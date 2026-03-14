@@ -673,7 +673,7 @@ function setTab(tab) {
   ["kpi-gir","kpi-fw","kpi-scr","kpi-putts","kpi-drive"].forEach(id=>{
     const el=document.getElementById(id);if(el)el.style.display=isReal?"none":"";
   });
-  ["cc-gir","cc-fw","cc-radar","cc-scr","cc-approach-drive","evalSection"].forEach(id=>{
+  ["cc-gir","cc-fw","cc-radar","cc-scr","cc-approach-drive"].forEach(id=>{
     const el=document.getElementById(id);if(el)el.style.display=isReal?"none":"";
   });
   // Par3 distance section only makes sense with shot data
@@ -779,7 +779,7 @@ function toBase64(file){
       const img=new Image();
       img.onerror=rej;
       img.onload=()=>{
-        const MAX=1000;
+        const MAX=1600;
         let w=img.width, h=img.height;
         if(w>MAX||h>MAX){
           if(w>h){ h=Math.round(h*MAX/w); w=MAX; }
@@ -788,7 +788,7 @@ function toBase64(file){
         const canvas=document.createElement("canvas");
         canvas.width=w; canvas.height=h;
         canvas.getContext("2d").drawImage(img,0,0,w,h);
-        const dataUrl=canvas.toDataURL("image/jpeg",0.85);
+        const dataUrl=canvas.toDataURL("image/jpeg",0.92);
         res(dataUrl.split(",")[1]);
       };
       img.src=reader.result;
@@ -1307,7 +1307,6 @@ function renderCoaching(full){
   }
   items.push({cls:"secondary",title:"⚠ Par 3 pattern: club selection above 155m",text:"Historical data shows consistent doubles on par 3s over 155m. Consider 5-iron or hybrid instead of 1/3-iron for 155–175m."});
   items.push({cls:"positive",title:`⭐ Ceiling proof: ${best.course} (${fmtScore(best.score_vs_par)})`,text:`${best.gir_pct!=null?best.gir_pct+"% GIR that round — ":""}replicate the approach quality and decision-making from that day.`});
-  items.push({cls:"positive",title:"💪 Squash athlete advantage",text:"Elite hand-eye coordination transfers directly to iron play precision. One focused range session delivers disproportionate gains."});
   document.getElementById("feedbackGrid").innerHTML=items.map(it=>`<div class="fb-item ${it.cls}"><strong>${it.title}</strong><p>${it.text}</p></div>`).join("");
 }
 

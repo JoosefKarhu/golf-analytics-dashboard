@@ -26,7 +26,7 @@ PORT         = 8080
 BASE_DIR     = Path(__file__).parent
 DATA_FILE    = BASE_DIR / "rounds_data.json"
 HTML_FILE    = BASE_DIR / "golf_dashboard.html"
-CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
 API_URL      = "https://api.anthropic.com/v1/messages"
 
 ANALYSIS_PROMPT = """
