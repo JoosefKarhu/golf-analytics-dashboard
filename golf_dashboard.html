@@ -1,0 +1,1780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Joonas — Golf Analytics Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:#0d1821; --surface:#162030; --surface2:#1e2e42; --surface3:#263a52;
+      --accent:#22c55e; --accent2:#16a34a; --warn:#f59e0b; --danger:#ef4444;
+      --blue:#3b82f6; --purple:#a855f7; --orange:#f97316;
+      --text:#f1f5f9; --muted:#64748b; --border:#1e3a5f; --radius:10px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+      background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+
+    /* ── Header ───────────────────────────────────────────────────────── */
+    header{background:var(--surface);border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:50}
+    .header-top{padding:12px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .logo{font-size:1.2rem;font-weight:800;color:var(--accent);letter-spacing:-.02em;white-space:nowrap}
+    .logo span{color:var(--text);font-weight:400;font-size:.95rem}
+    .header-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .api-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+      padding:7px 12px;border-radius:7px;width:250px;font-size:13px;outline:none;
+      transition:border-color .2s}
+    .api-input:focus{border-color:var(--accent)}
+
+    /* ── Tab bar ──────────────────────────────────────────────────────── */
+    .tab-bar{display:flex;gap:2px;padding:0 24px;border-top:1px solid var(--border)}
+    .tab-btn{padding:10px 18px;border:none;background:none;color:var(--muted);cursor:pointer;
+      font-size:.85rem;font-weight:600;border-bottom:2px solid transparent;
+      transition:all .2s;white-space:nowrap}
+    .tab-btn:hover:not(.active){color:var(--text)}
+    .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-count{font-size:.68rem;padding:1px 6px;border-radius:10px;background:var(--surface3);
+      color:var(--muted);margin-left:5px;font-weight:700}
+
+    /* ── Buttons ──────────────────────────────────────────────────────── */
+    .btn{padding:7px 16px;border-radius:7px;border:none;cursor:pointer;font-size:13px;
+      font-weight:600;transition:all .15s;white-space:nowrap}
+    .btn-primary{background:var(--accent);color:#000}
+    .btn-primary:hover{background:var(--accent2)}
+    .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .btn-ghost:hover{background:var(--surface2);color:var(--text)}
+    .btn-sm{padding:4px 10px;font-size:.75rem;border-radius:5px}
+
+    main{padding:24px;max-width:1440px;margin:0 auto}
+
+    /* ── Drop zone ────────────────────────────────────────────────────── */
+    .drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:30px 24px;
+      text-align:center;cursor:pointer;transition:all .25s;background:var(--surface);
+      margin-bottom:20px}
+    .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(34,197,94,.04)}
+    .drop-zone.drag-over{transform:scale(1.004)}
+    .drop-zone input[type=file]{display:none}
+    .dz-icon{font-size:2.2rem;margin-bottom:8px}
+    .drop-zone h3{font-size:.95rem;font-weight:600;margin-bottom:4px}
+    .drop-zone p{color:var(--muted);font-size:.82rem}
+    .dz-hint{margin-top:6px;font-size:.75rem;font-weight:500}
+
+    /* ── All-tab hint ──────────────────────────────────────────────────── */
+    .all-tab-hint{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:14px 20px;margin-bottom:20px;font-size:.84rem;color:var(--muted);text-align:center}
+    .all-tab-hint strong{color:var(--text)}
+
+    /* ── KPI cards ────────────────────────────────────────────────────── */
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+      gap:12px;margin-bottom:20px}
+    .kpi-card{background:var(--surface);border-radius:var(--radius);padding:14px;
+      border:1px solid var(--border);text-align:center;position:relative;overflow:hidden}
+    .kpi-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+      background:var(--border);transition:background .3s}
+    .kpi-card.good::after{background:var(--accent)}
+    .kpi-card.warn::after{background:var(--warn)}
+    .kpi-card.bad::after{background:var(--danger)}
+    .kpi-hcp::after{background:linear-gradient(90deg,#a855f7,#6366f1)!important}
+    .kpi-hcp .kpi-value{color:#c084fc}
+    .kpi-value{font-size:1.9rem;font-weight:800;letter-spacing:-.03em;line-height:1;margin-bottom:5px}
+    .kpi-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+    .kpi-delta{font-size:.72rem;margin-top:7px;font-weight:600}
+    .kpi-delta.good{color:var(--accent)}.kpi-delta.warn{color:var(--warn)}.kpi-delta.bad{color:var(--danger)}
+
+    /* ── Charts ───────────────────────────────────────────────────────── */
+    .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+    .chart-card{background:var(--surface);border-radius:var(--radius);padding:18px;border:1px solid var(--border)}
+    .chart-card.full{grid-column:1/-1}
+    .chart-title{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;
+      font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .badge-pill{font-size:.62rem;padding:2px 7px;border-radius:20px;background:var(--surface3);
+      color:var(--muted);font-weight:600}
+    canvas{max-height:240px;width:100%!important}
+
+    /* ── Section wrappers ─────────────────────────────────────────────── */
+    .section-wrap{margin-bottom:20px}
+    .section-head{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;
+      font-weight:700;margin-bottom:12px}
+
+    /* ── Score Damage ─────────────────────────────────────────────────── */
+    .damage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+    .damage-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:16px;text-align:center;position:relative;overflow:hidden}
+    .damage-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+      background:var(--border)}
+    .damage-card.good::after{background:var(--accent)}
+    .damage-card.bad::after{background:var(--danger)}
+    .damage-card.warn::after{background:var(--warn)}
+    .dmg-value{font-size:2rem;font-weight:800;line-height:1;margin-bottom:6px}
+    .dmg-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+    .dmg-target{font-size:.72rem;color:var(--muted);margin-top:6px}
+    .dmg-status{font-size:.72rem;font-weight:700;margin-top:4px}
+    .dmg-status.good{color:var(--accent)}.dmg-status.bad{color:var(--danger)}.dmg-status.warn{color:var(--warn)}
+
+    /* ── Approach distance bars ───────────────────────────────────────── */
+    .apb-header{display:grid;grid-template-columns:72px 1fr 46px 52px;gap:8px;padding:0 2px 6px;border-bottom:1px solid rgba(255,255,255,.06);font-size:.68rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+    .apb-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+    .apb-row{display:grid;grid-template-columns:72px 1fr 46px 52px;align-items:center;gap:8px}
+    .apb-label{font-size:.75rem;font-weight:600;color:#cbd5e1;white-space:nowrap}
+    .apb-track{background:rgba(255,255,255,.06);border-radius:6px;height:8px;position:relative;overflow:hidden}
+    .apb-fill{height:100%;border-radius:6px;transition:width .5s ease}
+    .apb-target{position:absolute;top:0;bottom:0;left:58%;width:1.5px;background:rgba(34,197,94,.7)}
+    .apb-pct{font-size:.8rem;font-weight:700;text-align:right}
+    .apb-n{font-size:.7rem;color:var(--muted);text-align:right}
+    .apb-legend{display:flex;gap:4px;align-items:center;margin-top:10px;font-size:.67rem;color:var(--muted)}
+    .apb-leg-dot{display:inline-block;width:8px;height:8px;border-radius:50%}
+    .bucket-good{background:rgba(34,197,94,.7)}.bucket-warn{background:rgba(245,158,11,.7)}.bucket-bad{background:rgba(239,68,68,.7)}
+
+    /* ── Real Course analytics ───────────────────────────────────────────── */
+    .par-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+    .par-type-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden}
+    .par-type-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
+    .par3-accent::after{background:#3b82f6}.par4-accent::after{background:#22c55e}.par5-accent::after{background:#a855f7}
+    .par-type-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+    .par-type-avg{font-size:2rem;font-weight:800;line-height:1;margin:6px 0 8px}
+    .score-dist-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+    .score-badge{background:var(--surface2);border-radius:8px;padding:10px 6px;text-align:center;border:1px solid var(--border)}
+    .sb-count{font-size:1.5rem;font-weight:800;line-height:1}
+    .sb-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:4px;display:block}
+    .sb-eagle{color:#f59e0b}.sb-birdie{color:var(--accent)}.sb-par{color:var(--blue)}.sb-bogey{color:var(--warn)}.sb-double{color:var(--danger)}
+    .real-info{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:.8rem;color:#93c5fd}
+
+    /* ── Par 3 ────────────────────────────────────────────────────────── */
+    .par3-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+    .par3-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+    .par3-card h4{font-size:.8rem;font-weight:700;margin-bottom:12px}
+    .par3-card h4 span{color:var(--muted);font-weight:400;margin-left:6px}
+    .stat-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.83rem}
+    .stat-row:last-child{border-bottom:none}
+    .stat-row span:first-child{color:var(--muted)}
+    .stat-row span:last-child{font-weight:700}
+
+    /* ── Evaluations ──────────────────────────────────────────────────── */
+    .eval-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto}
+    .eval-item{background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:.8rem}
+    .eval-item .eval-course{font-weight:600;margin-bottom:4px}
+    .eval-bars{display:flex;gap:6px;margin-top:4px}
+    .eval-bar-wrap{flex:1;display:flex;flex-direction:column;gap:2px;align-items:center}
+    .eval-bar-label{font-size:.62rem;color:var(--muted);text-transform:uppercase}
+    .eval-mini-bar{width:100%;background:var(--surface3);border-radius:10px;height:6px;overflow:hidden}
+    .eval-mini-fill{height:100%;border-radius:10px;background:var(--blue)}
+
+    /* ── Coaching / Practice Focus ────────────────────────────────────── */
+    .feedback-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .fb-item{padding:12px 14px;border-radius:8px;border-left:3px solid;font-size:.84rem}
+    .fb-item.priority{border-color:var(--danger);background:rgba(239,68,68,.07)}
+    .fb-item.secondary{border-color:var(--warn);background:rgba(245,158,11,.07)}
+    .fb-item.positive{border-color:var(--accent);background:rgba(34,197,94,.07)}
+    .fb-item strong{display:block;margin-bottom:3px;font-size:.81rem}
+    .fb-item p{color:var(--muted);line-height:1.5}
+    .practice-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .practice-item{background:var(--surface2);border-radius:8px;padding:16px;border:1px solid var(--border)}
+    .practice-item .prio-label{font-size:.65rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:.08em;margin-bottom:8px}
+    .practice-item .prio-label.p1{color:var(--danger)}
+    .practice-item .prio-label.p2{color:var(--warn)}
+    .practice-item h4{font-size:.9rem;font-weight:700;margin-bottom:6px}
+    .practice-item p{font-size:.82rem;color:var(--muted);line-height:1.5}
+    .practice-item .drills{margin-top:8px;font-size:.78rem;color:var(--muted)}
+    .practice-item .drills span{display:block;padding:2px 0}
+    .practice-item .drills span::before{content:'→ ';color:var(--accent)}
+
+    /* ── Table ────────────────────────────────────────────────────────── */
+    .table-card{background:var(--surface);border-radius:var(--radius);padding:18px;
+      border:1px solid var(--border);overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:.82rem}
+    thead th{padding:8px 10px;text-align:left;color:var(--muted);font-weight:700;
+      font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;
+      border-bottom:1px solid var(--border);white-space:nowrap}
+    tbody td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.03);white-space:nowrap}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:rgba(255,255,255,.02)}
+    .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:700}
+    .pill-good{background:rgba(34,197,94,.15);color:var(--accent)}
+    .pill-warn{background:rgba(245,158,11,.15);color:var(--warn)}
+    .pill-bad{background:rgba(239,68,68,.15);color:var(--danger)}
+    .pill-neutral{background:rgba(100,116,139,.15);color:var(--muted)}
+    .pill-real{background:rgba(59,130,246,.15);color:var(--blue)}
+    .pill-practice{background:rgba(249,115,22,.15);color:var(--orange)}
+    .col-good{color:var(--accent);font-weight:600}
+    .col-warn{color:var(--warn);font-weight:600}
+    .col-bad{color:var(--danger);font-weight:600}
+
+    /* ── Practice tab ─────────────────────────────────────────────────── */
+    .club-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:20px}
+    .club-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:14px;text-align:center;position:relative;overflow:hidden}
+    .club-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--border)}
+    .club-name{font-size:1rem;font-weight:800;color:var(--accent);margin-bottom:10px}
+    .club-carry{font-size:1.8rem;font-weight:800;line-height:1;letter-spacing:-.03em}
+    .club-carry-unit{font-size:.72rem;color:var(--muted)}
+    .club-range{font-size:.72rem;color:var(--muted);margin-top:4px}
+    .club-accuracy{font-size:.78rem;margin-top:6px;font-weight:600}
+    .club-sessions{font-size:.68rem;color:var(--muted);margin-top:5px}
+    .club-trend{font-size:.8rem;font-weight:700;margin-top:4px}
+    .trend-up{color:var(--accent)}.trend-down{color:var(--danger)}.trend-flat{color:var(--muted)}
+
+    /* Consistency bar (min-avg-max) */
+    .consist-list{display:flex;flex-direction:column;gap:10px}
+    .consist-row{display:grid;grid-template-columns:70px 1fr 80px;align-items:center;gap:10px}
+    .consist-label{font-size:.78rem;font-weight:600;text-align:right;white-space:nowrap}
+    .consist-bar-wrap{position:relative;background:var(--surface3);border-radius:4px;height:16px}
+    .consist-bar-range{position:absolute;top:0;bottom:0;background:rgba(59,130,246,.5);border-radius:4px}
+    .consist-bar-avg{position:absolute;top:-2px;bottom:-2px;width:3px;background:var(--blue);border-radius:2px}
+    .consist-nums{font-size:.72rem;color:var(--muted);text-align:right;line-height:1.4}
+
+    /* Range session table */
+    .range-table-wrap{overflow-x:auto}
+
+    /* ── No data / empty states ───────────────────────────────────────── */
+    .no-data{text-align:center;padding:28px;color:var(--muted)}
+    .no-data .nd-icon{font-size:2rem;margin-bottom:8px}
+    .no-data p{font-size:.83rem;margin-bottom:3px}
+    .no-data .nd-sub{font-size:.75rem;color:var(--surface3)}
+
+    /* ── Overlays ─────────────────────────────────────────────────────── */
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.76);
+      z-index:200;align-items:center;justify-content:center;padding:20px}
+    .overlay.active{display:flex}
+    .modal{background:var(--surface);border-radius:14px;border:1px solid var(--border);
+      padding:26px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto}
+    .modal h2{font-size:1.05rem;margin-bottom:6px}
+    .modal>p{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+    .round-preview{background:var(--surface2);border-radius:8px;padding:12px 14px;
+      margin-bottom:10px;border:1px solid var(--border)}
+    .round-preview h4{font-size:.88rem;margin-bottom:8px;color:var(--accent)}
+    .preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;font-size:.8rem}
+    .preview-row{display:flex;justify-content:space-between;gap:8px}
+    .preview-row span:first-child{color:var(--muted)}
+    .preview-row span:last-child{font-weight:600}
+    .modal-actions{display:flex;gap:10px;margin-top:18px}
+
+    /* Eval sliders */
+    .eval-form{display:flex;flex-direction:column;gap:14px}
+    .eval-row label{display:flex;justify-content:space-between;font-size:.8rem;
+      color:var(--muted);font-weight:600;margin-bottom:6px}
+    .eval-row label .score-display{color:var(--accent);font-size:1rem;font-weight:800}
+    input[type=range]{width:100%;accent-color:var(--accent);height:6px;cursor:pointer}
+    .eval-notes{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+      padding:8px 10px;border-radius:6px;font-size:.85rem;width:100%;height:70px;
+      resize:vertical;outline:none;font-family:inherit}
+    .eval-notes:focus{border-color:var(--accent)}
+
+    /* Spinner */
+    .spinner{width:42px;height:42px;border:3px solid var(--surface3);
+      border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-body{text-align:center;padding:10px 0}
+    .loading-body h2{margin:14px 0 6px;font-size:1.05rem}
+    .loading-body p{color:var(--muted);font-size:.85rem}
+
+    /* Toast */
+    #toast{position:fixed;bottom:22px;left:50%;
+      transform:translateX(-50%) translateY(80px);background:var(--surface2);
+      border:1px solid var(--border);padding:10px 18px;border-radius:8px;
+      font-size:.85rem;font-weight:600;z-index:500;transition:transform .3s;pointer-events:none}
+    #toast.show{transform:translateX(-50%) translateY(0)}
+    #toast.success{border-color:var(--accent);color:var(--accent)}
+    #toast.error{border-color:var(--danger);color:var(--danger)}
+
+    @media(max-width:900px){
+      .charts-grid,.par3-grid,.feedback-grid,.practice-grid,.par-type-grid{grid-template-columns:1fr}
+      .charts-grid .full{grid-column:1}.api-input{width:190px}
+    }
+    @media(max-width:600px){main{padding:12px}.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+  </style>
+</head>
+<body>
+
+<!-- ── Header ───────────────────────────────────────────────────────────── -->
+<header>
+  <div class="header-top">
+    <div class="logo">⛳ Joonas <span>Golf Analytics</span></div>
+    <div class="header-right">
+      <span id="roundCount" style="font-size:.8rem;color:var(--muted)"></span>
+      <input class="api-input" type="password" id="apiKey"
+             placeholder="Anthropic API key (sk-ant-…)" autocomplete="off">
+      <button class="btn btn-ghost" onclick="saveKey()">Save Key</button>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="all"       onclick="setTab('all')">All Rounds <span class="tab-count" id="tc-all">0</span></button>
+    <button class="tab-btn"        data-tab="simulator" onclick="setTab('simulator')">Simulator <span class="tab-count" id="tc-sim">0</span></button>
+    <button class="tab-btn"        data-tab="real"      onclick="setTab('real')">Real Course <span class="tab-count" id="tc-real">0</span></button>
+    <button class="tab-btn"        data-tab="practice"  onclick="setTab('practice')">Practice <span class="tab-count" id="tc-prac">0</span></button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Drop zone — hidden on All tab, label/mode changes per tab -->
+  <div id="dropWrap" style="display:none">
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="dz-icon" id="dzIcon">📸</div>
+      <h3 id="dzTitle">Drop screenshots here</h3>
+      <p id="dzSub">PNG or JPG files — any number</p>
+      <p class="dz-hint" id="dzHint" style="color:var(--accent)"></p>
+      <input type="file" id="fileInput" multiple accept="image/png,image/jpeg,image/jpg"
+             onchange="handleFiles(this.files)">
+    </div>
+  </div>
+
+  <!-- All-tab hint -->
+  <div class="all-tab-hint" id="allHint" style="display:none">
+    Use the <strong>Simulator</strong>, <strong>Real Course</strong>, or
+    <strong>Practice</strong> tabs to add new data via drag-and-drop.
+  </div>
+
+  <!-- ── ROUNDS CONTENT (All / Simulator / Real tabs) ─────────────────── -->
+  <div id="roundsContent">
+
+    <!-- KPI cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card" id="kpi-rounds"><div class="kpi-value" id="v-rounds">—</div><div class="kpi-label">Rounds (18H)</div><div class="kpi-delta" id="d-rounds"></div></div>
+      <div class="kpi-card" id="kpi-score"><div class="kpi-value" id="v-score">—</div><div class="kpi-label">Avg Score</div><div class="kpi-delta" id="d-score"></div></div>
+      <div class="kpi-card" id="kpi-gir"><div class="kpi-value" id="v-gir">—</div><div class="kpi-label">GIR %</div><div class="kpi-delta" id="d-gir"></div></div>
+      <div class="kpi-card" id="kpi-fw"><div class="kpi-value" id="v-fw">—</div><div class="kpi-label">Fairways %</div><div class="kpi-delta" id="d-fw"></div></div>
+      <div class="kpi-card" id="kpi-scr"><div class="kpi-value" id="v-scr">—</div><div class="kpi-label">Scrambling</div><div class="kpi-delta" id="d-scr"></div></div>
+      <div class="kpi-card" id="kpi-putts"><div class="kpi-value" id="v-putts">—</div><div class="kpi-label">Putts / Hole</div><div class="kpi-delta" id="d-putts"></div></div>
+      <div class="kpi-card" id="kpi-drive"><div class="kpi-value" id="v-drive">—</div><div class="kpi-label">Avg Drive</div><div class="kpi-delta" id="d-drive"></div></div>
+      <div class="kpi-card kpi-hcp" id="kpi-hcp"><div class="kpi-value" id="v-hcp">—</div><div class="kpi-label" id="lbl-hcp">Est. HCP (Sim)</div><div class="kpi-delta" id="d-hcp"></div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <div class="chart-title">📈 Scoring Trend <span class="badge-pill">Score vs Par · HCP5 = +3 · rolling avg · ▲ = 9-hole round</span></div>
+        <canvas id="chartScoring"></canvas>
+      </div>
+      <div class="chart-card" id="cc-gir">
+        <div class="chart-title">🎯 GIR % per Round <span class="badge-pill">Target ≥ 58%</span></div>
+        <canvas id="chartGir"></canvas>
+      </div>
+      <div class="chart-card" id="cc-fw">
+        <div class="chart-title">🏌️ Fairway % per Round <span class="badge-pill">Target ≥ 60%</span></div>
+        <canvas id="chartFw"></canvas>
+      </div>
+      <div class="chart-card" id="cc-radar">
+        <div class="chart-title">🕸️ KPI vs HCP 5 Benchmarks <span class="badge-pill">100% = on target</span></div>
+        <canvas id="chartRadar"></canvas>
+      </div>
+      <div class="chart-card" id="cc-scr">
+        <div class="chart-title">🔄 Scrambling % per Round <span class="badge-pill">Target ≥ 55%</span></div>
+        <canvas id="chartScrambling"></canvas>
+      </div>
+    </div>
+
+    <!-- Score Damage -->
+    <div class="section-wrap">
+      <div class="section-head">💥 Score Damage Tracker</div>
+      <div class="damage-grid">
+        <div class="damage-card" id="dmg-doubles"><div class="dmg-value" id="dmg-v-doubles">—</div><div class="dmg-label">Doubles / Round</div><div class="dmg-target">HCP5 target ≤ 1.5</div><div class="dmg-status" id="dmg-s-doubles"></div></div>
+        <div class="damage-card" id="dmg-triples"><div class="dmg-value" id="dmg-v-triples">—</div><div class="dmg-label">Triples+ / Round</div><div class="dmg-target">HCP5 target ≤ 0.3</div><div class="dmg-status" id="dmg-s-triples"></div></div>
+        <div class="damage-card" id="dmg-3putts"><div class="dmg-value" id="dmg-v-3putts">—</div><div class="dmg-label">3-Putts / Round</div><div class="dmg-target">HCP5 target ≤ 1.0</div><div class="dmg-status" id="dmg-s-3putts"></div></div>
+        <div class="damage-card" id="dmg-ob"><div class="dmg-value" id="dmg-v-ob">—</div><div class="dmg-label">OB / Penalty / Round</div><div class="dmg-target">HCP5 target ≤ 0.5</div><div class="dmg-status" id="dmg-s-ob"></div></div>
+      </div>
+      <p id="damageNote" style="font-size:.75rem;color:var(--muted);margin-top:8px;display:none">
+        ℹ Hole-level data available for <span id="damageRoundsCount">0</span> round(s). Drop new screenshots for full tracking.
+      </p>
+    </div>
+
+    <!-- Approach + Drive -->
+    <div class="charts-grid" id="cc-approach-drive">
+      <div class="chart-card">
+        <div class="chart-title">🎯 Approach GIR % by Distance <span class="badge-pill">Par 3 + Par 4</span></div>
+        <div id="approachContent"><div class="no-data"><div class="nd-icon">📊</div><p>No hole-level data yet</p><p class="nd-sub">Drop new screenshots to populate</p></div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🏌️ Drive Outcome Distribution <span class="badge-pill">Par 4 &amp; 5</span></div>
+        <div id="driveContent"><div class="no-data"><div class="nd-icon">🏌️</div><p>No hole-level data yet</p><p class="nd-sub">Drop new screenshots to populate</p></div></div>
+      </div>
+    </div>
+
+    <!-- Par 3 -->
+    <div class="section-wrap" id="par3Section">
+      <div class="section-head">⛳ Par 3 Performance — Split by distance</div>
+      <div class="par3-grid">
+        <div class="par3-card"><h4>Under 155m <span id="par3ShortCount">(no data)</span></h4>
+          <div id="par3ShortBody"><div class="no-data" style="padding:16px"><p>No hole data yet</p></div></div></div>
+        <div class="par3-card"><h4>Over 155m <span id="par3LongCount">(no data)</span></h4>
+          <div id="par3LongBody"><div class="no-data" style="padding:16px"><p>No hole data yet</p></div></div></div>
+      </div>
+    </div>
+
+    <!-- ── REAL COURSE ONLY SECTION ──────────────────────────────────── -->
+    <div id="realSection" style="display:none">
+
+      <div class="real-info">
+        📷 <strong>Real Course mode</strong> — Upload a scorecard photo above and Claude reads the hole-by-hole scores automatically. Shot stats (GIR, FW, Drive) populate when using VG3 real-course mode.
+      </div>
+
+      <!-- Par Type Performance -->
+      <div class="section-wrap">
+        <div class="section-head">⛳ Performance by Par Type</div>
+        <div class="par-type-grid">
+          <div class="par-type-card par3-accent" id="ptPar3">
+            <div class="no-data" style="padding:12px 0"><p>No data</p></div>
+          </div>
+          <div class="par-type-card par4-accent" id="ptPar4">
+            <div class="no-data" style="padding:12px 0"><p>No data</p></div>
+          </div>
+          <div class="par-type-card par5-accent" id="ptPar5">
+            <div class="no-data" style="padding:12px 0"><p>No data</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score Distribution + Front/Back 9 -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">🎯 Score Distribution <span class="badge-pill">All holes across real rounds</span></div>
+          <div id="scoreDistContent"><div class="no-data"><div class="nd-icon">📊</div><p>No hole data yet</p><p class="nd-sub">Upload a scorecard photo to populate</p></div></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">🔄 Front 9 vs Back 9 <span class="badge-pill">Score vs par per 9 holes</span></div>
+          <div id="frontBackContent"><div class="no-data"><div class="nd-icon">🔄</div><p>No hole data yet</p><p class="nd-sub">Upload a scorecard to populate</p></div></div>
+        </div>
+      </div>
+
+      <!-- Hole Difficulty Map -->
+      <div class="section-wrap">
+        <div class="section-head">🗺️ Hole-by-Hole Difficulty Map <span class="badge-pill" style="margin-left:8px;font-size:.62rem">avg strokes over par · green=par, amber=bogey, red=double+</span></div>
+        <div class="chart-card">
+          <div id="holeDiffContent"><div class="no-data"><div class="nd-icon">🗺️</div><p>No hole data yet</p><p class="nd-sub">Upload a scorecard to see per-hole difficulty</p></div></div>
+        </div>
+      </div>
+
+    </div><!-- /realSection -->
+
+    <!-- Evaluations -->
+    <div class="section-wrap" id="evalSection">
+      <div class="section-head">📝 Round Self-Evaluation</div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Evaluation Scores vs Scoring Performance</div>
+          <div id="evalChartWrap"><div class="no-data"><div class="nd-icon">📝</div><p>No evaluations yet</p><p class="nd-sub">Click "Rate" on any round below</p></div></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Recent Evaluations</div>
+          <div class="eval-list" id="evalList"><div class="no-data" style="padding:16px"><p>Rate rounds via the history table</p></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coaching -->
+    <div class="section-wrap" id="coachingSection">
+      <div class="section-head">🏆 Coaching Insights — Dynamic priority ranking</div>
+      <div class="feedback-grid" id="feedbackGrid"><p style="color:var(--muted);font-size:.85rem">Loading…</p></div>
+    </div>
+
+    <!-- Practice Focus -->
+    <div class="section-wrap" id="practiceFocusSection">
+      <div class="section-head">🎯 Next Practice Focus</div>
+      <div class="practice-grid" id="practiceFocusGrid"><p style="color:var(--muted);font-size:.85rem">Loading…</p></div>
+    </div>
+
+    <!-- Round History -->
+    <div class="table-card">
+      <div class="section-head" style="margin-bottom:12px">📋 Round History</div>
+      <table>
+        <thead><tr id="roundHead"></tr></thead>
+        <tbody id="roundBody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /roundsContent -->
+
+  <!-- ── PRACTICE CONTENT ──────────────────────────────────────────────── -->
+  <div id="practiceSection" style="display:none">
+
+    <!-- Club summary cards -->
+    <div class="section-wrap">
+      <div class="section-head">🏌️ Club Performance Summary — Latest session averages</div>
+      <div class="club-grid" id="clubGrid">
+        <div class="no-data" style="padding:24px;grid-column:1/-1">
+          <div class="nd-icon">🏌️</div>
+          <p>No practice sessions yet</p>
+          <p class="nd-sub">Drop range screenshots above to start tracking</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Club trend + consistency -->
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <div class="chart-title">📈 Carry Distance Evolution by Club <span class="badge-pill">Avg carry per session</span></div>
+        <div id="clubTrendWrap"><div class="no-data"><div class="nd-icon">📈</div><p>Drop range screenshots to see club trends</p></div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📏 Distance Consistency — Min · Avg · Max carry</div>
+        <div id="clubConsistWrap"><div class="no-data"><div class="nd-icon">📏</div><p>Awaiting data</p></div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🎯 Accuracy / Target Hit Rate <span class="badge-pill">Target ≥ 65%</span></div>
+        <div id="clubAccuracyWrap"><div class="no-data"><div class="nd-icon">🎯</div><p>Awaiting data</p></div></div>
+      </div>
+    </div>
+
+    <!-- Range session history -->
+    <div class="table-card">
+      <div class="section-head" style="margin-bottom:12px">📋 Range Session History</div>
+      <div class="range-table-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Date</th><th>Club</th><th>Shots</th>
+            <th>Avg Carry</th><th>Avg Total</th><th>Max Carry</th>
+            <th>Min Carry</th><th>Dispersion</th><th>Target Hit</th>
+          </tr></thead>
+          <tbody id="rangeBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /practiceSection -->
+
+</main>
+
+<!-- ── LOADING OVERLAY ───────────────────────────────────────────────────── -->
+<div class="overlay" id="loadingOverlay">
+  <div class="modal" style="max-width:340px">
+    <div class="loading-body">
+      <div class="spinner"></div>
+      <h2 id="loadingTitle">Analysing Screenshots</h2>
+      <p id="loadingMsg">Sending images to Claude…</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESULTS OVERLAY ───────────────────────────────────────────────────── -->
+<div class="overlay" id="resultsOverlay">
+  <div class="modal">
+    <h2 id="resultsTitle">📊 Analysis Complete</h2>
+    <p id="resultsSubtitle">Review the extracted data — confirm to save.</p>
+    <div id="resultsContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="confirmSave()">✓ Save to History</button>
+      <button class="btn btn-ghost" onclick="closeResults()">Discard</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RATE ROUND MODAL ──────────────────────────────────────────────────── -->
+<div class="overlay" id="rateOverlay">
+  <div class="modal" style="max-width:420px">
+    <h2>📝 Rate This Round</h2>
+    <p id="rateRoundName" style="color:var(--accent);font-weight:600;margin-bottom:18px"></p>
+    <div class="eval-form">
+      <div class="eval-row">
+        <label>Decision Quality <span class="score-display" id="dVal">5</span></label>
+        <input type="range" min="1" max="10" value="5" id="sDecision" oninput="document.getElementById('dVal').textContent=this.value">
+      </div>
+      <div class="eval-row">
+        <label>Execution Quality <span class="score-display" id="eVal">5</span></label>
+        <input type="range" min="1" max="10" value="5" id="sExecution" oninput="document.getElementById('eVal').textContent=this.value">
+      </div>
+      <div class="eval-row">
+        <label>Mental Commitment <span class="score-display" id="mVal">5</span></label>
+        <input type="range" min="1" max="10" value="5" id="sMental" oninput="document.getElementById('mVal').textContent=this.value">
+      </div>
+      <div class="eval-row">
+        <label>Notes (optional)</label>
+        <textarea class="eval-notes" id="evalNotes" placeholder="Key observations…"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEval()">Save Evaluation</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('rateOverlay').classList.remove('active')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════════════════════ -->
+<script>
+/* ── Constants ──────────────────────────────────────────────────────────── */
+const BENCH = {score:3,gir:58,fw:60,scr:55,putts:1.70,drive:240};
+const DAMAGE_BENCH = {doubles:1.5,triples:0.3,threePutts:1.0,ob:0.5};
+const APPROACH_BUCKETS = [
+  {label:"< 80m",min:0,max:80},{label:"80–110m",min:80,max:110},
+  {label:"110–130m",min:110,max:130},{label:"130–150m",min:130,max:150},
+  {label:"150–170m",min:150,max:170},{label:"170–200m",min:170,max:200},
+];
+const GRID_COLOR = "rgba(255,255,255,0.05)";
+const TICK_COLOR = "#475569";
+const AXIS_OPTS  = {ticks:{color:TICK_COLOR},grid:{color:GRID_COLOR}};
+const CHART_OPTS = {
+  responsive:true,maintainAspectRatio:true,animation:{duration:600},
+  plugins:{legend:{labels:{color:"#94a3b8",font:{size:11},boxWidth:12}}}
+};
+// Club colours for trend chart (up to 10 clubs)
+const CLUB_COLORS = ["#22c55e","#3b82f6","#f59e0b","#a855f7","#ef4444",
+                     "#06b6d4","#f97316","#84cc16","#ec4899","#94a3b8"];
+
+/* ── State ──────────────────────────────────────────────────────────────── */
+let rounds        = [];
+let rangeSessions = [];
+let activeTab     = "all";
+let pendingData   = null;   // {type:"rounds"|"range", items:[]}
+let evaluations   = {};
+let currentEvalKey = null;
+
+/* ── Init ───────────────────────────────────────────────────────────────── */
+document.addEventListener("DOMContentLoaded", () => {
+  const k = localStorage.getItem("golf_api_key");
+  if (k) document.getElementById("apiKey").value = k;
+  evaluations = JSON.parse(localStorage.getItem("golf_evals") || "{}");
+
+  const dz = document.getElementById("dropZone");
+  dz.addEventListener("dragover",  e=>{e.preventDefault();dz.classList.add("drag-over");});
+  dz.addEventListener("dragleave", ()=>dz.classList.remove("drag-over"));
+  dz.addEventListener("drop", e=>{e.preventDefault();dz.classList.remove("drag-over");handleFiles(e.dataTransfer.files);});
+
+  fetchRounds();
+});
+
+function saveKey(){
+  const k=document.getElementById("apiKey").value.trim();
+  if(!k) return showToast("Enter an API key first","error");
+  localStorage.setItem("golf_api_key",k);
+  showToast("API key saved ✓","success");
+}
+
+/* ── Tab system ─────────────────────────────────────────────────────────── */
+const DZ_CONFIG = {
+  simulator: {icon:"📸", title:"Drop Virtual Golf 3 round screenshots here",
+    sub:"Hole maps and round summary screens", hint:"→ Saved to Simulator history", color:"var(--accent)"},
+  real:      {icon:"📷", title:"Drop scorecard photo here (1 image)",
+    sub:"Mobile scoring app screenshot or paper card photo", hint:"→ Claude reads hole-by-hole scores automatically", color:"var(--blue)"},
+  practice:  {icon:"🏌️", title:"Drop range practice screenshots here",
+    sub:"VG3 range mode screenshots or real driving range data", hint:"→ Saved to Practice history", color:"var(--orange)"},
+};
+
+function setTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+
+  const isPractice = tab === "practice";
+  const isAll      = tab === "all";
+  const isReal     = tab === "real";
+
+  document.getElementById("roundsContent").style.display  = isPractice ? "none" : "";
+  document.getElementById("practiceSection").style.display = isPractice ? "" : "none";
+  document.getElementById("dropWrap").style.display  = isAll ? "none" : "";
+  document.getElementById("allHint").style.display   = isAll ? "" : "none";
+  // Real-only section
+  document.getElementById("realSection").style.display       = isReal ? "" : "none";
+  // Sections hidden on Real tab (shot stats not available from scorecard)
+  ["kpi-gir","kpi-fw","kpi-scr","kpi-putts","kpi-drive"].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display=isReal?"none":"";
+  });
+  ["cc-gir","cc-fw","cc-radar","cc-scr","cc-approach-drive","evalSection"].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display=isReal?"none":"";
+  });
+  // Par3 distance section only makes sense with shot data
+  document.getElementById("par3Section").style.display = isReal ? "none" : "";
+  // Practice Focus only on All tab
+  const pfEl=document.getElementById("practiceFocusSection");
+  if(pfEl) pfEl.style.display = isAll ? "" : "none";
+  // Score Damage: hide 3-putts and OB on Real tab (scorecard can't provide that)
+  ["dmg-3putts","dmg-ob"].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display=isReal?"none":"";
+  });
+
+  if (!isAll) {
+    const cfg = DZ_CONFIG[tab];
+    document.getElementById("dzIcon").textContent   = cfg.icon;
+    document.getElementById("dzTitle").textContent  = cfg.title;
+    document.getElementById("dzSub").textContent    = cfg.sub;
+    document.getElementById("dzHint").textContent   = cfg.hint;
+    document.getElementById("dzHint").style.color   = cfg.color;
+    document.getElementById("dropZone").style.borderColor = "";
+  }
+
+  renderAll();
+}
+
+function updateTabCounts(){
+  const sim  = rounds.filter(r=>!r.source_type||r.source_type==="simulator");
+  const real = rounds.filter(r=>r.source_type==="real");
+  document.getElementById("tc-all").textContent  = rounds.length;
+  document.getElementById("tc-sim").textContent  = sim.length;
+  document.getElementById("tc-real").textContent = real.length;
+  document.getElementById("tc-prac").textContent = rangeSessions.length;
+}
+
+function filteredRounds(){
+  if(activeTab==="simulator") return rounds.filter(r=>!r.source_type||r.source_type==="simulator");
+  if(activeTab==="real")      return rounds.filter(r=>r.source_type==="real");
+  return rounds;
+}
+
+/* ── Data loading ───────────────────────────────────────────────────────── */
+async function fetchRounds(){
+  try{
+    const r=await fetch("/api/rounds");
+    if(!r.ok) throw new Error("Server not responding — is golf_server.py running?");
+    const data=await r.json();
+    rounds        = data.rounds||[];
+    rangeSessions = data.range_sessions||[];
+    updateTabCounts();
+    renderAll();
+  }catch(e){ showToast("Cannot reach server: "+e.message,"error"); }
+}
+
+/* ── File handling ──────────────────────────────────────────────────────── */
+async function handleFiles(files){
+  if(!files?.length) return;
+  const apiKey=document.getElementById("apiKey").value.trim();
+  if(!apiKey) return showToast("Enter your Anthropic API key first","error");
+
+  const modeMap = {simulator:"round",real:"real_round",practice:"range"};
+  const mode    = modeMap[activeTab] || "round";
+
+  const images=[];
+  for(const f of files) images.push({name:f.name,data:await toBase64(f),media_type:"image/jpeg"});
+
+  const titles = {round:"Analysing Round Screenshots",real_round:"Analysing Scorecard / Round Summary",range:"Analysing Range Practice Screenshots"};
+  document.getElementById("loadingTitle").textContent = titles[mode]||"Analysing…";
+  document.getElementById("loadingMsg").textContent = `Sending ${images.length} image${images.length>1?"s":""} to Claude…`;
+  document.getElementById("loadingOverlay").classList.add("active");
+
+  try{
+    const resp=await fetch("/api/analyse",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({api_key:apiKey,images,mode})});
+    const result=await resp.json();
+    document.getElementById("loadingOverlay").classList.remove("active");
+    document.getElementById("fileInput").value="";
+
+    if(!resp.ok||result.error) return showToast("Analysis failed: "+(result.error||"unknown"),"error");
+
+    if(mode==="range"){
+      const sessions=(result.data?.range_sessions||[]).filter(s=>s?.club);
+      if(!sessions.length) return showToast("No range data detected","error");
+      pendingData={type:"range",items:sessions};
+      showRangeResults(sessions);
+    }else{
+      const rds=(result.data?.rounds||[]).filter(r=>r?.course)
+        .map(r=>({...r,source_type:mode==="real_round"?"real":"simulator"}));
+      if(!rds.length) return showToast("No rounds detected","error");
+      pendingData={type:"rounds",items:rds};
+      showRoundResults(rds);
+    }
+  }catch(e){
+    document.getElementById("loadingOverlay").classList.remove("active");
+    showToast("Error: "+e.message,"error");
+  }
+}
+
+function toBase64(file){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onerror=rej;
+    reader.onload=()=>{
+      const img=new Image();
+      img.onerror=rej;
+      img.onload=()=>{
+        const MAX=1000;
+        let w=img.width, h=img.height;
+        if(w>MAX||h>MAX){
+          if(w>h){ h=Math.round(h*MAX/w); w=MAX; }
+          else   { w=Math.round(w*MAX/h); h=MAX; }
+        }
+        const canvas=document.createElement("canvas");
+        canvas.width=w; canvas.height=h;
+        canvas.getContext("2d").drawImage(img,0,0,w,h);
+        const dataUrl=canvas.toDataURL("image/jpeg",0.85);
+        res(dataUrl.split(",")[1]);
+      };
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ── Results previews ───────────────────────────────────────────────────── */
+function showRoundResults(rds){
+  document.getElementById("resultsTitle").textContent   = "📊 Round Analysis Complete";
+  document.getElementById("resultsSubtitle").textContent = "Review extracted data — confirm to save to history.";
+  document.getElementById("resultsContent").innerHTML = rds.map(r=>`
+    <div class="round-preview">
+      <h4>${esc(r.course)} — ${r.date||"date unknown"} <span style="font-size:.75rem;color:${r.source_type==='real'?'var(--blue)':'var(--muted)'}">[${r.source_type==='real'?'Real Course':'Simulator'}]</span></h4>
+      <div class="preview-grid">
+        <div class="preview-row"><span>Score vs Par</span><span>${r.score_vs_par!=null?fmtScore(r.score_vs_par):"—"}</span></div>
+        <div class="preview-row"><span>Strokes / Holes</span><span>${r.total_strokes??"—"} / ${r.holes_played??"—"}</span></div>
+        <div class="preview-row"><span>GIR %</span><span>${r.gir_pct!=null?r.gir_pct+"%":"—"}</span></div>
+        <div class="preview-row"><span>FW %</span><span>${r.fairways_hit_pct!=null?r.fairways_hit_pct+"%":"—"}</span></div>
+        <div class="preview-row"><span>Scrambling</span><span>${r.scrambling_pct!=null?r.scrambling_pct+"%":"—"}</span></div>
+        <div class="preview-row"><span>Putts/Hole</span><span>${r.putts_per_hole!=null?r.putts_per_hole.toFixed(2):"—"}</span></div>
+        <div class="preview-row"><span>Avg Drive</span><span>${r.avg_drive_m?r.avg_drive_m+"m":"—"}</span></div>
+        <div class="preview-row"><span>Hole data</span><span>${(r.holes||[]).length>0?r.holes.length+" holes":"summary only"}</span></div>
+      </div>
+    </div>`).join("");
+  document.getElementById("resultsOverlay").classList.add("active");
+}
+
+function showRangeResults(sessions){
+  document.getElementById("resultsTitle").textContent   = "🏌️ Range Analysis Complete";
+  document.getElementById("resultsSubtitle").textContent = "Review extracted club data — confirm to save to Practice history.";
+  document.getElementById("resultsContent").innerHTML = sessions.map(s=>`
+    <div class="round-preview">
+      <h4 style="color:var(--orange)">${esc(s.club)} <span style="font-size:.75rem;color:var(--muted)">${s.date||""} · ${s.shots!=null?s.shots+" shots":"—"}</span></h4>
+      <div class="preview-grid">
+        <div class="preview-row"><span>Avg Carry</span><span>${s.avg_carry_m!=null?s.avg_carry_m+"m":"—"}</span></div>
+        <div class="preview-row"><span>Avg Total</span><span>${s.avg_total_m!=null?s.avg_total_m+"m":"—"}</span></div>
+        <div class="preview-row"><span>Max Carry</span><span>${(s.max_carry_m||s.longest_m)!=null?(s.max_carry_m||s.longest_m)+"m":"—"}</span></div>
+        <div class="preview-row"><span>Min Carry</span><span>${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</span></div>
+        <div class="preview-row"><span>Dispersion</span><span>${s.dispersion_m!=null?s.dispersion_m+"m":"—"}</span></div>
+        <div class="preview-row"><span>Target Hit</span><span>${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</span></div>
+      </div>
+    </div>`).join("");
+  document.getElementById("resultsOverlay").classList.add("active");
+}
+
+async function confirmSave(){
+  document.getElementById("resultsOverlay").classList.remove("active");
+  if(!pendingData) return;
+
+  try{
+    let body;
+    if(pendingData.type==="range"){
+      body=JSON.stringify({target:"range_sessions",range_sessions:pendingData.items});
+    }else{
+      body=JSON.stringify({target:"rounds",rounds:pendingData.items});
+    }
+    const resp=await fetch("/api/save",{method:"POST",headers:{"Content-Type":"application/json"},body});
+    const res=await resp.json();
+    if(res.success){
+      const count=pendingData.items.length;
+      const label=pendingData.type==="range"?"session(s)":"round(s)";
+      showToast(`Saved ${count} ${label} ✓`,"success");
+      await fetchRounds();
+    }else showToast("Save failed: "+res.error,"error");
+  }catch(e){ showToast("Error: "+e.message,"error"); }
+  pendingData=null;
+}
+
+function closeResults(){
+  document.getElementById("resultsOverlay").classList.remove("active");
+  pendingData=null;
+}
+
+/* ── Render all ─────────────────────────────────────────────────────────── */
+function renderAll(){
+  if(activeTab==="practice"){
+    renderPractice();
+  }else{
+    const fr   = filteredRounds();
+    const full = fr.filter(r=>r.holes_played>=18);
+    document.getElementById("roundCount").textContent =
+      `${full.length} rounds (18H) · ${fr.length} total`;
+    renderKPIs(full);
+    renderCharts(full, fr);   // fr passed for inclusive scoring trend
+    renderDamage(fr);
+    renderApproach(fr);
+    renderDriveDistribution(fr);
+    renderPar3(fr);
+    if(activeTab==="real") renderRealSection(fr);
+    if(activeTab!=="real") renderEvals();
+    if(activeTab==="real") renderCoachingReal(fr);
+    else renderCoaching(full);
+    if(activeTab==="all") renderPracticeFocus(full);
+    renderTable(fr);
+  }
+}
+
+/* ── Helpers ────────────────────────────────────────────────────────────── */
+function mean(arr,key){const v=arr.map(r=>r[key]).filter(v=>v!=null&&!isNaN(v));return v.length?v.reduce((a,b)=>a+b,0)/v.length:null}
+function fmtScore(n){return n>0?"+"+n:n===0?"E":String(n)}
+function fmtPct(n){return n!=null?Math.round(n)+"%":"—"}
+function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+function destroyChart(id){const e=Chart.getChart(id);if(e)e.destroy()}
+
+/* ── Estimated Handicap (WHS simplified) ────────────────────────────────── */
+function calcEstHCP(rounds){
+  // Need ≥3 18-hole rounds with a score
+  const eligible = rounds.filter(r=>r.holes_played>=18 && r.score_vs_par!=null);
+  if(eligible.length<3) return null;
+  // Sort ascending (best first)
+  const sorted = [...eligible].sort((a,b)=>a.score_vs_par-b.score_vs_par);
+  const n = eligible.length;
+  // WHS: number of best differentials to use
+  const count = n<=5?1 : n<=8?2 : n<=11?3 : n<=14?4 : n<=16?5 : n<=18?6 : n===19?7 : 8;
+  const best = sorted.slice(0,count);
+  const avg  = best.reduce((s,r)=>s+r.score_vs_par,0)/count;
+  // 0.96 WHS adjustment; floor at 0 (no + handicaps in this tool)
+  return Math.max(0, Math.round(avg*0.96*10)/10);
+}
+
+/* ── Real HCP estimate (includes 9-hole rounds normalised to 18H) ────────── */
+function calcRealHCP(rounds){
+  // Accept 9-hole rounds by doubling their score_vs_par
+  const eligible = rounds.filter(r=>r.score_vs_par!=null && r.holes_played>=9);
+  if(eligible.length<3) return null;
+  const normalized = eligible.map(r=>({
+    ...r,
+    score_vs_par: r.holes_played>=18 ? r.score_vs_par : r.score_vs_par*2
+  }));
+  const sorted = [...normalized].sort((a,b)=>a.score_vs_par-b.score_vs_par);
+  const n = eligible.length;
+  const count = n<=5?1 : n<=8?2 : n<=11?3 : n<=14?4 : n<=16?5 : n<=18?6 : n===19?7 : 8;
+  const best = sorted.slice(0,count);
+  const avg  = best.reduce((s,r)=>s+r.score_vs_par,0)/count;
+  return Math.max(0, Math.round(avg*0.96*10)/10);
+}
+
+/* ── KPI cards ──────────────────────────────────────────────────────────── */
+function renderKPIs(full){
+  const setScore=v=>{
+    const card=document.getElementById("kpi-score"),vEl=document.getElementById("v-score"),dEl=document.getElementById("d-score");
+    if(v==null){vEl.textContent="—";return}
+    vEl.textContent=fmtScore(Math.round(v*10)/10);
+    const d=v-BENCH.score,cls=d<=0?"good":d<3?"warn":"bad";
+    dEl.textContent=d<=0?"✓ on target":`+${d.toFixed(1)} above target`;
+    dEl.className="kpi-delta "+cls;card.className="kpi-card "+cls;
+  };
+  const setHigh=(id,v,bench,sfx)=>{
+    const card=document.getElementById("kpi-"+id),vEl=document.getElementById("v-"+id),dEl=document.getElementById("d-"+id);
+    if(v==null){vEl.textContent="—";return}
+    vEl.textContent=id==="drive"?Math.round(v)+"m":Math.round(v)+"%";
+    const d=v-bench,cls=d>=0?"good":d>-8?"warn":"bad";
+    dEl.textContent=(d>=0?"+":"")+d.toFixed(1)+sfx;dEl.className="kpi-delta "+cls;card.className="kpi-card "+cls;
+  };
+  const setLow=(id,v,bench,sfx)=>{
+    const card=document.getElementById("kpi-"+id),vEl=document.getElementById("v-"+id),dEl=document.getElementById("d-"+id);
+    if(v==null){vEl.textContent="—";return}
+    vEl.textContent=v.toFixed(2);
+    const d=v-bench,cls=d<=0?"good":d<.1?"warn":"bad";
+    dEl.textContent=(d>=0?"+":"")+d.toFixed(2)+sfx;dEl.className="kpi-delta "+cls;card.className="kpi-card "+cls;
+  };
+  document.getElementById("v-rounds").textContent=full.length;
+  document.getElementById("d-rounds").textContent=full.length+" full rounds";
+  document.getElementById("d-rounds").className="kpi-delta";
+  setScore(mean(full,"score_vs_par"));
+  setHigh("gir", mean(full,"gir_pct"),         BENCH.gir, "% vs 58%");
+  setHigh("fw",  mean(full,"fairways_hit_pct"), BENCH.fw,  "% vs 60%");
+  setHigh("scr", mean(full,"scrambling_pct"),   BENCH.scr, "% vs 55%");
+  setLow("putts",mean(full,"putts_per_hole"),   BENCH.putts," vs 1.70");
+  setHigh("drive",mean(full,"avg_drive_m"),     BENCH.drive,"m vs 240m");
+
+  // Estimated handicap — separate Sim vs Real calculation
+  const isRealTab = activeTab === "real";
+  const hcp      = isRealTab ? calcRealHCP(full) : calcEstHCP(full);
+  const lblEl    = document.getElementById("lbl-hcp");
+  const hEl      = document.getElementById("v-hcp");
+  const hDEl     = document.getElementById("d-hcp");
+  const hCard    = document.getElementById("kpi-hcp");
+
+  lblEl.textContent = isRealTab ? "Est. HCP (Real)" : "Est. HCP (Sim)";
+
+  if(hcp===null){
+    hEl.textContent="—";
+    const need = isRealTab
+      ? (full.filter(r=>r.score_vs_par!=null&&r.holes_played>=9).length<3 ? "Need 3+ rounds" : "Calculating…")
+      : (full.filter(r=>r.holes_played>=18&&r.score_vs_par!=null).length<3 ? "Need 3+ 18H rounds" : "Calculating…");
+    hDEl.textContent=need;
+    hDEl.className="kpi-delta";
+    hCard.title="";
+  } else {
+    hEl.textContent=hcp.toFixed(1);
+    const gap = hcp - 5;
+    hDEl.textContent = gap<=0 ? "✓ HCP 5 achieved!" : `${gap.toFixed(1)} away from HCP 5`;
+    hDEl.className = "kpi-delta "+(gap<=0?"good":gap<=3?"warn":"bad");
+    // tooltip explaining method
+    if(isRealTab){
+      const eligible = full.filter(r=>r.score_vs_par!=null&&r.holes_played>=9);
+      const n = eligible.length;
+      const count = n<=5?1:n<=8?2:n<=11?3:n<=14?4:n<=16?5:n<=18?6:n===19?7:8;
+      hCard.title=`WHS simplified: best ${count} of ${n} rounds × 0.96 (9H rounds normalised ×2)`;
+    } else {
+      const eligible = full.filter(r=>r.holes_played>=18&&r.score_vs_par!=null);
+      const n = eligible.length;
+      const count = n<=5?1:n<=8?2:n<=11?3:n<=14?4:n<=16?5:n<=18?6:n===19?7:8;
+      hCard.title=`WHS simplified (simulator): best ${count} of ${n} rounds × 0.96\n⚠ Simulator scores may not reflect real-course difficulty`;
+    }
+  }
+}
+
+/* ── Charts ─────────────────────────────────────────────────────────────── */
+function renderCharts(full, allRounds){
+  const all = allRounds || full;  // allRounds includes 9-hole; full is 18H only
+  if(!full.length && !all.length){
+    ["chartScoring","chartGir","chartFw","chartScrambling","chartRadar"].forEach(id=>{
+      destroyChart(id);
+      const el=document.getElementById(id);
+      if(el){el.style.display="none";const p=el.parentElement;if(p&&!p.querySelector(".chart-no-data")){const d=document.createElement("div");d.className="chart-no-data no-data";d.innerHTML="<p>No rounds in this view yet</p>";p.appendChild(d);}}
+    });
+    return;
+  }
+  ["chartScoring","chartGir","chartFw","chartScrambling","chartRadar"].forEach(id=>{
+    const el=document.getElementById(id);if(el){el.style.display="";}
+    document.querySelectorAll(".chart-no-data").forEach(e=>e.remove());
+  });
+
+  // Scoring trend uses ALL rounds (including 9-hole), with distinct markers
+  const trendRounds = all.length ? all : full;
+  const trendLabels = trendRounds.map((r,i)=>"#"+(i+1)+" "+r.course.split(" ").slice(0,2).join(" "));
+  const is9 = r => r.holes_played && r.holes_played < 18;
+  destroyChart("chartScoring");
+  new Chart("chartScoring",{
+    type:"line",
+    data:{labels:trendLabels,datasets:[
+      {label:"Score vs Par",data:trendRounds.map(r=>r.score_vs_par),borderColor:"#3b82f6",
+        backgroundColor:"rgba(59,130,246,.08)",
+        pointBackgroundColor:trendRounds.map(r=>r.score_vs_par<=3?"#22c55e":r.score_vs_par<=6?"#f59e0b":"#ef4444"),
+        pointStyle:trendRounds.map(r=>is9(r)?"triangle":"circle"),
+        pointRadius:trendRounds.map(r=>is9(r)?7:6),pointHoverRadius:9,tension:.35,fill:true},
+      {label:"HCP5 (+3)",data:trendRounds.map(()=>3),borderColor:"#22c55e",borderDash:[7,4],pointRadius:0,borderWidth:2},
+      {label:"3-Rnd Avg",data:trendRounds.map((_,i)=>{const s=trendRounds.slice(Math.max(0,i-2),i+1);return mean(s,"score_vs_par");}),
+        borderColor:"#a855f7",borderDash:[3,3],pointRadius:0,borderWidth:2},
+    ]},
+    options:{
+      ...CHART_OPTS,
+      scales:{
+        x:{...AXIS_OPTS,ticks:{...AXIS_OPTS.ticks,maxRotation:50,font:{size:10}}},
+        y:{...AXIS_OPTS,title:{display:true,text:"Score vs Par",color:TICK_COLOR}},
+      },
+      plugins:{
+        ...CHART_OPTS.plugins,
+        tooltip:{callbacks:{title:function(tt){const r=trendRounds[tt[0].dataIndex];return r.course+(is9(r)?" (9H)":"");}}}
+      }
+    }
+  });
+
+  const barChart=(id,data,colors,tv,lbl)=>{
+    destroyChart(id);
+    new Chart(id,{type:"bar",data:{labels:full.map((_,i)=>"#"+(i+1)),datasets:[
+      {label:lbl,data,backgroundColor:colors,borderRadius:3},
+      {label:"Target "+tv+"%",data:full.map(()=>tv),type:"line",
+        borderColor:"#22c55e",borderDash:[6,3],pointRadius:0,borderWidth:2},
+    ]},options:{...CHART_OPTS,scales:{
+      x:{...AXIS_OPTS,ticks:{color:TICK_COLOR,font:{size:10}}},y:{...AXIS_OPTS,min:0,max:100},
+    }}});
+  };
+  barChart("chartGir",full.map(r=>r.gir_pct),
+    full.map(r=>r.gir_pct>=58?"rgba(34,197,94,.65)":r.gir_pct>=44?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),58,"GIR %");
+  barChart("chartFw",full.map(r=>r.fairways_hit_pct),
+    full.map(r=>r.fairways_hit_pct==null?"rgba(100,116,139,.3)":r.fairways_hit_pct>=60?"rgba(34,197,94,.65)":r.fairways_hit_pct>=45?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),60,"FW %");
+  barChart("chartScrambling",full.map(r=>r.scrambling_pct),
+    full.map(r=>r.scrambling_pct==null?"rgba(100,116,139,.3)":r.scrambling_pct>=55?"rgba(34,197,94,.65)":r.scrambling_pct>=40?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),55,"Scrambling %");
+
+  destroyChart("chartRadar");
+  const ag=mean(full,"gir_pct")??0,af=mean(full,"fairways_hit_pct")??0,
+        as=mean(full,"scrambling_pct")??0,ap=mean(full,"putts_per_hole")??2,
+        ad=mean(full,"avg_drive_m")??200,asc=mean(full,"score_vs_par")??10;
+  const nm=(v,t,hi=true)=>Math.min(100,Math.round(hi?(v/t)*100:(t/v)*100));
+  new Chart("chartRadar",{type:"radar",data:{
+    labels:["GIR %","Fairway %","Scrambling","Putting","Drive","Scoring"],
+    datasets:[
+      {label:"Current",data:[nm(ag,BENCH.gir),nm(af,BENCH.fw),nm(as,BENCH.scr),
+        nm(BENCH.putts,ap),nm(ad,BENCH.drive),nm(BENCH.score+1,asc+1)],
+        borderColor:"#3b82f6",backgroundColor:"rgba(59,130,246,.18)",pointBackgroundColor:"#3b82f6",pointRadius:4},
+      {label:"HCP 5",data:[100,100,100,100,100,100],borderColor:"#22c55e",
+        borderDash:[5,4],backgroundColor:"rgba(34,197,94,.04)",pointRadius:0},
+    ]},options:{...CHART_OPTS,scales:{r:{min:0,max:100,
+      ticks:{color:TICK_COLOR,backdropColor:"transparent",stepSize:25},
+      grid:{color:"rgba(255,255,255,.08)"},
+      pointLabels:{color:"#cbd5e1",font:{size:11}},
+      angleLines:{color:"rgba(255,255,255,.08)"},
+    }}}});
+}
+
+/* ── Score Damage ───────────────────────────────────────────────────────── */
+function renderDamage(all){
+  const wh=all.filter(r=>(r.holes||[]).length>0);
+  document.getElementById("damageNote").style.display=wh.length>0?"":"none";
+  document.getElementById("damageRoundsCount").textContent=wh.length;
+  const set=(key,val,bench)=>{
+    const card=document.getElementById("dmg-"+key),vEl=document.getElementById("dmg-v-"+key),sEl=document.getElementById("dmg-s-"+key);
+    if(val==null){vEl.textContent="—";sEl.textContent="No data";sEl.className="dmg-status";card.className="damage-card";return}
+    vEl.textContent=val.toFixed(1);
+    const ok=val<=bench;
+    sEl.textContent=ok?"✓ On target":`+${(val-bench).toFixed(1)} above target`;
+    sEl.className="dmg-status "+(ok?"good":"bad");card.className="damage-card "+(ok?"good":"bad");
+  };
+  if(!wh.length){set("doubles",null,1.5);set("triples",null,.3);set("3putts",null,1.0);set("ob",null,.5);return}
+  let db=0,tr=0,tp=0,ob=0;
+  for(const r of wh){for(const h of r.holes){
+    if(h.par&&h.strokes){const d=h.strokes-h.par;if(d===2)db++;if(d>=3)tr++;}
+    if(h.putts!=null&&h.putts>=3)tp++;
+    if(driveLanding(h)==="ob")ob++;
+  }}
+  set("doubles",db/wh.length,1.5);set("triples",tr/wh.length,.3);set("3putts",tp/wh.length,1.0);set("ob",ob/wh.length,.5);
+}
+
+/* ── Approach by Distance ───────────────────────────────────────────────── */
+function renderApproach(all){
+  const buckets=APPROACH_BUCKETS.map(b=>({...b,hits:0,total:0}));
+  for(const r of all){for(const h of r.holes||[]){
+    let dist=null;
+    if(h.par===3&&h.distance_m)dist=h.distance_m;
+    else if(h.par===4&&h.distance_m&&h.drive_m)dist=h.distance_m-h.drive_m;
+    if(dist==null||dist<0)continue;
+    for(const b of buckets){if(dist>=b.min&&dist<b.max){b.total++;if(h.gir)b.hits++;break;}}
+  }}
+  const el=document.getElementById("approachContent");
+  if(!buckets.some(b=>b.total>0)){
+    el.innerHTML=`<div class="no-data"><div class="nd-icon">📊</div><p>No hole-level data yet</p><p class="nd-sub">Drop new screenshots to populate</p></div>`;return;
+  }
+  const rows=buckets.map(b=>{
+    if(!b.total)return`
+      <div class="apb-row">
+        <div class="apb-label">${b.label}</div>
+        <div class="apb-track"><div class="apb-fill" style="width:0%"></div><div class="apb-target"></div></div>
+        <div class="apb-pct" style="color:var(--muted)">—</div>
+        <div class="apb-n" style="color:var(--muted)">0 holes</div>
+      </div>`;
+    const pct=Math.round((b.hits/b.total)*100);
+    const col=pct>=58?"var(--accent)":pct>=44?"var(--warn)":"var(--danger)";
+    const bg=pct>=58?"rgba(34,197,94,.22)":pct>=44?"rgba(245,158,11,.22)":"rgba(239,68,68,.22)";
+    return`
+      <div class="apb-row">
+        <div class="apb-label">${b.label}</div>
+        <div class="apb-track"><div class="apb-fill" style="width:${pct}%;background:${col};opacity:.85"></div><div class="apb-target"></div></div>
+        <div class="apb-pct" style="color:${col}">${pct}%</div>
+        <div class="apb-n">${b.hits}/${b.total}</div>
+      </div>`;
+  }).join("");
+  el.innerHTML=`
+    <div class="apb-header">
+      <span>Distance zone</span><span style="grid-column:2/4;text-align:right;padding-right:4px">GIR %</span><span>Holes</span>
+    </div>
+    <div class="apb-list">${rows}</div>
+    <div class="apb-legend"><span class="apb-leg-dot" style="background:var(--accent)"></span>≥58% on target&ensp;<span class="apb-leg-dot" style="background:var(--warn)"></span>≥44% close&ensp;<span class="apb-leg-dot" style="background:var(--danger)"></span>&lt;44% gap</div>`;
+}
+
+/* ── Drive Distribution ─────────────────────────────────────────────────── */
+function driveLanding(h){
+  // Normalise across different hole data schemas
+  let loc = h.landing || h.approach_location || null;
+  if(loc==null && h.fairway_hit!=null) loc = h.fairway_hit ? "fairway" : "rough";
+  if(!loc) return null;
+  loc = loc.toLowerCase().trim();
+  if(loc==="fairway") return "fairway";
+  if(loc==="deep rough"||loc==="deep_rough") return "deepRough";
+  if(loc==="rough") return "rough";
+  if(loc==="sand"||loc==="bunker") return "sand";
+  if(loc==="ob"||loc==="out of bounds"||loc==="penalty") return "ob";
+  return null;
+}
+
+function renderDriveDistribution(all){
+  const d={fairway:0,rough:0,deepRough:0,sand:0,ob:0};
+  for(const r of all){for(const h of r.holes||[]){
+    if(h.par<4)continue;
+    const loc=driveLanding(h);
+    if(loc&&d[loc]!==undefined)d[loc]++;
+  }}
+  const total=Object.values(d).reduce((a,b)=>a+b,0);
+  const el=document.getElementById("driveContent");
+  if(!total){el.innerHTML=`<div class="no-data"><div class="nd-icon">🏌️</div><p>No hole-level data yet</p><p class="nd-sub">Drop screenshots to populate</p></div>`;return;}
+  el.innerHTML=`<canvas id="chartDrive" style="max-height:220px"></canvas>`;
+  const p=v=>Math.round((v/total)*100);
+  new Chart("chartDrive",{type:"doughnut",data:{
+    labels:["Fairway","Rough","Deep Rough","Sand","OB/Penalty"],
+    datasets:[{data:[d.fairway,d.rough,d.deepRough,d.sand,d.ob],
+      backgroundColor:["rgba(34,197,94,.75)","rgba(245,158,11,.75)","rgba(239,68,68,.65)","rgba(100,116,139,.65)","rgba(239,68,68,.9)"],
+      borderColor:"var(--surface)",borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{position:"bottom",labels:{color:"#94a3b8",font:{size:11},padding:10}},
+      tooltip:{callbacks:{label:c=>{const v=c.raw;return` ${c.label}: ${v} (${p(v)}%)`}}}}}});
+}
+
+/* ── Par 3 ──────────────────────────────────────────────────────────────── */
+function renderPar3(all){
+  const mk=()=>({holes:0,girHits:0,totalStrokes:0,pars:0,bogeys:0,doubles:0});
+  const sh=mk(),lg=mk();
+  for(const r of all){for(const h of r.holes||[]){
+    if(h.par!==3)continue;
+    const b=(h.distance_m||0)<155?sh:lg;
+    b.holes++;if(h.gir)b.girHits++;
+    if(h.strokes){b.totalStrokes+=h.strokes;const d=h.strokes-3;if(d===0)b.pars++;if(d===1)b.bogeys++;if(d>=2)b.doubles++;}
+  }}
+  const rc=(data,idC,idB)=>{
+    if(!data.holes){document.getElementById(idC).textContent="(no data)";return}
+    document.getElementById(idC).textContent=`(${data.holes} holes)`;
+    const avgSc=data.totalStrokes?(data.totalStrokes/data.holes).toFixed(2):"—";
+    const girPct=data.holes?Math.round((data.girHits/data.holes)*100):0;
+    const parPct=data.holes?Math.round((data.pars/data.holes)*100):0;
+    const bogPct=data.holes?Math.round((data.bogeys/data.holes)*100):0;
+    const dblPct=data.holes?Math.round((data.doubles/data.holes)*100):0;
+    const gc=girPct>=58?"col-good":girPct>=44?"col-warn":"col-bad";
+    document.getElementById(idB).innerHTML=`
+      <div class="stat-row"><span>Avg Score</span><span>${avgSc}</span></div>
+      <div class="stat-row"><span>GIR %</span><span class="${gc}">${girPct}%</span></div>
+      <div class="stat-row"><span>Par rate</span><span class="col-good">${parPct}%</span></div>
+      <div class="stat-row"><span>Bogey rate</span><span class="col-warn">${bogPct}%</span></div>
+      <div class="stat-row"><span>Double+ rate</span><span class="${dblPct>20?"col-bad":"col-warn"}">${dblPct}%</span></div>
+      <div class="stat-row"><span>Total holes</span><span>${data.holes}</span></div>`;
+  };
+  rc(sh,"par3ShortCount","par3ShortBody");rc(lg,"par3LongCount","par3LongBody");
+}
+
+/* ── Evaluations ────────────────────────────────────────────────────────── */
+function evalKey(r){return(r.course+"_"+r.date).replace(/\s+/g,"_")}
+
+function openRateModal(roundIndex){
+  const fr=filteredRounds(),r=fr[roundIndex];
+  if(!r)return;
+  currentEvalKey=evalKey(r);
+  const e=evaluations[currentEvalKey]||{decision:5,execution:5,mental:5,notes:""};
+  document.getElementById("rateRoundName").textContent=`${r.course} — ${r.date||"?"}`;
+  ["Decision","Execution","Mental"].forEach(n=>{
+    const sl=document.getElementById("s"+n),vl=document.getElementById(n[0].toLowerCase()+"Val");
+    sl.value=e[n.toLowerCase()];vl.textContent=e[n.toLowerCase()];
+  });
+  document.getElementById("evalNotes").value=e.notes||"";
+  document.getElementById("rateOverlay").classList.add("active");
+}
+
+function saveEval(){
+  if(!currentEvalKey)return;
+  evaluations[currentEvalKey]={
+    decision:parseInt(document.getElementById("sDecision").value),
+    execution:parseInt(document.getElementById("sExecution").value),
+    mental:parseInt(document.getElementById("sMental").value),
+    notes:document.getElementById("evalNotes").value.trim(),
+  };
+  localStorage.setItem("golf_evals",JSON.stringify(evaluations));
+  document.getElementById("rateOverlay").classList.remove("active");
+  showToast("Evaluation saved ✓","success");renderAll();
+}
+
+function renderEvals(){
+  const fr=filteredRounds(),rated=fr.filter(r=>evaluations[evalKey(r)]);
+  const listEl=document.getElementById("evalList");
+  if(!rated.length){
+    listEl.innerHTML=`<div class="no-data" style="padding:16px"><p>Rate rounds via the table below</p></div>`;
+  }else{
+    listEl.innerHTML=rated.slice(-6).reverse().map(r=>{
+      const e=evaluations[evalKey(r)];
+      return`<div class="eval-item">
+        <div class="eval-course">${esc(r.course)} — ${r.date||"?"} <span style="color:var(--muted);font-weight:400">${fmtScore(r.score_vs_par)}</span></div>
+        <div class="eval-bars">${[["D",e.decision],["E",e.execution],["M",e.mental]].map(([l,v])=>`
+          <div class="eval-bar-wrap"><div class="eval-bar-label">${l}</div>
+          <div class="eval-mini-bar"><div class="eval-mini-fill" style="width:${v*10}%"></div></div>
+          <div style="font-size:.7rem;font-weight:700;margin-top:1px">${v}</div></div>`).join("")}
+        </div>${e.notes?`<div style="font-size:.75rem;color:var(--muted);margin-top:5px;font-style:italic">${esc(e.notes)}</div>`:""}
+      </div>`;}).join("");}
+  const wrapEl=document.getElementById("evalChartWrap");
+  if(rated.length<2){wrapEl.innerHTML=`<div class="no-data"><div class="nd-icon">📝</div><p>Rate at least 2 rounds to see trends</p></div>`;return;}
+  wrapEl.innerHTML=`<canvas id="chartEval" style="max-height:220px"></canvas>`;
+  destroyChart("chartEval");
+  new Chart("chartEval",{type:"line",data:{
+    labels:rated.map((r,i)=>"#"+(fr.indexOf(r)+1)+" "+r.course.split(" ")[0]),
+    datasets:[
+      {label:"Decision",data:rated.map(r=>evaluations[evalKey(r)].decision),borderColor:"#3b82f6",pointRadius:4,tension:.3,borderWidth:2,yAxisID:"y1"},
+      {label:"Execution",data:rated.map(r=>evaluations[evalKey(r)].execution),borderColor:"#a855f7",pointRadius:4,tension:.3,borderWidth:2,yAxisID:"y1"},
+      {label:"Mental",data:rated.map(r=>evaluations[evalKey(r)].mental),borderColor:"#f59e0b",pointRadius:4,tension:.3,borderWidth:2,yAxisID:"y1"},
+      {label:"Score",data:rated.map(r=>r.score_vs_par),borderColor:"#ef4444",pointRadius:4,tension:.3,borderWidth:2,borderDash:[4,3],yAxisID:"y2"},
+    ]},options:{...CHART_OPTS,scales:{
+      x:{...AXIS_OPTS,ticks:{color:TICK_COLOR,font:{size:10},maxRotation:45}},
+      y1:{...AXIS_OPTS,min:0,max:10,title:{display:true,text:"Rating",color:TICK_COLOR},position:"left"},
+      y2:{...AXIS_OPTS,title:{display:true,text:"Score vs Par",color:TICK_COLOR},position:"right",grid:{display:false}},
+    }}});
+}
+
+/* ── Coaching Insights ──────────────────────────────────────────────────── */
+function renderCoaching(full){
+  if(!full.length)return;
+  const ag=mean(full,"gir_pct"),af=mean(full,"fairways_hit_pct"),
+        as=mean(full,"scrambling_pct"),ap=mean(full,"putts_per_hole"),asc=mean(full,"score_vs_par");
+  const gaps=[];
+  if(ag!=null)gaps.push({key:"gir",gap:(BENCH.gir-ag)/BENCH.gir,val:ag});
+  if(as!=null)gaps.push({key:"scr",gap:(BENCH.scr-as)/BENCH.scr,val:as});
+  if(ap!=null)gaps.push({key:"putts",gap:(ap-BENCH.putts)/BENCH.putts,val:ap});
+  if(asc!=null)gaps.push({key:"score",gap:(asc-BENCH.score)/(BENCH.score+1),val:asc});
+  if(af!=null)gaps.push({key:"fw",gap:(BENCH.fw-af)/BENCH.fw,val:af});
+  gaps.sort((a,b)=>b.gap-a.gap);
+  const hiGir=full.filter(r=>r.gir_pct!=null&&r.gir_pct>=58),loGir=full.filter(r=>r.gir_pct!=null&&r.gir_pct<58);
+  const hiSc=mean(hiGir,"score_vs_par"),loSc=mean(loGir,"score_vs_par");
+  const early=full.slice(0,4),recent=full.slice(-4),trend=mean(recent,"score_vs_par")-mean(early,"score_vs_par");
+  const best=full.reduce((a,b)=>a.score_vs_par<b.score_vs_par?a:b,full[0]);
+  const items=[];
+  if(trend<-1.0)items.push({cls:"positive",title:`📈 Improving: avg +${mean(early,"score_vs_par").toFixed(1)} → +${mean(recent,"score_vs_par").toFixed(1)}`,text:`Last 4 rounds ${Math.abs(trend).toFixed(1)} strokes better than your first 4. Clear upward trajectory.`});
+  else if(trend>1.0)items.push({cls:"secondary",title:"📉 Recent uptick — review patterns",text:`Last 4 rounds averaging +${mean(recent,"score_vs_par").toFixed(1)} vs +${mean(early,"score_vs_par").toFixed(1)} earlier.`});
+  for(const g of gaps.slice(0,2)){
+    if(g.gap<=0)continue;
+    if(g.key==="gir"){let t=`GIR at ${Math.round(g.val)}% vs 58% target.`;if(hiSc!=null&&loSc!=null)t+=` GIR≥58% rounds score +${hiSc.toFixed(1)} vs +${loSc.toFixed(1)} — a ${(loSc-hiSc).toFixed(1)}-stroke premium.`;items.push({cls:"priority",title:"🎯 #1 Gap: Approach play accuracy",text:t});}
+    else if(g.key==="scr")items.push({cls:"priority",title:`🔄 Scrambling ${(BENCH.scr-g.val).toFixed(0)}% below target`,text:`${Math.round(g.val)}% vs 55%. Chip/pitch from 10–30m is the primary short game deficit.`});
+    else if(g.key==="putts")items.push({cls:"secondary",title:"⛳ Putting: 3-putt elimination",text:`${g.val.toFixed(2)} putts/hole vs 1.70. Lag putting from >7m key — one fewer 3-putt = one stroke.`});
+    else if(g.key==="fw")items.push({cls:"secondary",title:"🏌️ Tee accuracy below target",text:`${Math.round(g.val)}% FW vs 60%. GIR data shows approach from rough still effective on wide courses.`});
+  }
+  items.push({cls:"secondary",title:"⚠ Par 3 pattern: club selection above 155m",text:"Historical data shows consistent doubles on par 3s over 155m. Consider 5-iron or hybrid instead of 1/3-iron for 155–175m."});
+  items.push({cls:"positive",title:`⭐ Ceiling proof: ${best.course} (${fmtScore(best.score_vs_par)})`,text:`${best.gir_pct!=null?best.gir_pct+"% GIR that round — ":""}replicate the approach quality and decision-making from that day.`});
+  items.push({cls:"positive",title:"💪 Squash athlete advantage",text:"Elite hand-eye coordination transfers directly to iron play precision. One focused range session delivers disproportionate gains."});
+  document.getElementById("feedbackGrid").innerHTML=items.map(it=>`<div class="fb-item ${it.cls}"><strong>${it.title}</strong><p>${it.text}</p></div>`).join("");
+}
+
+/* ── Practice Focus ─────────────────────────────────────────────────────── */
+const PRACTICE_RECS={
+  gir:{title:"Approach Play: 130–170m Distance Control",text:"Biggest scoring lever. Iron distance calibration — 6i to 9i carry distances.",
+    drills:["50 balls: alternate 7i/8i, record carries","130m, 150m, 170m target sessions","Note every approach result vs pin distance"]},
+  scr:{title:"Short Game: Chip & Pitch Conversion",text:"Scrambling gap = missed pars from off the green. Focus on 10–30m landing spot control.",
+    drills:["30-min bump-and-run sessions (9i, PW)","Pitch from rough: 15m, 20m, 25m","Up-and-down challenge: 10 balls, different lies"]},
+  putts:{title:"Putting: Lag Putting from 7–12m",text:"3-putt elimination without changing ball-striking.",
+    drills:["Lag drill: 10 putts from 8m, within 60cm","Distance gate: two tees 50cm wide at 8m","Pre-round warm-up: 5 min lag only"]},
+  fw:{title:"Tee Play: Fairway % Improvement",text:"Better tee shots simplify approach yardages and reduce penalties.",
+    drills:["Alignment sticks drill: two parallel rods","Split fairway: aim left vs right half","Tempo check: slower backswing = more consistent"]},
+  score:{title:"Course Management: Eliminate Doubles",text:"One fewer double per round = one stroke. Smarter decisions on tight holes.",
+    drills:["Pre-shot: always identify miss zone first","Par 3 rule: uncertain distance → one more club","Bogey golf mindset: lag putts, avoid 3-putts"]},
+};
+function renderPracticeFocus(full){
+  if(!full.length){document.getElementById("practiceFocusGrid").innerHTML=`<p style="color:var(--muted);font-size:.85rem">No data yet.</p>`;return}
+  const ag=mean(full,"gir_pct"),af=mean(full,"fairways_hit_pct"),as=mean(full,"scrambling_pct"),ap=mean(full,"putts_per_hole"),asc=mean(full,"score_vs_par");
+  const gaps=[];
+  if(ag!=null)gaps.push({key:"gir",gap:(BENCH.gir-ag)/BENCH.gir});
+  if(as!=null)gaps.push({key:"scr",gap:(BENCH.scr-as)/BENCH.scr});
+  if(ap!=null)gaps.push({key:"putts",gap:(ap-BENCH.putts)/BENCH.putts});
+  if(asc!=null)gaps.push({key:"score",gap:(asc-BENCH.score)/(BENCH.score+1)});
+  if(af!=null)gaps.push({key:"fw",gap:(BENCH.fw-af)/BENCH.fw});
+  gaps.sort((a,b)=>b.gap-a.gap);
+  const top2=gaps.filter(g=>g.gap>0).slice(0,2);
+  if(!top2.length){document.getElementById("practiceFocusGrid").innerHTML=`<div class="practice-item"><div class="prio-label p1">All on target</div><h4>Maintain current form</h4><p>All metrics meeting benchmarks.</p></div>`;return}
+  document.getElementById("practiceFocusGrid").innerHTML=top2.map((g,i)=>{
+    const r=PRACTICE_RECS[g.key];if(!r)return"";
+    return`<div class="practice-item"><div class="prio-label ${i===0?"p1":"p2"}">${i===0?"Primary Focus":"Secondary Focus"}</div><h4>${r.title}</h4><p>${r.text}</p><div class="drills">${r.drills.map(d=>`<span>${esc(d)}</span>`).join("")}</div></div>`;
+  }).join("");
+}
+
+/* ── Round History Table ────────────────────────────────────────────────── */
+function renderTable(all){
+  const body=document.getElementById("roundBody");
+  const head=document.getElementById("roundHead");
+  const isReal=(activeTab==="real");
+  const colspan=isReal?8:13;
+  if(!all.length){
+    if(head)head.innerHTML=`<th colspan="${colspan}" style="text-align:center;color:var(--muted)">No rounds in this view</th>`;
+    body.innerHTML="";return;
+  }
+  const fr=filteredRounds();
+
+  if(isReal){
+    // Simplified header for Real tab — score-focused, no shot stats
+    if(head)head.innerHTML=`<th>#</th><th>Course</th><th>Date</th><th>Holes</th><th>Score</th><th>Strokes</th><th>Par</th><th>Eval</th>`;
+    body.innerHTML=all.map((r,i)=>{
+      const sc=r.score_vs_par,sp=sc!=null?(sc<=3?"pill-good":sc<=6?"pill-warn":"pill-bad"):"pill-neutral";
+      const he=!!evaluations[evalKey(r)],fi=fr.indexOf(r);
+      const par=r.par||(r.total_strokes!=null&&sc!=null?r.total_strokes-sc:null);
+      return`<tr>
+        <td style="color:var(--muted)">${i+1}</td>
+        <td><strong>${esc(r.course||"—")}</strong></td>
+        <td style="color:var(--muted)">${r.date||"—"}</td>
+        <td style="color:var(--muted)">${r.holes_played??"—"}</td>
+        <td><span class="pill ${sp}">${sc!=null?fmtScore(sc):"—"}</span></td>
+        <td>${r.total_strokes??"—"}</td>
+        <td style="color:var(--muted)">${par??"—"}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="openRateModal(${fi})"
+          style="${he?"color:var(--accent);border-color:var(--accent)":""}">${he?"★":"Rate"}</button></td>
+      </tr>`;}).join("");
+  } else {
+    // Full header for All/Simulator tabs
+    if(head)head.innerHTML=`<th>#</th><th>Type</th><th>Course</th><th>Date</th><th>Score</th><th>Strokes</th><th>Holes</th><th>FW%</th><th>Drive</th><th>GIR%</th><th>Scrambling</th><th>Putts/H</th><th>Eval</th>`;
+    body.innerHTML=all.map((r,i)=>{
+      const sc=r.score_vs_par,sp=sc<=3?"pill-good":sc<=6?"pill-warn":"pill-bad";
+      const tp=r.source_type==="real"?"pill-real":"pill-neutral",tl=r.source_type==="real"?"Real":"Sim";
+      const gc=r.gir_pct==null?"":r.gir_pct>=58?"col-good":r.gir_pct>=44?"col-warn":"col-bad";
+      const fc=r.fairways_hit_pct==null?"":r.fairways_hit_pct>=60?"col-good":r.fairways_hit_pct>=45?"col-warn":"col-bad";
+      const sc2=r.scrambling_pct==null?"":r.scrambling_pct>=55?"col-good":r.scrambling_pct>=40?"col-warn":"col-bad";
+      const pc=r.putts_per_hole==null?"":r.putts_per_hole<=1.70?"col-good":r.putts_per_hole<=1.85?"col-warn":"col-bad";
+      const he=!!evaluations[evalKey(r)],fi=fr.indexOf(r);
+      return`<tr>
+        <td style="color:var(--muted)">${i+1}</td>
+        <td><span class="pill ${tp}">${tl}</span></td>
+        <td><strong>${esc(r.course||"—")}</strong></td>
+        <td style="color:var(--muted)">${r.date||"—"}</td>
+        <td><span class="pill ${sp}">${sc!=null?fmtScore(sc):"—"}</span></td>
+        <td>${r.total_strokes??"—"}</td><td style="color:var(--muted)">${r.holes_played??"—"}</td>
+        <td class="${fc}">${fmtPct(r.fairways_hit_pct)}</td>
+        <td>${r.avg_drive_m?r.avg_drive_m+"m":"—"}</td>
+        <td class="${gc}">${fmtPct(r.gir_pct)}</td>
+        <td class="${sc2}">${fmtPct(r.scrambling_pct)}</td>
+        <td class="${pc}">${r.putts_per_hole!=null?r.putts_per_hole.toFixed(2):"—"}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="openRateModal(${fi})"
+          style="${he?"color:var(--accent);border-color:var(--accent)":""}">${he?"★":"Rate"}</button></td>
+      </tr>`;}).join("");
+  }
+}
+
+/* ── Coaching Insights — Real Course specific ───────────────────────────── */
+function renderCoachingReal(fr){
+  const grid=document.getElementById("feedbackGrid");
+  if(!fr.length){grid.innerHTML=`<p style="color:var(--muted);font-size:.85rem">No real rounds yet.</p>`;return;}
+  const withHoles=fr.filter(r=>(r.holes||[]).length>0);
+  const items=[];
+
+  // 1. Score trend
+  const sorted=[...fr].filter(r=>r.score_vs_par!=null).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  if(sorted.length>=3){
+    const recent=sorted.slice(-3),earlier=sorted.slice(0,3);
+    const rAvg=mean(recent,"score_vs_par"),eAvg=mean(earlier,"score_vs_par");
+    if(rAvg!=null&&eAvg!=null){
+      const delta=rAvg-eAvg;
+      if(delta<-1)items.push({cls:"positive",title:`📈 Improving: avg ${eAvg>0?"+":""}${eAvg.toFixed(1)} → ${rAvg>0?"+":""}${rAvg.toFixed(1)}`,text:`Recent rounds trending ${Math.abs(delta).toFixed(1)} strokes better. Keep building on this momentum.`});
+      else if(delta>1.5)items.push({cls:"secondary",title:"📉 Recent rounds tougher",text:`Last 3 rounds avg ${rAvg>0?"+":""}${rAvg.toFixed(1)} vs earlier ${eAvg>0?"+":""}${eAvg.toFixed(1)}. Review course management decisions.`});
+    }
+  }
+
+  // 2. Par type weakness
+  if(withHoles.length){
+    const mk=()=>({n:0,s:0});
+    const t3=mk(),t4=mk(),t5=mk(),tMap={3:t3,4:t4,5:t5};
+    for(const r of withHoles) for(const h of r.holes||[]){
+      const t=tMap[h.par];if(!t||!h.strokes)continue;t.n++;t.s+=h.strokes;
+    }
+    const avps=[[3,t3],[4,t4],[5,t5]].filter(([p,t])=>t.n>=3).map(([p,t])=>({par:p,avp:t.s/t.n-p,n:t.n}));
+    avps.sort((a,b)=>b.avp-a.avp);
+    if(avps[0]){
+      const w=avps[0];
+      const label=w.par===3?"Par 3s":w.par===4?"Par 4s":"Par 5s";
+      items.push({cls:"priority",title:`🎯 Biggest gap: ${label} averaging +${w.avp.toFixed(2)}`,
+        text:w.par===3?`${w.n} par 3s played — averaging ${(w.avp+3).toFixed(2)} per hole. Focus: commit to club, full swing. Doubt → one more club.`
+           :w.par===4?`${w.n} par 4s — key scoring holes. Target: +0.7 avg for HCP 5. Focus on tee shot placement to avoid recovery shots.`
+           :`${w.n} par 5s — birdie opportunities being missed. Par 5s should be your lowest vs-par holes. Focus on lay-up positioning.`});
+    }
+    // 3. Doubles analysis
+    let doubles=0,totalHoles=0;
+    for(const r of withHoles) for(const h of r.holes||[]){
+      if(!h.strokes||!h.par)continue;totalHoles++;if(h.strokes-h.par>=2)doubles++;
+    }
+    if(totalHoles>0){
+      const dRate=doubles/(withHoles.length);
+      if(dRate>1.5)items.push({cls:"priority",title:`💥 Doubles: ${dRate.toFixed(1)}/round — critical damage`,text:`${doubles} doubles across ${withHoles.length} round(s). Each double costs 2 strokes above par. One fewer double = one full shot off your HCP.`});
+      else if(dRate>0.7)items.push({cls:"secondary",title:`⚠ Doubles: ${dRate.toFixed(1)}/round — room to improve`,text:`Target ≤1.5/round for HCP 5. Bogey golf mindset: when in trouble, take the bogey and move on.`});
+      else items.push({cls:"positive",title:`✓ Doubles under control: ${dRate.toFixed(1)}/round`,text:`You're averaging ${dRate.toFixed(1)} doubles/round — on target for HCP 5. Eliminate to reach HCP 3-4.`});
+    }
+    // 4. Front vs back pattern
+    const fb=withHoles.map(r=>{
+      const front=(r.holes||[]).filter(h=>h.number>=1&&h.number<=9);
+      const back=(r.holes||[]).filter(h=>h.number>=10&&h.number<=18);
+      if(!front.length||!back.length)return null;
+      const fvp=front.reduce((s,h)=>s+(h.strokes||0),0)-front.reduce((s,h)=>s+(h.par||0),0);
+      const bvp=back.reduce((s,h)=>s+(h.strokes||0),0)-back.reduce((s,h)=>s+(h.par||0),0);
+      return{fvp,bvp};
+    }).filter(Boolean);
+    if(fb.length>=2){
+      const avgF=fb.reduce((s,x)=>s+x.fvp,0)/fb.length;
+      const avgB=fb.reduce((s,x)=>s+x.bvp,0)/fb.length;
+      if(avgB-avgF>2.5)items.push({cls:"secondary",title:`🔄 Back 9 fatigue: avg +${avgB.toFixed(1)} vs front +${avgF.toFixed(1)}`,text:`Back 9 consistently costs ${(avgB-avgF).toFixed(1)} more strokes. Check: pre-round warm-up, hydration, mental reset at the turn.`});
+      else if(avgF-avgB>2.5)items.push({cls:"positive",title:`🔄 Strong finisher: back 9 avg +${avgB.toFixed(1)} vs front +${avgF.toFixed(1)}`,text:`You finish stronger than you start — warm-up routine could help the front 9.`});
+    }
+  }
+
+  // 5. Best round reference
+  const best=fr.filter(r=>r.score_vs_par!=null).sort((a,b)=>a.score_vs_par-b.score_vs_par)[0];
+  if(best)items.push({cls:"positive",title:`⭐ Best real round: ${best.course} (${fmtScore(best.score_vs_par)})`,text:`On ${best.date||"that day"} you shot your best score on a real course. Revisit your routine and mindset from that round.`});
+
+  if(!items.length)items.push({cls:"secondary",title:"📋 Add more rounds for insights",text:"Upload more scorecard photos to generate pattern-based coaching insights."});
+  grid.innerHTML=items.map(it=>`<div class="fb-item ${it.cls}"><strong>${it.title}</strong><p>${it.text}</p></div>`).join("");
+}
+
+/* ── Real Course Section ────────────────────────────────────────────────── */
+function renderRealSection(fr){
+  renderParTypePerf(fr);
+  renderScoreDistribution(fr);
+  renderFrontBack(fr);
+  renderHoleDifficulty(fr);
+}
+
+function renderParTypePerf(fr){
+  const mk=()=>({n:0,s:0,birdie:0,par_:0,bogey:0,double:0});
+  const t3=mk(),t4=mk(),t5=mk();
+  const tMap={3:t3,4:t4,5:t5};
+  for(const r of fr) for(const h of r.holes||[]){
+    const p=h.par,s=h.strokes;
+    if(!p||!s||!tMap[p])continue;
+    const t=tMap[p],d=s-p;
+    t.n++;t.s+=s;
+    if(d<=-1)t.birdie++;else if(d===0)t.par_++;else if(d===1)t.bogey++;else t.double++;
+  }
+  const render=(id,par,t,color,label)=>{
+    const el=document.getElementById(id);
+    if(!t.n){el.innerHTML=`<div class="par-type-title" style="color:${color}">${label}</div><div class="no-data" style="padding:14px 0;font-size:.78rem"><p>No data yet</p></div>`;return;}
+    const avg=t.s/t.n,avp=avg-par;
+    const ac=avp<=0?"var(--accent)":avp<=1?"var(--warn)":"var(--danger)";
+    const pct=v=>Math.round((v/t.n)*100);
+    el.innerHTML=`
+      <div class="par-type-title" style="color:${color}">${label}</div>
+      <div class="par-type-avg" style="color:${ac}">${avg.toFixed(2)}</div>
+      <div style="font-size:.7rem;color:var(--muted);margin-bottom:10px">${avp>=0?"+":""}${avp.toFixed(2)} vs par · ${t.n} holes</div>
+      <div class="stat-row"><span>Birdie or better</span><span class="col-good">${pct(t.birdie)}%</span></div>
+      <div class="stat-row"><span>Par</span><span style="color:var(--blue)">${pct(t.par_)}%</span></div>
+      <div class="stat-row"><span>Bogey</span><span class="col-warn">${pct(t.bogey)}%</span></div>
+      <div class="stat-row"><span>Double+</span><span class="col-bad">${pct(t.double)}%</span></div>`;
+  };
+  render("ptPar3",3,t3,"#3b82f6","Par 3s");
+  render("ptPar4",4,t4,"#22c55e","Par 4s");
+  render("ptPar5",5,t5,"#a855f7","Par 5s");
+}
+
+function renderScoreDistribution(fr){
+  const d={eagle:0,birdie:0,par:0,bogey:0,double:0,triple:0};
+  let total=0;
+  for(const r of fr) for(const h of r.holes||[]){
+    if(!h.par||!h.strokes)continue;
+    const diff=h.strokes-h.par;total++;
+    if(diff<=-2)d.eagle++;else if(diff===-1)d.birdie++;else if(diff===0)d.par++;
+    else if(diff===1)d.bogey++;else if(diff===2)d.double++;else d.triple++;
+  }
+  const el=document.getElementById("scoreDistContent");
+  if(!total){el.innerHTML=`<div class="no-data"><div class="nd-icon">📊</div><p>No hole data yet</p><p class="nd-sub">Upload a scorecard photo to populate</p></div>`;return;}
+  const pct=v=>Math.round((v/total)*100);
+  el.innerHTML=`
+    <div class="score-dist-grid">
+      <div class="score-badge"><div class="sb-count sb-eagle">${d.eagle}</div><span class="sb-label">Eagle</span><div style="font-size:.68rem;color:var(--muted)">${pct(d.eagle)}%</div></div>
+      <div class="score-badge"><div class="sb-count sb-birdie">${d.birdie}</div><span class="sb-label">Birdie</span><div style="font-size:.68rem;color:var(--muted)">${pct(d.birdie)}%</div></div>
+      <div class="score-badge"><div class="sb-count sb-par">${d.par}</div><span class="sb-label">Par</span><div style="font-size:.68rem;color:var(--muted)">${pct(d.par)}%</div></div>
+      <div class="score-badge"><div class="sb-count sb-bogey">${d.bogey}</div><span class="sb-label">Bogey</span><div style="font-size:.68rem;color:var(--muted)">${pct(d.bogey)}%</div></div>
+      <div class="score-badge"><div class="sb-count sb-double">${d.double+d.triple}</div><span class="sb-label">Dbl+</span><div style="font-size:.68rem;color:var(--muted)">${pct(d.double+d.triple)}%</div></div>
+    </div>
+    <canvas id="chartScoreDist" style="max-height:170px"></canvas>`;
+  destroyChart("chartScoreDist");
+  new Chart("chartScoreDist",{type:"doughnut",data:{
+    labels:["Eagle","Birdie","Par","Bogey","Double","Triple+"],
+    datasets:[{data:[d.eagle,d.birdie,d.par,d.bogey,d.double,d.triple],
+      backgroundColor:["#f59e0b","#22c55e","#3b82f6","#f97316","#ef4444","#991b1b"],
+      borderColor:"var(--surface)",borderWidth:2}]
+  },options:{responsive:true,maintainAspectRatio:true,
+    plugins:{legend:{position:"bottom",labels:{color:"#94a3b8",font:{size:10},padding:8,boxWidth:10}},
+    tooltip:{callbacks:{label:c=>{const v=c.raw;return` ${c.label}: ${v} (${pct(v)}%)`}}}}}});
+}
+
+function renderFrontBack(fr){
+  const wh=fr.filter(r=>(r.holes||[]).length>=9);
+  const el=document.getElementById("frontBackContent");
+  if(!wh.length){el.innerHTML=`<div class="no-data"><div class="nd-icon">🔄</div><p>No hole data yet</p><p class="nd-sub">Upload a scorecard to populate</p></div>`;return;}
+  const labels=wh.map(r=>r.course.split(" ").slice(0,2).join(" "));
+  const calc9=(r,from,to)=>{
+    const holes=(r.holes||[]).filter(h=>h.number>=from&&h.number<=to);
+    if(!holes.length)return null;
+    const s=holes.reduce((a,h)=>a+(h.strokes||0),0);
+    const p=holes.reduce((a,h)=>a+(h.par||0),0);
+    return p?s-p:null;
+  };
+  const frontData=wh.map(r=>calc9(r,1,9));
+  const backData=wh.map(r=>calc9(r,10,18));
+  el.innerHTML=`<canvas id="chartFrontBack" style="max-height:220px"></canvas>`;
+  destroyChart("chartFrontBack");
+  new Chart("chartFrontBack",{type:"bar",data:{labels,datasets:[
+    {label:"Front 9 vs Par",data:frontData,backgroundColor:"rgba(59,130,246,.65)",borderRadius:3},
+    {label:"Back 9 vs Par",data:backData,backgroundColor:"rgba(168,85,247,.65)",borderRadius:3},
+  ]},options:{...CHART_OPTS,scales:{
+    x:{...AXIS_OPTS,ticks:{color:TICK_COLOR,font:{size:10},maxRotation:45}},
+    y:{...AXIS_OPTS,title:{display:true,text:"Strokes vs Par",color:TICK_COLOR}},
+  }}});
+}
+
+function renderHoleDifficulty(fr){
+  const hd={};
+  for(let i=1;i<=18;i++)hd[i]={n:0,total:0,par:4};
+  for(const r of fr) for(const h of r.holes||[]){
+    if(!h.number||!h.strokes||!h.par)continue;
+    const n=h.number;if(n<1||n>18)continue;
+    hd[n].n++;hd[n].total+=h.strokes;hd[n].par=h.par;
+  }
+  const el=document.getElementById("holeDiffContent");
+  if(!Object.values(hd).some(d=>d.n>0)){
+    el.innerHTML=`<div class="no-data"><div class="nd-icon">🗺️</div><p>No hole data yet</p><p class="nd-sub">Upload a scorecard to see hole difficulty</p></div>`;return;
+  }
+  const labels=Object.keys(hd).map(h=>"H"+h);
+  const data=Object.values(hd).map(d=>d.n>0?Math.round(((d.total/d.n)-d.par)*10)/10:null);
+  const cols=data.map(v=>v===null?"rgba(100,116,139,.2)":v<=0?"rgba(34,197,94,.7)":v<=1?"rgba(245,158,11,.7)":"rgba(239,68,68,.7)");
+  el.innerHTML=`<canvas id="chartHoleDiff" style="max-height:200px"></canvas>`;
+  destroyChart("chartHoleDiff");
+  new Chart("chartHoleDiff",{type:"bar",data:{labels,datasets:[
+    {label:"Avg vs Par",data,backgroundColor:cols,borderRadius:3}
+  ]},options:{...CHART_OPTS,scales:{
+    x:{...AXIS_OPTS,ticks:{color:TICK_COLOR,font:{size:10}}},
+    y:{...AXIS_OPTS,title:{display:true,text:"Avg strokes over par",color:TICK_COLOR}},
+  }}});
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PRACTICE TAB
+════════════════════════════════════════════════════════════════════════════ */
+function renderPractice(){
+  document.getElementById("roundCount").textContent =
+    `${rangeSessions.length} range session(s) · ${new Set(rangeSessions.map(s=>s.club)).size} clubs tracked`;
+
+  if(!rangeSessions.length){
+    document.getElementById("clubGrid").innerHTML=`<div class="no-data" style="padding:24px;grid-column:1/-1"><div class="nd-icon">🏌️</div><p>No practice sessions yet</p><p class="nd-sub">Drop range screenshots above to start tracking</p></div>`;
+    ["clubTrendWrap","clubConsistWrap","clubAccuracyWrap"].forEach(id=>{
+      document.getElementById(id).innerHTML=`<div class="no-data"><div class="nd-icon">📊</div><p>Awaiting data</p></div>`;
+    });
+    document.getElementById("rangeBody").innerHTML=`<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;
+    return;
+  }
+
+  renderClubCards();
+  renderClubTrend();
+  renderClubConsistency();
+  renderClubAccuracy();
+  renderRangeTable();
+}
+
+/* Get unique clubs sorted by typical bag order */
+function getClubs(){
+  const order=["Driver","3W","3-Wood","5W","5-Wood","2I","3I","4I","5I","6I","7I","7-Iron","8I","9I","PW","52°","56°","60°"];
+  const clubs=[...new Set(rangeSessions.map(s=>s.club))];
+  clubs.sort((a,b)=>{const ia=order.findIndex(x=>x.toLowerCase()===a.toLowerCase()),ib=order.findIndex(x=>x.toLowerCase()===b.toLowerCase());if(ia>=0&&ib>=0)return ia-ib;if(ia>=0)return-1;if(ib>=0)return 1;return a.localeCompare(b);});
+  return clubs;
+}
+
+/* Latest session data per club */
+function latestByClub(){
+  const clubs=getClubs(),result={};
+  for(const club of clubs){
+    const sessions=rangeSessions.filter(s=>s.club===club).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+    result[club]=sessions;
+  }
+  return result;
+}
+
+function renderClubCards(){
+  const byClub=latestByClub();
+  const clubs=Object.keys(byClub);
+  document.getElementById("clubGrid").innerHTML=clubs.map((club,ci)=>{
+    const sessions=byClub[club];
+    const latest=sessions[sessions.length-1];
+    const prev=sessions.length>1?sessions[sessions.length-2]:null;
+    const carry=latest.avg_carry_m;
+    const maxC=latest.max_carry_m||latest.longest_m;
+    const minC=latest.min_carry_m;
+    const acc=latest.target_hit_pct;
+    const accCls=acc==null?"":acc>=65?"col-good":acc>=45?"col-warn":"col-bad";
+    let trendHtml="";
+    if(prev&&prev.avg_carry_m&&carry){
+      const d=carry-prev.avg_carry_m;
+      if(Math.abs(d)>=2)trendHtml=`<div class="club-trend ${d>0?"trend-up":"trend-down"}">${d>0?"▲":"▼"} ${Math.abs(d)}m vs prev</div>`;
+      else trendHtml=`<div class="club-trend trend-flat">— stable</div>`;
+    }
+    const color=CLUB_COLORS[ci%CLUB_COLORS.length];
+    return`<div class="club-card" style="border-top:3px solid ${color}">
+      <div class="club-name">${esc(club)}</div>
+      ${carry!=null?`<div class="club-carry">${carry}</div><div class="club-carry-unit">avg carry (m)</div>`:"<div style='color:var(--muted);font-size:.8rem'>No carry data</div>"}
+      ${maxC!=null&&minC!=null?`<div class="club-range">${minC}–${maxC}m range</div>`:(maxC!=null?`<div class="club-range">max ${maxC}m</div>`:"") }
+      ${acc!=null?`<div class="club-accuracy ${accCls}">${acc}% target hit</div>`:""}
+      ${trendHtml}
+      <div class="club-sessions">${sessions.length} session${sessions.length>1?"s":""}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderClubTrend(){
+  const byClub=latestByClub();
+  const clubs=Object.keys(byClub);
+  const hasData=clubs.some(c=>byClub[c].some(s=>s.avg_carry_m!=null));
+  const el=document.getElementById("clubTrendWrap");
+  if(!hasData){el.innerHTML=`<div class="no-data"><div class="nd-icon">📈</div><p>No carry distance data yet</p></div>`;return;}
+
+  // Build a unified sorted date list
+  const allDates=[...new Set(rangeSessions.map(s=>s.date).filter(Boolean))].sort();
+  // For each club, create a dataset; x = session index within that club
+  const datasets=clubs.map((club,ci)=>{
+    const sessions=byClub[club].filter(s=>s.avg_carry_m!=null);
+    return{
+      label:club,
+      data:sessions.map((s,i)=>({x:i+1,y:s.avg_carry_m})),
+      borderColor:CLUB_COLORS[ci%CLUB_COLORS.length],
+      backgroundColor:"transparent",
+      pointRadius:5,pointHoverRadius:7,tension:.3,borderWidth:2,
+    };
+  }).filter(d=>d.data.length>0);
+
+  el.innerHTML=`<canvas id="chartClubTrend" style="max-height:240px"></canvas>`;
+  destroyChart("chartClubTrend");
+  new Chart("chartClubTrend",{type:"line",data:{datasets},options:{
+    ...CHART_OPTS,
+    scales:{
+      x:{...AXIS_OPTS,type:"linear",title:{display:true,text:"Session #",color:TICK_COLOR}},
+      y:{...AXIS_OPTS,title:{display:true,text:"Avg Carry (m)",color:TICK_COLOR}},
+    },
+  }});
+}
+
+function renderClubConsistency(){
+  const byClub=latestByClub();
+  const clubs=Object.keys(byClub);
+  const el=document.getElementById("clubConsistWrap");
+  // Need at least one club with min and max data
+  const withRange=clubs.filter(c=>{const l=byClub[c][byClub[c].length-1];return l&&l.avg_carry_m!=null&&(l.min_carry_m!=null||(l.max_carry_m||l.longest_m)!=null);});
+  if(!withRange.length){el.innerHTML=`<div class="no-data"><div class="nd-icon">📏</div><p>Need min/max carry data</p><p class="nd-sub">More detailed range screenshots will populate this</p></div>`;return;}
+  // Compute global min/max for bar scaling
+  let globalMin=999,globalMax=0;
+  for(const club of withRange){
+    const l=byClub[club][byClub[club].length-1];
+    if(l.min_carry_m&&l.min_carry_m<globalMin)globalMin=l.min_carry_m;
+    const mx=l.max_carry_m||l.longest_m;if(mx&&mx>globalMax)globalMax=mx;
+  }
+  const span=globalMax-globalMin||1;
+  const rows=withRange.map((club,ci)=>{
+    const l=byClub[club][byClub[club].length-1];
+    const mn=l.min_carry_m||l.avg_carry_m,mx=l.max_carry_m||l.longest_m||l.avg_carry_m,avg=l.avg_carry_m;
+    const left=((mn-globalMin)/span)*100,width=((mx-mn)/span)*100,avgPos=((avg-globalMin)/span)*100;
+    const color=CLUB_COLORS[ci%CLUB_COLORS.length];
+    const spread=mx-mn;
+    return`<div class="consist-row">
+      <div class="consist-label">${esc(club)}</div>
+      <div class="consist-bar-wrap">
+        <div class="consist-bar-range" style="left:${left}%;width:${Math.max(width,1)}%;background:${color}40;border:1px solid ${color}60"></div>
+        <div class="consist-bar-avg" style="left:${avgPos}%;background:${color}"></div>
+      </div>
+      <div class="consist-nums">${avg}m avg<br><span style="font-size:.65rem">${spread>0?spread+"m spread":""}</span></div>
+    </div>`;}).join("");
+  el.innerHTML=`<div style="font-size:.72rem;color:var(--muted);margin-bottom:10px">Bar = min–max range · Line = avg carry</div><div class="consist-list">${rows}</div>`;
+}
+
+function renderClubAccuracy(){
+  const byClub=latestByClub();
+  const clubs=Object.keys(byClub);
+  const withAcc=clubs.filter(c=>byClub[c][byClub[c].length-1]?.target_hit_pct!=null);
+  const el=document.getElementById("clubAccuracyWrap");
+  if(!withAcc.length){el.innerHTML=`<div class="no-data"><div class="nd-icon">🎯</div><p>No accuracy data yet</p><p class="nd-sub">Drop screenshots with target hit % data</p></div>`;return;}
+  el.innerHTML=`<canvas id="chartClubAcc" style="max-height:220px"></canvas>`;
+  destroyChart("chartClubAcc");
+  const data=withAcc.map(c=>byClub[c][byClub[c].length-1].target_hit_pct);
+  new Chart("chartClubAcc",{type:"bar",data:{
+    labels:withAcc,
+    datasets:[
+      {label:"Target Hit %",data,backgroundColor:data.map(v=>v>=65?"rgba(34,197,94,.7)":v>=45?"rgba(245,158,11,.7)":"rgba(239,68,68,.7)"),borderRadius:4},
+      {label:"Target 65%",data:withAcc.map(()=>65),type:"line",borderColor:"#22c55e",borderDash:[6,3],pointRadius:0,borderWidth:2},
+    ]},options:{...CHART_OPTS,scales:{
+      x:{...AXIS_OPTS,ticks:{color:TICK_COLOR,font:{size:11}}},
+      y:{...AXIS_OPTS,min:0,max:100},
+    }}});
+}
+
+function renderRangeTable(){
+  const tbody=document.getElementById("rangeBody");
+  if(!rangeSessions.length){tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;return}
+  const sorted=[...rangeSessions].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  tbody.innerHTML=sorted.map((s,i)=>{
+    const maxC=s.max_carry_m||s.longest_m;
+    const accCls=s.target_hit_pct==null?"":s.target_hit_pct>=65?"col-good":s.target_hit_pct>=45?"col-warn":"col-bad";
+    return`<tr>
+      <td style="color:var(--muted)">${sorted.length-i}</td>
+      <td style="color:var(--muted)">${s.date||"—"}</td>
+      <td><span class="pill pill-practice">${esc(s.club)}</span></td>
+      <td>${s.shots!=null?s.shots:"—"}</td>
+      <td><strong>${s.avg_carry_m!=null?s.avg_carry_m+"m":"—"}</strong></td>
+      <td>${s.avg_total_m!=null?s.avg_total_m+"m":"—"}</td>
+      <td>${maxC!=null?maxC+"m":"—"}</td>
+      <td>${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</td>
+      <td>${s.dispersion_m!=null?s.dispersion_m+"m":"—"}</td>
+      <td class="${accCls}">${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</td>
+    </tr>`;}).join("");
+}
+
+/* ── Toast ──────────────────────────────────────────────────────────────── */
+function showToast(msg,type="success"){
+  const t=document.getElementById("toast");t.textContent=msg;t.className="show "+type;
+  setTimeout(()=>{t.className="";},3500);
+}
+</script>
+</body>
+</html>
