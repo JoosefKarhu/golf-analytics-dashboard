@@ -727,6 +727,15 @@ async function fetchRounds(){
   }catch(e){ showToast("Cannot reach server: "+e.message,"error"); }
 }
 
+/* ── Adaptive compression ────────────────────────────────────────────────── */
+// Fewer images → higher quality (paper scorecards need detail).
+// Large batches (VG3 full round) → smaller files to keep payload manageable.
+function compressionFor(count){
+  if(count<=3)  return{maxPx:1600,quality:0.92};
+  if(count<=8)  return{maxPx:1200,quality:0.87};
+  return              {maxPx:900, quality:0.82};
+}
+
 /* ── File handling ──────────────────────────────────────────────────────── */
 async function handleFiles(files){
   if(!files?.length) return;
@@ -736,12 +745,13 @@ async function handleFiles(files){
   const modeMap = {simulator:"round",real:"real_round",practice:"range"};
   const mode    = modeMap[activeTab] || "round";
 
+  const {maxPx,quality}=compressionFor(files.length);
   const images=[];
-  for(const f of files) images.push({name:f.name,data:await toBase64(f),media_type:"image/jpeg"});
+  for(const f of files) images.push({name:f.name,data:await toBase64(f,maxPx,quality),media_type:"image/jpeg"});
 
   const titles = {round:"Analysing Round Screenshots",real_round:"Analysing Scorecard / Round Summary",range:"Analysing Range Practice Screenshots"};
   document.getElementById("loadingTitle").textContent = titles[mode]||"Analysing…";
-  document.getElementById("loadingMsg").textContent = `Sending ${images.length} image${images.length>1?"s":""} to Claude…`;
+  document.getElementById("loadingMsg").textContent = `Compressing & sending ${images.length} image${images.length>1?"s":""} to Claude…`;
   document.getElementById("loadingOverlay").classList.add("active");
 
   try{
@@ -771,7 +781,7 @@ async function handleFiles(files){
   }
 }
 
-function toBase64(file){
+function toBase64(file,maxPx=1600,quality=0.92){
   return new Promise((res,rej)=>{
     const reader=new FileReader();
     reader.onerror=rej;
@@ -779,16 +789,15 @@ function toBase64(file){
       const img=new Image();
       img.onerror=rej;
       img.onload=()=>{
-        const MAX=1600;
         let w=img.width, h=img.height;
-        if(w>MAX||h>MAX){
-          if(w>h){ h=Math.round(h*MAX/w); w=MAX; }
-          else   { w=Math.round(w*MAX/h); h=MAX; }
+        if(w>maxPx||h>maxPx){
+          if(w>h){ h=Math.round(h*maxPx/w); w=maxPx; }
+          else   { w=Math.round(w*maxPx/h); h=maxPx; }
         }
         const canvas=document.createElement("canvas");
         canvas.width=w; canvas.height=h;
         canvas.getContext("2d").drawImage(img,0,0,w,h);
-        const dataUrl=canvas.toDataURL("image/jpeg",0.92);
+        const dataUrl=canvas.toDataURL("image/jpeg",quality);
         res(dataUrl.split(",")[1]);
       };
       img.src=reader.result;
