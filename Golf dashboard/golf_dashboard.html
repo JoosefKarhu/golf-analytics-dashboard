@@ -801,9 +801,18 @@ function toBase64(file){
 function showRoundResults(rds){
   document.getElementById("resultsTitle").textContent   = "📊 Round Analysis Complete";
   document.getElementById("resultsSubtitle").textContent = "Review extracted data — confirm to save to history.";
-  document.getElementById("resultsContent").innerHTML = rds.map(r=>`
+  document.getElementById("resultsContent").innerHTML = rds.map((r,i)=>`
     <div class="round-preview">
-      <h4>${esc(r.course)} — ${r.date||"date unknown"} <span style="font-size:.75rem;color:${r.source_type==='real'?'var(--blue)':'var(--muted)'}">[${r.source_type==='real'?'Real Course':'Simulator'}]</span></h4>
+      <h4>${esc(r.course)} <span style="font-size:.75rem;color:${r.source_type==='real'?'var(--blue)':'var(--muted)'}">[${r.source_type==='real'?'Real Course':'Simulator'}]</span></h4>
+      ${r.date
+        ? `<div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">📅 ${r.date}</div>`
+        : `<div style="margin-bottom:8px">
+             <label style="font-size:.75rem;color:var(--warn);font-weight:600;display:block;margin-bottom:4px">⚠ Date not detected — enter manually:</label>
+             <input type="date" id="date-field-${i}"
+               style="background:var(--surface2);border:1px solid var(--warn);color:var(--text);
+                      padding:5px 10px;border-radius:6px;font-size:.82rem;outline:none;width:160px">
+           </div>`
+      }
       <div class="preview-grid">
         <div class="preview-row"><span>Score vs Par</span><span>${r.score_vs_par!=null?fmtScore(r.score_vs_par):"—"}</span></div>
         <div class="preview-row"><span>Strokes / Holes</span><span>${r.total_strokes??"—"} / ${r.holes_played??"—"}</span></div>
@@ -840,6 +849,14 @@ async function confirmSave(){
   document.getElementById("resultsOverlay").classList.remove("active");
   if(!pendingData) return;
 
+  // Collect any manually entered dates before saving
+  if(pendingData.type==="rounds"){
+    pendingData.items.forEach((item,i)=>{
+      const field=document.getElementById(`date-field-${i}`);
+      if(field&&field.value) item.date=field.value;
+    });
+  }
+
   try{
     let body;
     if(pendingData.type==="range"){
@@ -850,9 +867,12 @@ async function confirmSave(){
     const resp=await fetch("/api/save",{method:"POST",headers:{"Content-Type":"application/json"},body});
     const res=await resp.json();
     if(res.success){
-      const count=pendingData.items.length;
+      const saved=res.saved??pendingData.items.length;
+      const skipped=res.skipped??0;
       const label=pendingData.type==="range"?"session(s)":"round(s)";
-      showToast(`Saved ${count} ${label} ✓`,"success");
+      let msg=`Saved ${saved} ${label} ✓`;
+      if(skipped>0) msg+=` · ${skipped} duplicate${skipped>1?"s":""} skipped`;
+      showToast(msg,"success");
       await fetchRounds();
     }else showToast("Save failed: "+res.error,"error");
   }catch(e){ showToast("Error: "+e.message,"error"); }

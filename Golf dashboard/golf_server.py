@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Golf Dashboard Server v1.0
+Golf Dashboard Server v1.1
 ──────────────────────────────────────────────────────────────────────────────
 Lightweight HTTP server that powers the interactive Golf Analytics Dashboard.
 
@@ -51,7 +51,19 @@ Examine ALL provided images carefully and return a single JSON object with this 
       "scrambling_pct": integer or null,
       "total_putts": integer or null,
       "putts_per_hole": float or null,
-      "holes": [],
+      "holes": [
+        {
+          "number": integer (hole number),
+          "par": integer (3, 4, or 5),
+          "strokes": integer (player score on this hole),
+          "stroke_index": integer or null (difficulty ranking 1–18),
+          "distance_m": integer or null (hole length in metres),
+          "gir": true or false or null (reached green in regulation: strokes to reach green <= par - 2),
+          "putts": integer or null (number of putts on this hole),
+          "fairway_hit": true or false or null (tee shot on fairway — par 4/5 only, null for par 3),
+          "drive_m": integer or null (tee shot carry distance in metres — par 4/5 only)
+        }
+      ],
       "source_images": []
     }
   ],
@@ -62,6 +74,9 @@ Rules:
 - Group hole-map images with their corresponding round summary into ONE round entry.
 - If you see two different courses, create two separate round entries.
 - Infer par = total_strokes - score_vs_par.
+- Extract hole-level data from hole map images when visible. Leave holes: [] if only a summary screen is provided.
+- GIR = true if the player reached the green in (par - 2) strokes or fewer before putting. Infer from shot maps where possible.
+- fairway_hit and drive_m apply to par 4 and par 5 holes only; use null for par 3s.
 - Return ONLY the JSON object — no explanation, no markdown fences.
 - If a field is genuinely not visible, use null.
 """
@@ -127,7 +142,11 @@ printed round summary. Extract ALL visible data and return a single JSON object:
           "number": integer (hole number 1-18),
           "par": integer (3, 4, or 5 — from the Par row),
           "strokes": integer (player result — from the Result/Score row),
-          "stroke_index": integer or null (from the HCP/Index row — difficulty ranking 1-18)
+          "stroke_index": integer or null (from the HCP/Index row — difficulty ranking 1-18),
+          "distance_m": integer or null (hole length in metres, if shown on scorecard),
+          "gir": true or false or null (reached green in regulation — infer as true if strokes - putts <= par - 2 when putts is known),
+          "putts": integer or null (putts on this hole — extract from Putts row if visible),
+          "fairway_hit": true or false or null (par 4/5 only — extract from FW row if visible, null for par 3)
         }
       ],
       "source_images": [],
@@ -140,6 +159,9 @@ Rules:
 - ALWAYS extract hole-by-hole data when a scorecard table is visible.
 - The Hole row = hole number; Par row = par; Result/Score row = strokes played.
 - The HCP row (if shown) = stroke_index (difficulty ranking, not the player's handicap).
+- If a Putts row is visible, extract putts per hole.
+- If a Fairways row is visible, extract fairway_hit per hole (true/false, par 4/5 only).
+- Infer GIR = true when strokes - putts <= par - 2 (i.e. player reached green in regulation).
 - Calculate score_vs_par = total_strokes - par.
 - If only 9 holes are visible, extract those 9 and set holes_played = 9.
 - Return ONLY the JSON object — no markdown fences, no explanation.
@@ -151,6 +173,41 @@ PROMPTS = {
     "real_round": REAL_ROUND_PROMPT,
     "range":      RANGE_PROMPT,
 }
+
+
+# ── Duplicate helpers ────────────────────────────────────────────────────────
+def _is_duplicate_round(store, r):
+    """True if a round with the same course + date + total_strokes already exists."""
+    course  = (r.get("course") or "").strip().lower()
+    date    = r.get("date")
+    strokes = r.get("total_strokes")
+    if not course or not date or strokes is None:
+        return False   # can't reliably detect duplicates without all three fields
+    for existing in store.get("rounds", []):
+        if (
+            (existing.get("course") or "").strip().lower() == course
+            and existing.get("date") == date
+            and existing.get("total_strokes") == strokes
+        ):
+            return True
+    return False
+
+
+def _is_duplicate_session(store, s):
+    """True if a range session with the same club + date + avg_carry already exists."""
+    club  = (s.get("club") or "").strip().lower()
+    date  = s.get("date")
+    carry = s.get("avg_carry_m")
+    if not club or not date or carry is None:
+        return False
+    for existing in store.get("range_sessions", []):
+        if (
+            (existing.get("club") or "").strip().lower() == club
+            and existing.get("date") == date
+            and existing.get("avg_carry_m") == carry
+        ):
+            return True
+    return False
 
 
 # ── HTTP Handler ────────────────────────────────────────────────────────────
@@ -305,20 +362,32 @@ class GolfHandler(BaseHTTPRequestHandler):
         store.setdefault("range_sessions", [])
 
         if target == "range_sessions":
+            saved, skipped = 0, 0
             for s in items:
-                s.setdefault("source_images", [])
-                store["range_sessions"].append(s)
+                if _is_duplicate_session(store, s):
+                    skipped += 1
+                    print(f"  ⚠ Skipped duplicate session: {s.get('club')} {s.get('date')}")
+                else:
+                    s.setdefault("source_images", [])
+                    store["range_sessions"].append(s)
+                    saved += 1
             total = len(store["range_sessions"])
-            print(f"  ✓ Saved {len(items)} range session(s) — total now: {total}")
-            self._send({"success": True, "total_range_sessions": total})
+            print(f"  ✓ Saved {saved} range session(s), skipped {skipped} duplicate(s) — total: {total}")
+            self._send({"success": True, "saved": saved, "skipped": skipped, "total_range_sessions": total})
         else:
+            saved, skipped = 0, 0
             for r in items:
-                r.setdefault("holes", [])
-                r.setdefault("source_images", [])
-                store["rounds"].append(r)
+                if _is_duplicate_round(store, r):
+                    skipped += 1
+                    print(f"  ⚠ Skipped duplicate round: {r.get('course')} {r.get('date')} ({r.get('total_strokes')} strokes)")
+                else:
+                    r.setdefault("holes", [])
+                    r.setdefault("source_images", [])
+                    store["rounds"].append(r)
+                    saved += 1
             total = len(store["rounds"])
-            print(f"  ✓ Saved {len(items)} round(s) — total now: {total}")
-            self._send({"success": True, "total_rounds": total})
+            print(f"  ✓ Saved {saved} round(s), skipped {skipped} duplicate(s) — total: {total}")
+            self._send({"success": True, "saved": saved, "skipped": skipped, "total_rounds": total})
 
         DATA_FILE.write_text(json.dumps(store, indent=2, ensure_ascii=False))
 
