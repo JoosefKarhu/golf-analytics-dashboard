@@ -773,6 +773,39 @@ function getFaceAngle(s){
   return null;
 }
 
+// ── Stock shape classification ───────────────────────────────────────────────
+// Single source of truth for spin-axis → shape mapping.
+// Specified draw range is +3 to +9; fade range is -3 to -9.
+// The ±2–3° gaps are intentionally absorbed into draw/fade rather than
+// straight, keeping the straight window at exactly ±2° and preventing
+// mild curves from being misclassified as straight.
+// Effective boundaries: Hook >+9 | Draw >+2 | Straight ≥-2 | Fade ≥-9 | Slice <-9
+function classifyShape(axis){
+  if(axis==null) return null;
+  if(axis >  9)  return "hook";
+  if(axis >  2)  return "draw";
+  if(axis >= -2) return "straight";
+  if(axis >= -9) return "fade";
+  return "slice";
+}
+
+// Median of an array; returns null for empty input.
+function medianOf(arr){
+  if(!arr.length) return null;
+  const s=[...arr].sort((a,b)=>a-b);
+  const m=Math.floor(s.length/2);
+  return s.length%2===0 ? (s[m-1]+s[m])/2 : s[m];
+}
+
+// Derives a club's stock shape from the MEDIAN spin axis across all its
+// range sessions, preventing single-session outliers from changing the badge.
+function getStockShape(clubName){
+  const axes=rangeSessions
+    .filter(s=>s.club===clubName && s.avg_spin_axis_deg!=null)
+    .map(s=>s.avg_spin_axis_deg);
+  return classifyShape(medianOf(axes));
+}
+
 // ── Simulator shot-level analytics ──────────────────────────────────────────
 // Flattens all non-putt shots from simulator rounds into a single array.
 // Each entry: { club, carry_m, result, par, gir, hole_strokes, round_date }
@@ -2091,8 +2124,9 @@ function renderClubCards(){
       ${acc!=null?`<div class="club-accuracy ${accCls}">${acc}% target hit</div>`:""}
       ${trendHtml}
       ${(()=>{
-        // Shape badge
-        const shape = latest.dominant_shape;
+        // Shape badge — median spin axis across all sessions for this club,
+        // so a single outlier session can't flip the displayed stock shape.
+        const shape = getStockShape(club);
         const shapeHtml = shape
           ? `<div class="shape-badge shape-${shape}">${shape.toUpperCase()}</div>`
           : "";
@@ -2543,7 +2577,7 @@ function buildDashboardContext(){
         const l=sessions[sessions.length-1];
         return `  ${club}: ${l.avg_carry_m!=null?l.avg_carry_m+"m carry":"-"}`
              + (l.target_hit_pct!=null?`, ${l.target_hit_pct}% target hit`:"")
-             + (l.dominant_shape   ?` shape:${l.dominant_shape}`:"")
+             + (()=>{ const sh=getStockShape(club); return sh?` shape:${sh}`:""; })()
              + (l.avg_face_to_path !=null?` F→P:${l.avg_face_to_path>0?"+":""}${l.avg_face_to_path.toFixed(1)}°`:"")
              + (l.avg_smash_factor !=null?` smash:${l.avg_smash_factor.toFixed(2)}`:"")
              + (l.avg_club_speed_mph!=null?` spd:${Math.round(l.avg_club_speed_mph)}mph`:"")
