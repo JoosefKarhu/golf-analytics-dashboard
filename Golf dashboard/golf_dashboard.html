@@ -326,6 +326,24 @@
     @media(min-width:760px){body.coach-open main{padding-right:396px;
       transition:padding-right .28s cubic-bezier(.4,0,.2,1)}}
     @media(max-width:759px){.coach-drawer{width:100vw;right:-100vw}}
+
+    /* ── Shot shape badge ──────────────────────────────────────────────── */
+    .shape-badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:.7rem;
+      font-weight:700;letter-spacing:.05em;margin-top:6px}
+    .shape-fade    {background:rgba(59,130,246,.2);color:#93c5fd}
+    .shape-draw    {background:rgba(34,197,94,.2);color:#86efac}
+    .shape-straight{background:rgba(100,116,139,.2);color:#94a3b8}
+    .shape-slice   {background:rgba(239,68,68,.2);color:#fca5a5}
+    .shape-hook    {background:rgba(249,115,22,.2);color:#fdba74}
+
+    /* ── Club card stats mini-row ──────────────────────────────────────── */
+    .bf-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:6px;
+      border-top:1px solid var(--border);font-size:.72rem}
+    .bf-stat{color:var(--muted)}
+    .bf-stat strong{font-size:.78rem}
+    .bf-pos{color:#86efac}
+    .bf-neg{color:#fca5a5}
+    .bf-neu{color:var(--text)}
   </style>
 </head>
 <body>
@@ -576,6 +594,16 @@
         <div class="chart-title">🎯 Accuracy / Target Hit Rate <span class="badge-pill">Target ≥ 65%</span></div>
         <div id="clubAccuracyWrap"><div class="no-data"><div class="nd-icon">🎯</div><p>Awaiting data</p></div></div>
       </div>
+      <!-- Ball Flight Pattern — shown only when face/path/F→P data present -->
+      <div class="chart-card" id="cc-ballflight" style="display:none">
+        <div class="chart-title">🌀 Ball Flight Pattern <span class="badge-pill">Face · Path · Face-to-Path</span></div>
+        <div id="ballFlightWrap"></div>
+      </div>
+      <!-- Strike Quality — shown only when smash/speed/spin data present -->
+      <div class="chart-card" id="cc-strikequality" style="display:none">
+        <div class="chart-title">⚡ Strike Quality <span class="badge-pill">Speed · Smash · Spin</span></div>
+        <div id="strikeQualityWrap"></div>
+      </div>
     </div>
 
     <!-- Range session history -->
@@ -587,6 +615,8 @@
             <th>#</th><th>Date</th><th>Club</th><th>Shots</th>
             <th>Avg Carry</th><th>Avg Total</th><th>Max Carry</th>
             <th>Min Carry</th><th>Dispersion</th><th>Target Hit</th>
+            <th>Shape</th><th>Smash</th><th>Speed</th><th>Spin rpm</th>
+            <th>Axis°</th><th>Face°</th><th>Path°</th><th>F→P°</th><th>Attack°</th>
           </tr></thead>
           <tbody id="rangeBody"></tbody>
         </table>
@@ -691,13 +721,38 @@
 <script>
 /* ── Constants ──────────────────────────────────────────────────────────── */
 const BENCH_PROFILES = {
-  scratch: {label:"Scratch",score:0, gir:72,fw:72,scr:65,putts:1.58,drive:270},
-  hcp5:    {label:"HCP 5",  score:3, gir:58,fw:60,scr:55,putts:1.70,drive:240},
-  hcp10:   {label:"HCP 10", score:8, gir:45,fw:52,scr:45,putts:1.80,drive:225},
-  hcp15:   {label:"HCP 15", score:13,gir:33,fw:45,scr:35,putts:1.90,drive:215},
-  hcp20:   {label:"HCP 20", score:18,gir:22,fw:38,scr:25,putts:2.00,drive:205},
+  scratch: {label:"Scratch",score:0, hcp:0,  gir:72,fw:72,scr:65,putts:1.58,drive:270},
+  hcp5:    {label:"HCP 5",  score:3, hcp:5,  gir:58,fw:60,scr:55,putts:1.70,drive:240},
+  hcp10:   {label:"HCP 10", score:8, hcp:10, gir:45,fw:52,scr:45,putts:1.80,drive:225},
+  hcp15:   {label:"HCP 15", score:13,hcp:15, gir:33,fw:45,scr:35,putts:1.90,drive:215},
+  hcp20:   {label:"HCP 20", score:18,hcp:20, gir:22,fw:38,scr:25,putts:2.00,drive:205},
 };
 let BENCH = BENCH_PROFILES.hcp5;   // mutable — updated by setTarget()
+
+/* ── Club name normalisation ──────────────────────────────────────────────── */
+// Maps common variations (e.g. "3-Wood", "3 Wood") → canonical short form ("3W")
+const CLUB_ALIASES = {
+  'driver':'Dr','dr':'Dr',
+  '3-wood':'3W','3wood':'3W','3 wood':'3W','3w':'3W',
+  '5-wood':'5W','5wood':'5W','5 wood':'5W','5w':'5W',
+  '7-wood':'7W','7wood':'7W','7 wood':'7W','7w':'7W',
+  '2-iron':'2I','2iron':'2I','2 iron':'2I','2i':'2I',
+  '3-iron':'3I','3iron':'3I','3 iron':'3I','3i':'3I',
+  '4-iron':'4I','4iron':'4I','4 iron':'4I','4i':'4I',
+  '5-iron':'5I','5iron':'5I','5 iron':'5I','5i':'5I',
+  '6-iron':'6I','6iron':'6I','6 iron':'6I','6i':'6I',
+  '7-iron':'7I','7iron':'7I','7 iron':'7I','7i':'7I',
+  '8-iron':'8I','8iron':'8I','8 iron':'8I','8i':'8I',
+  '9-iron':'9I','9iron':'9I','9 iron':'9I','9i':'9I',
+  'pitching wedge':'PW','p wedge':'PW','pw':'PW',
+  'gap wedge':'GW','g wedge':'GW','gw':'GW',
+  'approach wedge':'AW','a wedge':'AW','aw':'AW',
+};
+function normalizeClub(name){
+  if(!name) return name;
+  return CLUB_ALIASES[name.toLowerCase().trim()] || name;
+}
+
 const DAMAGE_BENCH = {doubles:1.5,triples:0.3,threePutts:1.0,ob:0.5};
 const APPROACH_BUCKETS = [
   {label:"< 80m",min:0,max:80},{label:"80–110m",min:80,max:110},
@@ -864,7 +919,7 @@ async function fetchRounds(){
       if(!b.date) return -1;
       return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
     });
-    rangeSessions = data.range_sessions||[];
+    rangeSessions = (data.range_sessions||[]).map(s=>({...s, club: normalizeClub(s.club)}));
     updateTabCounts();
     renderAll();
   }catch(e){ showToast("Cannot reach server: "+e.message,"error"); }
@@ -1190,7 +1245,7 @@ function renderKPIs(full){
       card.className="kpi-card kpi-hcp";
     } else {
       vEl.textContent=hcp.toFixed(1);
-      const gap=hcp-BENCH.score;
+      const gap=hcp-BENCH.hcp;
       dEl.textContent=gap<=0?`✓ ${tn} achieved!`:`${gap.toFixed(1)} away from ${tn}`;
       dEl.className="kpi-delta "+(gap<=0?"good":gap<=3?"warn":"bad");
       card.className="kpi-card kpi-hcp "+(gap<=0?"good":gap<=3?"warn":"bad");
@@ -1895,7 +1950,8 @@ function renderPractice(){
     ["clubTrendWrap","clubConsistWrap","clubAccuracyWrap"].forEach(id=>{
       document.getElementById(id).innerHTML=`<div class="no-data"><div class="nd-icon">📊</div><p>Awaiting data</p></div>`;
     });
-    document.getElementById("rangeBody").innerHTML=`<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;
+    document.getElementById("rangeBody").innerHTML=`<tr><td colspan="19" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;
+    ["cc-ballflight","cc-strikequality"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
     return;
   }
 
@@ -1903,12 +1959,14 @@ function renderPractice(){
   renderClubTrend();
   renderClubConsistency();
   renderClubAccuracy();
+  renderBallFlight();
+  renderStrikeQuality();
   renderRangeTable();
 }
 
 /* Get unique clubs sorted by typical bag order */
 function getClubs(){
-  const order=["Driver","3W","3-Wood","5W","5-Wood","2I","3I","4I","5I","6I","7I","7-Iron","8I","9I","PW","52°","56°","60°"];
+  const order=["Dr","3W","5W","7W","2I","3I","4I","5I","6I","7I","8I","9I","PW","GW","AW","48°","50°","52°","54°","56°","58°","60°"];
   const clubs=[...new Set(rangeSessions.map(s=>s.club))];
   clubs.sort((a,b)=>{const ia=order.findIndex(x=>x.toLowerCase()===a.toLowerCase()),ib=order.findIndex(x=>x.toLowerCase()===b.toLowerCase());if(ia>=0&&ib>=0)return ia-ib;if(ia>=0)return-1;if(ib>=0)return 1;return a.localeCompare(b);});
   return clubs;
@@ -1949,14 +2007,35 @@ function renderClubCards(){
       ${maxC!=null&&minC!=null?`<div class="club-range">${minC}–${maxC}m range</div>`:(maxC!=null?`<div class="club-range">max ${maxC}m</div>`:"") }
       ${acc!=null?`<div class="club-accuracy ${accCls}">${acc}% target hit</div>`:""}
       ${trendHtml}
-      <div class="club-sessions">${sessions.length} session${sessions.length>1?"s":""}</div>
       ${(()=>{
+        // Shape badge
+        const shape = latest.dominant_shape;
+        const shapeHtml = shape
+          ? `<div class="shape-badge shape-${shape}">${shape.toUpperCase()}</div>`
+          : "";
+        // Key launch-monitor stats mini-row
+        const smash = latest.avg_smash_factor;
+        const cspd  = latest.avg_club_speed_mph;
+        const ftp   = latest.avg_face_to_path;
+        const spinAx= latest.avg_spin_axis_deg;
+        const bfFmt = v => v==null?"—"
+          : `<strong class="${Math.abs(v)<1?'bf-neu':v>0?'bf-pos':'bf-neg'}">${v>0?"+":""}${v.toFixed(1)}°</strong>`;
+        const hasStats = smash!=null||cspd!=null||ftp!=null||spinAx!=null;
+        const statsHtml = hasStats ? `<div class="bf-row">
+          ${smash !=null?`<span class="bf-stat">Smash: <strong class="${smash>=1.45?'bf-pos':smash>=1.35?'bf-neu':'bf-neg'}">${smash.toFixed(2)}</strong></span>`:""}
+          ${cspd  !=null?`<span class="bf-stat">Speed: <strong class="bf-neu">${Math.round(cspd)}mph</strong></span>`:""}
+          ${ftp   !=null?`<span class="bf-stat">F→P: ${bfFmt(ftp)}</span>`:""}
+          ${spinAx!=null?`<span class="bf-stat">Axis: ${bfFmt(spinAx)}</span>`:""}
+        </div>` : "";
+        // Performance score + course HCP
         const perf=calcClubPerformanceScore(club);
         const chcp=calcClubHCP(club);
         const perfCls=perf==null?"":perf>=70?"col-good":perf>=50?"col-warn":"col-bad";
-        return(perf!=null?`<div class="${perfCls}" style="font-size:.82rem;font-weight:700;margin-top:8px;border-top:1px solid var(--border);padding-top:6px">Performance: ${perf}/100</div>`:"")
+        return shapeHtml+statsHtml
+          +(perf!=null?`<div class="${perfCls}" style="font-size:.82rem;font-weight:700;margin-top:8px;border-top:1px solid var(--border);padding-top:6px">Performance: ${perf}/100</div>`:"")
           +(chcp!=null?`<div style="font-size:.75rem;color:var(--muted);margin-top:2px">Course HCP: <strong style="color:var(--text)">${chcp.toFixed(1)}</strong></div>`:"");
       })()}
+      <div class="club-sessions" style="margin-top:6px">${sessions.length} session${sessions.length>1?"s":""}</div>
       <button class="btn btn-ghost btn-sm" onclick="openCoach('club',${JSON.stringify(club)})"
         style="margin-top:10px;width:100%;color:var(--blue);border-color:rgba(59,130,246,.35);font-size:.73rem">💬 Ask Coach</button>
     </div>`;
@@ -1999,61 +2078,95 @@ function renderClubConsistency(){
   const byClub=latestByClub();
   const clubs=Object.keys(byClub);
   const el=document.getElementById("clubConsistWrap");
-  // Need at least one club with min and max data
-  const withRange=clubs.filter(c=>{const l=byClub[c][byClub[c].length-1];return l&&l.avg_carry_m!=null&&(l.min_carry_m!=null||(l.max_carry_m||l.longest_m)!=null);});
-  if(!withRange.length){el.innerHTML=`<div class="no-data"><div class="nd-icon">📏</div><p>Need min/max carry data</p><p class="nd-sub">More detailed range screenshots will populate this</p></div>`;return;}
-  // Compute global min/max for bar scaling
-  let globalMin=999,globalMax=0;
-  for(const club of withRange){
-    const l=byClub[club][byClub[club].length-1];
-    if(l.min_carry_m&&l.min_carry_m<globalMin)globalMin=l.min_carry_m;
-    const mx=l.max_carry_m||l.longest_m;if(mx&&mx>globalMax)globalMax=mx;
+  const withRange=clubs.filter(c=>{
+    const l=byClub[c].at(-1);
+    return l&&l.avg_carry_m!=null&&((l.min_carry_m||l.max_carry_m||l.longest_m)!=null);
+  });
+  if(!withRange.length){
+    el.innerHTML=`<div class="no-data"><div class="nd-icon">📏</div><p>Need min/max carry data</p><p class="nd-sub">More detailed range screenshots will populate this</p></div>`;
+    return;
   }
-  const span=globalMax-globalMin||1;
-  const rows=withRange.map((club,ci)=>{
-    const l=byClub[club][byClub[club].length-1];
-    const mn=l.min_carry_m||l.avg_carry_m,mx=l.max_carry_m||l.longest_m||l.avg_carry_m,avg=l.avg_carry_m;
-    const left=((mn-globalMin)/span)*100,width=((mx-mn)/span)*100,avgPos=((avg-globalMin)/span)*100;
-    const color=CLUB_COLORS[ci%CLUB_COLORS.length];
-    const spread=mx-mn;
-    return`<div class="consist-row">
-      <div class="consist-label">${esc(club)}</div>
-      <div class="consist-bar-wrap">
-        <div class="consist-bar-range" style="left:${left}%;width:${Math.max(width,1)}%;background:${color}40;border:1px solid ${color}60"></div>
-        <div class="consist-bar-avg" style="left:${avgPos}%;background:${color}"></div>
-      </div>
-      <div class="consist-nums">${avg}m avg<br><span style="font-size:.65rem">${spread>0?spread+"m spread":""}</span></div>
-    </div>`;}).join("");
-  el.innerHTML=`<div style="font-size:.72rem;color:var(--muted);margin-bottom:10px">Bar = min–max range · Line = avg carry</div><div class="consist-list">${rows}</div>`;
+  const h=Math.max(180,withRange.length*38);
+  el.innerHTML=`<canvas id="chartClubConsist" style="width:100%;height:${h}px"></canvas>`;
+  destroyChart("chartClubConsist");
+  const rangeData=withRange.map(c=>{
+    const l=byClub[c].at(-1);
+    const mn=l.min_carry_m??l.avg_carry_m;
+    const mx=l.max_carry_m??l.longest_m??l.avg_carry_m;
+    return mn!=null&&mx!=null?[mn,mx]:null;
+  });
+  const avgData=withRange.map(c=>byClub[c].at(-1).avg_carry_m);
+  new Chart("chartClubConsist",{
+    type:"bar",
+    data:{
+      labels:withRange,
+      datasets:[
+        {label:"Range (min–max)",data:rangeData,
+         backgroundColor:"rgba(59,130,246,.22)",borderColor:"rgba(59,130,246,.55)",borderWidth:1,borderRadius:3},
+        {label:"Avg carry",data:avgData,type:"scatter",
+         backgroundColor:"#3b82f6",pointRadius:5,pointHoverRadius:7},
+      ]
+    },
+    options:{
+      indexAxis:"y",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:"#94a3b8",font:{size:11}}}},
+      scales:{
+        x:{title:{display:true,text:"Carry (m)",color:TICK_COLOR},grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+        y:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+      }
+    }
+  });
 }
 
 function renderClubAccuracy(){
   const byClub=latestByClub();
   const clubs=Object.keys(byClub);
-  const withAcc=clubs.filter(c=>byClub[c][byClub[c].length-1]?.target_hit_pct!=null);
+  const withAcc=clubs.filter(c=>byClub[c].at(-1)?.target_hit_pct!=null);
   const el=document.getElementById("clubAccuracyWrap");
-  if(!withAcc.length){el.innerHTML=`<div class="no-data"><div class="nd-icon">🎯</div><p>No accuracy data yet</p><p class="nd-sub">Drop screenshots with target hit % data</p></div>`;return;}
-  el.innerHTML=`<canvas id="chartClubAcc" style="max-height:220px"></canvas>`;
+  if(!withAcc.length){
+    el.innerHTML=`<div class="no-data"><div class="nd-icon">🎯</div><p>No accuracy data yet</p><p class="nd-sub">Drop screenshots with target hit % data</p></div>`;
+    return;
+  }
+  const h=Math.max(180,withAcc.length*38);
+  el.innerHTML=`<canvas id="chartClubAcc" style="width:100%;height:${h}px"></canvas>`;
   destroyChart("chartClubAcc");
-  const data=withAcc.map(c=>byClub[c][byClub[c].length-1].target_hit_pct);
-  new Chart("chartClubAcc",{type:"bar",data:{
-    labels:withAcc,
-    datasets:[
-      {label:"Target Hit %",data,backgroundColor:data.map(v=>v>=65?"rgba(34,197,94,.7)":v>=45?"rgba(245,158,11,.7)":"rgba(239,68,68,.7)"),borderRadius:4},
-      {label:"Target 65%",data:withAcc.map(()=>65),type:"line",borderColor:"#22c55e",borderDash:[6,3],pointRadius:0,borderWidth:2},
-    ]},options:{...CHART_OPTS,scales:{
-      x:{...AXIS_OPTS,ticks:{color:TICK_COLOR,font:{size:11}}},
-      y:{...AXIS_OPTS,min:0,max:100},
-    }}});
+  const data=withAcc.map(c=>byClub[c].at(-1).target_hit_pct);
+  new Chart("chartClubAcc",{
+    type:"bar",
+    data:{
+      labels:withAcc,
+      datasets:[
+        {label:"Target Hit %",data,
+         backgroundColor:data.map(v=>v>=65?"rgba(34,197,94,.7)":v>=45?"rgba(245,158,11,.7)":"rgba(239,68,68,.7)"),
+         borderRadius:4},
+        {label:`Target ${BENCH.gir}%`,data:withAcc.map(()=>65),
+         type:"line",borderColor:"#22c55e",borderDash:[6,3],pointRadius:0,borderWidth:2},
+      ]
+    },
+    options:{
+      indexAxis:"y",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:"#94a3b8",font:{size:11}}}},
+      scales:{
+        x:{...AXIS_OPTS,min:0,max:100,title:{display:true,text:"Target Hit %",color:TICK_COLOR}},
+        y:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+      }
+    }
+  });
 }
 
 function renderRangeTable(){
   const tbody=document.getElementById("rangeBody");
-  if(!rangeSessions.length){tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;return}
+  if(!rangeSessions.length){tbody.innerHTML=`<tr><td colspan="19" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;return}
   const sorted=[...rangeSessions].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const degFmt=(v,redNeg=false)=>{
+    if(v==null) return"—";
+    const cls=Math.abs(v)<1?"":v>0?(redNeg?"col-bad":"col-good"):(redNeg?"col-good":"col-bad");
+    return`<span class="${cls}">${v>0?"+":""}${v.toFixed(1)}°</span>`;
+  };
   tbody.innerHTML=sorted.map((s,i)=>{
     const maxC=s.max_carry_m||s.longest_m;
     const accCls=s.target_hit_pct==null?"":s.target_hit_pct>=65?"col-good":s.target_hit_pct>=45?"col-warn":"col-bad";
+    const smashCls=s.avg_smash_factor==null?"":s.avg_smash_factor>=1.45?"col-good":s.avg_smash_factor>=1.35?"col-warn":"col-bad";
     return`<tr>
       <td style="color:var(--muted)">${sorted.length-i}</td>
       <td style="color:var(--muted)">${s.date||"—"}</td>
@@ -2065,7 +2178,105 @@ function renderRangeTable(){
       <td>${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</td>
       <td>${s.dispersion_m!=null?s.dispersion_m+"m":"—"}</td>
       <td class="${accCls}">${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</td>
+      <td>${s.dominant_shape?`<span class="shape-badge shape-${s.dominant_shape}" style="margin-top:0">${s.dominant_shape.toUpperCase()}</span>`:"—"}</td>
+      <td class="${smashCls}">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
+      <td>${s.avg_club_speed_mph!=null?Math.round(s.avg_club_speed_mph)+"mph":"—"}</td>
+      <td>${s.avg_spin_rate_rpm!=null?Math.round(s.avg_spin_rate_rpm):"—"}</td>
+      <td>${degFmt(s.avg_spin_axis_deg)}</td>
+      <td>${degFmt(s.avg_face_angle)}</td>
+      <td>${degFmt(s.avg_club_path)}</td>
+      <td>${degFmt(s.avg_face_to_path)}</td>
+      <td>${degFmt(s.avg_attack_angle_deg)}</td>
     </tr>`;}).join("");
+}
+
+/* ── Ball Flight Pattern chart (face/path/F→P per club) ───────────────── */
+function renderBallFlight(){
+  const cc=document.getElementById("cc-ballflight");
+  const wrap=document.getElementById("ballFlightWrap");
+  if(!cc||!wrap) return;
+  const byClub=latestByClub();
+  const clubs=Object.keys(byClub).filter(c=>{
+    const s=byClub[c].at(-1);
+    return s.avg_face_angle!=null||s.avg_club_path!=null||s.avg_face_to_path!=null;
+  });
+  if(!clubs.length){cc.style.display="none";return;}
+  cc.style.display="";
+  const h=Math.max(200,clubs.length*46);
+  wrap.innerHTML=`<canvas id="chartBallFlight" style="width:100%;height:${h}px"></canvas>`;
+  destroyChart("chartBallFlight");
+  new Chart("chartBallFlight",{
+    type:"bar",
+    data:{
+      labels:clubs,
+      datasets:[
+        {label:"Face Angle (°)",data:clubs.map(c=>byClub[c].at(-1).avg_face_angle??null),
+         backgroundColor:"rgba(252,165,165,.6)",borderRadius:3},
+        {label:"Club Path (°)",data:clubs.map(c=>byClub[c].at(-1).avg_club_path??null),
+         backgroundColor:"rgba(59,130,246,.5)",borderRadius:3},
+        {label:"Face-to-Path (°)",data:clubs.map(c=>byClub[c].at(-1).avg_face_to_path??null),
+         backgroundColor:"rgba(249,115,22,.55)",borderRadius:3},
+      ]
+    },
+    options:{
+      indexAxis:"y",responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:"#94a3b8",font:{size:11}}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.raw!=null?(ctx.raw>0?"+":"")+ctx.raw.toFixed(1)+"°":"—"}`}}
+      },
+      scales:{
+        x:{title:{display:true,text:"Degrees  (neg = open/out-to-in · pos = closed/in-to-out)",color:TICK_COLOR},
+           grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+        y:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+      }
+    }
+  });
+}
+
+/* ── Strike Quality chart (smash / club speed / spin rate) ─────────────── */
+function renderStrikeQuality(){
+  const cc=document.getElementById("cc-strikequality");
+  const wrap=document.getElementById("strikeQualityWrap");
+  if(!cc||!wrap) return;
+  const byClub=latestByClub();
+  const clubs=Object.keys(byClub).filter(c=>{
+    const s=byClub[c].at(-1);
+    return s.avg_smash_factor!=null||s.avg_club_speed_mph!=null||s.avg_spin_rate_rpm!=null;
+  });
+  if(!clubs.length){cc.style.display="none";return;}
+  cc.style.display="";
+  const h=Math.max(180,clubs.length*36);
+  wrap.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div><div style="font-size:.75rem;color:var(--muted);margin-bottom:4px;text-align:center">Smash Factor</div>
+           <canvas id="chartSmash" style="height:${h}px"></canvas></div>
+      <div><div style="font-size:.75rem;color:var(--muted);margin-bottom:4px;text-align:center">Club Speed (mph)</div>
+           <canvas id="chartClubSpeed" style="height:${h}px"></canvas></div>
+      <div><div style="font-size:.75rem;color:var(--muted);margin-bottom:4px;text-align:center">Spin Rate (rpm)</div>
+           <canvas id="chartSpinRate" style="height:${h}px"></canvas></div>
+    </div>`;
+  const mkBar=(id,data,colorFn)=>{
+    destroyChart(id);
+    new Chart(id,{type:"bar",
+      data:{labels:clubs,datasets:[{data,backgroundColor:data.map(colorFn),borderRadius:3}]},
+      options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR,font:{size:10}}},
+          y:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR,font:{size:10}}}
+        }
+      }
+    });
+  };
+  mkBar("chartSmash",
+    clubs.map(c=>byClub[c].at(-1).avg_smash_factor??null),
+    v=>v==null?"transparent":v>=1.45?"rgba(34,197,94,.6)":v>=1.35?"rgba(245,158,11,.6)":"rgba(239,68,68,.55)");
+  mkBar("chartClubSpeed",
+    clubs.map(c=>byClub[c].at(-1).avg_club_speed_mph??null),
+    ()=>"rgba(59,130,246,.55)");
+  mkBar("chartSpinRate",
+    clubs.map(c=>byClub[c].at(-1).avg_spin_rate_rpm??null),
+    v=>v==null?"transparent":v>4000?"rgba(239,68,68,.55)":v>3000?"rgba(245,158,11,.55)":"rgba(34,197,94,.6)");
 }
 
 /* ── Toast ──────────────────────────────────────────────────────────────── */
@@ -2116,6 +2327,12 @@ function buildDashboardContext(){
         const l=sessions[sessions.length-1];
         return `  ${club}: ${l.avg_carry_m!=null?l.avg_carry_m+"m carry":"-"}`
              + (l.target_hit_pct!=null?`, ${l.target_hit_pct}% target hit`:"")
+             + (l.dominant_shape   ?` shape:${l.dominant_shape}`:"")
+             + (l.avg_face_to_path !=null?` F→P:${l.avg_face_to_path>0?"+":""}${l.avg_face_to_path.toFixed(1)}°`:"")
+             + (l.avg_smash_factor !=null?` smash:${l.avg_smash_factor.toFixed(2)}`:"")
+             + (l.avg_club_speed_mph!=null?` spd:${Math.round(l.avg_club_speed_mph)}mph`:"")
+             + (l.avg_spin_rate_rpm!=null?` spin:${Math.round(l.avg_spin_rate_rpm)}rpm`:"")
+             + (l.avg_attack_angle_deg!=null?` AoA:${l.avg_attack_angle_deg>0?"+":""}${l.avg_attack_angle_deg.toFixed(1)}°`:"")
              + ` (${sessions.length} session${sessions.length>1?"s":""})`;
       }).join("\n")
     : "  No range sessions recorded.";

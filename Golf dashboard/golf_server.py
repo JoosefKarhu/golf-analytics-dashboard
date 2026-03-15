@@ -83,26 +83,43 @@ Rules:
 """
 
 RANGE_PROMPT = """
-You are analysing screenshots from the Virtual Golf 3 golf simulator range / practice mode,
-or photos from a real driving range session.
+You are analysing screenshots from a launch-monitor range app (e.g. Garmin Golf, Golf Pad),
+a golf simulator range mode, or photos from a real driving range session.
 
-The images may show shot-by-shot distance data, accuracy stats, club info, or dispersion maps.
+The app shows two swipeable data views per session:
+  View 1 columns: Carry, Total, Club Speed (mph), Ball Speed (mph), Smash Factor,
+                  Spin Rate (rpm), Spin Axis (deg), Curve (m + L/R), Attack Angle (deg)
+  View 2 columns: Face-to-Path (deg), Club Path (deg), Face Angle (deg), Launch Angle (deg),
+                  Launch Direction (deg + L/R), Carry Side (m + L/R), Total Side (m),
+                  Dynamic Loft (deg), Impact Height (mm), Spin Loft (deg)
 
-Extract all club data visible and return a single JSON object:
+Compute session averages from all visible shot rows. Extract all club data and return a single JSON:
 
 {
   "range_sessions": [
     {
       "date": "YYYY-MM-DD or null",
-      "club": "exact club name as shown, e.g. Driver, 3W, 5I, 7I, 9I, PW, 52°, 56°, 60°",
+      "club": "canonical short form: Dr (driver), 3W/5W/7W (fairway woods), 2I-9I (irons), PW/GW/AW (wedges), then degree notation like 52 deg/56 deg/60 deg",
       "shots": integer or null,
       "avg_carry_m": integer or null,
       "avg_total_m": integer or null,
       "max_carry_m": integer or null,
       "min_carry_m": integer or null,
-      "dispersion_m": integer or null (lateral spread in metres — smaller = tighter),
-      "target_hit_pct": integer or null (% of shots on target),
-      "avg_from_pin_m": float or null (average distance from pin/target),
+      "dispersion_m": integer or null (lateral spread width in metres — from dispersion ellipse if shown),
+      "target_hit_pct": integer or null (% of shots on target — compute from Target Hit count / total shots),
+      "avg_from_pin_m": float or null (average distance from pin — may be absent for some clubs),
+      "avg_carry_side_m": float or null (average lateral offset in metres — positive=right, negative=left; derive sign from R/L suffix),
+      "dominant_shape": "derive from avg Spin Axis: >+10 -> 'hook', +3 to +10 -> 'draw', -3 to +3 -> 'straight', -10 to -3 -> 'fade', <-10 -> 'slice'. Null if spin axis not shown.",
+      "avg_face_angle": float or null (average Face Angle in degrees; negative=open, positive=closed for right-handed golfer),
+      "avg_club_path": float or null (average Club Path in degrees; negative=out-to-in, positive=in-to-out),
+      "avg_face_to_path": float or null (average Face-to-Path in degrees; negative=fade/slice tendency, positive=draw/hook),
+      "avg_spin_axis_deg": float or null (average Spin Axis in degrees; positive=draw tilt, negative=fade tilt),
+      "avg_spin_rate_rpm": integer or null (average Spin Rate in rpm),
+      "avg_smash_factor": float or null (average Smash Factor; typically 1.20-1.50),
+      "avg_club_speed_mph": float or null (average Club Speed in mph),
+      "avg_ball_speed_mph": float or null (average Ball Speed in mph),
+      "avg_attack_angle_deg": float or null (average Attack Angle in degrees; negative=downward, positive=upward),
+      "avg_launch_angle_deg": float or null (average Launch Angle in degrees),
       "source_images": []
     }
   ]
@@ -110,9 +127,10 @@ Extract all club data visible and return a single JSON object:
 
 Rules:
 - Create one entry per club. If multiple clubs appear, create multiple entries.
-- If individual shot distances are shown, derive avg/max/min from them.
+- If individual shot distances are shown in a table, compute avg/max/min from those rows.
+- For L/R direction fields (Carry Side, Launch Dir etc.): treat L as negative, R as positive for right-handed golfer.
 - Return ONLY the JSON object — no markdown fences, no explanation.
-- Use null for any field not visible.
+- Use null for any field not visible in the screenshots.
 """
 
 REAL_ROUND_PROMPT = """
