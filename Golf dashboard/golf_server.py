@@ -110,7 +110,7 @@ Compute session averages from all visible shot rows. Extract all club data and r
       "avg_from_pin_m": float or null (average distance from pin — may be absent for some clubs),
       "avg_carry_side_m": float or null (average lateral offset in metres — positive=right, negative=left; derive sign from R/L suffix),
       "dominant_shape": "derive from avg Spin Axis: >+8 -> 'hook', +2 to +8 -> 'draw', -2 to +2 -> 'straight', -8 to -2 -> 'fade', <-8 -> 'slice'. Null if spin axis not shown.",
-      "avg_face_angle": float or null (average Face Angle in degrees; negative=open, positive=closed for right-handed golfer),
+      "avg_face_angle": float or null (average Face Angle in degrees RELATIVE TO TARGET LINE for right-handed golfer; negative=open/left, positive=closed/right. CRITICAL: true face angle is ALWAYS within ±10°, typically ±5°. DO NOT confuse with Launch Angle (10°–40°), Dynamic Loft (10°–50°), or any other loft-related column. If the column value appears to be >10° or <-10°, it is NOT the face angle — set null instead.),
       "avg_club_path": float or null (average Club Path in degrees; negative=out-to-in, positive=in-to-out),
       "avg_face_to_path": float or null (average Face-to-Path in degrees; negative=fade/slice tendency, positive=draw/hook),
       "avg_spin_axis_deg": float or null (average Spin Axis in degrees; positive=draw tilt, negative=fade tilt),

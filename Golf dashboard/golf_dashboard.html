@@ -753,6 +753,19 @@ function normalizeClub(name){
   return CLUB_ALIASES[name.toLowerCase().trim()] || name;
 }
 
+// Derive face angle to target from the mathematical identity:
+//   Face Angle = Club Path + Face-to-Path
+// This is more reliable than the extracted avg_face_angle which Claude may
+// confuse with Launch Angle (10–40°) when reading screenshot column headers.
+// Falls back to stored avg_face_angle only if it's within ±10° (plausible range).
+function getFaceAngle(s){
+  if(s==null) return null;
+  if(s.avg_face_to_path!=null && s.avg_club_path!=null)
+    return Math.round((s.avg_face_to_path + s.avg_club_path)*10)/10;
+  if(s.avg_face_angle!=null && Math.abs(s.avg_face_angle)<=10) return s.avg_face_angle;
+  return null;
+}
+
 const DAMAGE_BENCH = {doubles:1.5,triples:0.3,threePutts:1.0,ob:0.5};
 const APPROACH_BUCKETS = [
   {label:"< 80m",min:0,max:80},{label:"80–110m",min:80,max:110},
@@ -2190,7 +2203,7 @@ function renderRangeTable(){
       <td>${s.avg_club_speed_mph!=null?Math.round(s.avg_club_speed_mph)+"mph":"—"}</td>
       <td>${s.avg_spin_rate_rpm!=null?Math.round(s.avg_spin_rate_rpm):"—"}</td>
       <td>${degFmt(s.avg_spin_axis_deg)}</td>
-      <td>${degFmt(s.avg_face_angle)}</td>
+      <td>${degFmt(getFaceAngle(s))}</td>
       <td>${degFmt(s.avg_club_path)}</td>
       <td>${degFmt(s.avg_face_to_path)}</td>
       <td>${degFmt(s.avg_attack_angle_deg)}</td>
@@ -2205,7 +2218,7 @@ function renderBallFlight(){
   const byClub=latestByClub();
   const clubs=Object.keys(byClub).filter(c=>{
     const s=byClub[c].at(-1);
-    return s.avg_face_angle!=null||s.avg_club_path!=null||s.avg_face_to_path!=null;
+    return getFaceAngle(s)!=null||s.avg_club_path!=null||s.avg_face_to_path!=null;
   });
   if(!clubs.length){cc.style.display="none";return;}
   cc.style.display="";
@@ -2217,7 +2230,7 @@ function renderBallFlight(){
     data:{
       labels:clubs,
       datasets:[
-        {label:"Face Angle (°)",data:clubs.map(c=>byClub[c].at(-1).avg_face_angle??null),
+        {label:"Face Angle (°)",data:clubs.map(c=>getFaceAngle(byClub[c].at(-1))??null),
          backgroundColor:"rgba(252,165,165,.6)",borderRadius:3},
         {label:"Club Path (°)",data:clubs.map(c=>byClub[c].at(-1).avg_club_path??null),
          backgroundColor:"rgba(59,130,246,.5)",borderRadius:3},
