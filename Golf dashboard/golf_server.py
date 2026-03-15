@@ -14,6 +14,7 @@ Endpoints:
   GET  /api/rounds        Returns rounds_data.json
   POST /api/analyse       Receives images → calls Anthropic API → returns round data
   POST /api/save          Appends new rounds to rounds_data.json
+  POST /api/coach         AI coach chat — sends conversation + data context to Claude
 ──────────────────────────────────────────────────────────────────────────────
 """
 
@@ -174,6 +175,24 @@ PROMPTS = {
     "range":      RANGE_PROMPT,
 }
 
+COACH_SYSTEM_PROMPT = """You are an expert personal golf coach for Joonas. \
+Communicate like a PGA teaching professional: direct, data-driven, encouraging, and specific. \
+Always reference actual numbers when data is available — never give generic advice when specifics exist.
+
+Coaching principles:
+- Identify 1–2 highest-leverage improvements, not a laundry list
+- Distinguish simulator vs real-course performance where relevant
+- Connect range carry data to on-course GIR outcomes when both are available
+- Use concrete targets ("aim for 60% GIR") not vague cues ("hit more greens")
+- Acknowledge progress explicitly when metrics are improving
+
+Formatting rules:
+- **Bold** the single most important takeaway per response
+- Keep responses under 280 words unless the player explicitly asks for detail
+- Use short paragraphs (2-4 sentences max); bullet points for lists of 3+ items
+- Do NOT use markdown headers (## or ###) — this is a chat interface
+- Do not repeat the question back to the player"""
+
 
 # ── Duplicate helpers ────────────────────────────────────────────────────────
 def _is_duplicate_round(store, r):
@@ -267,6 +286,8 @@ class GolfHandler(BaseHTTPRequestHandler):
             self._handle_analyse(payload)
         elif self.path == "/api/save":
             self._handle_save(payload)
+        elif self.path == "/api/coach":
+            self._handle_coach(payload)
         else:
             self._send({"error": "Not found"}, 404)
 
@@ -390,6 +411,61 @@ class GolfHandler(BaseHTTPRequestHandler):
             self._send({"success": True, "saved": saved, "skipped": skipped, "total_rounds": total})
 
         DATA_FILE.write_text(json.dumps(store, indent=2, ensure_ascii=False))
+
+    # ── AI Coach chat ─────────────────────────────────────────────────────
+    def _handle_coach(self, payload: dict):
+        api_key  = payload.get("api_key", "").strip()
+        messages = payload.get("messages", [])
+        context  = payload.get("context", {})
+
+        if not api_key:
+            self._send({"error": "API key required"}, 400); return
+        if not messages:
+            self._send({"error": "No messages provided"}, 400); return
+
+        # Cap history to last 20 messages to control token usage
+        messages = list(messages[-20:])
+
+        # On the very first user turn, prepend the data context to the message content
+        ctx_text = context.get("text", "")
+        ctx_type = context.get("type", "dashboard")
+        if ctx_text and len(messages) == 1 and messages[0].get("role") == "user":
+            messages[0] = {
+                "role": "user",
+                "content": f"[MY GOLF DATA]\n{ctx_text}\n\n[MY QUESTION]\n{messages[0]['content']}",
+            }
+
+        body = json.dumps({
+            "model":      CLAUDE_MODEL,
+            "max_tokens": 1024,
+            "system":     COACH_SYSTEM_PROMPT,
+            "messages":   messages,
+        }).encode()
+
+        req = urllib.request.Request(
+            API_URL, data=body,
+            headers={
+                "x-api-key":         api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type":      "application/json",
+            },
+            method="POST",
+        )
+
+        print(f"  → Coach request: {ctx_type} context, {len(messages)} msg(s)")
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                result = json.loads(resp.read())
+            reply = result["content"][0]["text"].strip()
+            print(f"  ✓ Coach replied ({len(reply)} chars)")
+            self._send({"success": True, "reply": reply})
+        except urllib.error.HTTPError as e:
+            err = e.read().decode()
+            print(f"  ✗ Coach API error {e.code}: {err[:200]}")
+            self._send({"error": f"API error {e.code}: {err}"}, 500)
+        except Exception as e:
+            print(f"  ✗ Coach error: {e}")
+            self._send({"error": str(e)}, 500)
 
 
 # ── Entry point ─────────────────────────────────────────────────────────────

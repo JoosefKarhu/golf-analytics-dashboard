@@ -285,6 +285,47 @@
       .charts-grid .full{grid-column:1}.api-input{width:190px}
     }
     @media(max-width:600px){main{padding:12px}.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+
+    /* ── AI Coach Drawer ──────────────────────────────────────────────────── */
+    .coach-drawer{position:fixed;top:0;right:-420px;width:380px;height:100vh;
+      background:var(--surface);border-left:1px solid var(--border);z-index:300;
+      display:flex;flex-direction:column;
+      transition:right .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 24px rgba(0,0,0,.45)}
+    .coach-drawer.open{right:0}
+    .coach-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:299}
+    .coach-backdrop.active{display:block}
+    .coach-drawer-header{display:flex;align-items:center;justify-content:space-between;
+      padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .coach-drawer-title{display:flex;align-items:center;gap:8px;font-size:.9rem;font-weight:700}
+    .coach-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;
+      flex-direction:column;gap:12px;scroll-behavior:smooth}
+    .coach-welcome{background:var(--surface2);border-radius:10px;padding:14px;
+      font-size:.84rem;border-left:3px solid var(--accent)}
+    .coach-msg{border-radius:10px;padding:10px 13px;font-size:.83rem;line-height:1.55;
+      white-space:pre-wrap;word-break:break-word}
+    .coach-msg.user{background:var(--surface3);align-self:flex-end;
+      max-width:88%;border-bottom-right-radius:3px}
+    .coach-msg.assistant{background:var(--surface2);align-self:flex-start;
+      border-bottom-left-radius:3px;border-left:2px solid var(--accent)}
+    .coach-msg.error{background:rgba(239,68,68,.1);border-left:2px solid var(--danger);
+      color:var(--danger);font-size:.8rem}
+    .coach-typing{display:flex;gap:5px;padding:8px 16px;align-items:center;flex-shrink:0}
+    .coach-typing-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);
+      animation:coachBounce 1.2s infinite ease-in-out}
+    .coach-typing-dot:nth-child(2){animation-delay:.2s}
+    .coach-typing-dot:nth-child(3){animation-delay:.4s}
+    @keyframes coachBounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-6px);opacity:1}}
+    .coach-input-area{display:flex;gap:8px;padding:12px 16px;
+      border-top:1px solid var(--border);flex-shrink:0;align-items:flex-end}
+    .coach-input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+      border-radius:8px;padding:8px 11px;font-size:.84rem;font-family:inherit;resize:none;
+      outline:none;transition:border-color .2s;max-height:100px;overflow-y:auto}
+    .coach-input:focus{border-color:var(--accent)}
+    .coach-footer{display:flex;align-items:center;justify-content:space-between;
+      padding:7px 16px 10px;flex-shrink:0}
+    @media(min-width:760px){body.coach-open main{padding-right:396px;
+      transition:padding-right .28s cubic-bezier(.4,0,.2,1)}}
+    @media(max-width:759px){.coach-drawer{width:100vw;right:-100vw}}
   </style>
 </head>
 <body>
@@ -295,6 +336,18 @@
     <div class="logo">⛳ Joonas <span>Golf Analytics</span></div>
     <div class="header-right">
       <span id="roundCount" style="font-size:.8rem;color:var(--muted)"></span>
+      <label style="font-size:.75rem;color:var(--muted);white-space:nowrap">Target:
+        <select id="targetSelect" onchange="setTarget(this.value)"
+          style="background:var(--surface2);border:1px solid var(--border);color:var(--text);
+                 padding:5px 8px;border-radius:7px;font-size:13px;font-weight:600;outline:none;cursor:pointer;margin-left:4px">
+          <option value="scratch">Scratch</option>
+          <option value="hcp5" selected>HCP 5</option>
+          <option value="hcp10">HCP 10</option>
+          <option value="hcp15">HCP 15</option>
+          <option value="hcp20">HCP 20</option>
+        </select>
+      </label>
+      <button class="btn btn-ghost" onclick="openCoach('dashboard')" style="color:var(--accent);border-color:rgba(34,197,94,.4)">💬 Ask Coach</button>
       <input class="api-input" type="password" id="apiKey"
              placeholder="Anthropic API key (sk-ant-…)" autocomplete="off">
       <button class="btn btn-ghost" onclick="saveKey()">Save Key</button>
@@ -346,23 +399,23 @@
     <!-- Charts -->
     <div class="charts-grid">
       <div class="chart-card full">
-        <div class="chart-title">📈 Scoring Trend <span class="badge-pill">Score vs Par · HCP5 = +3 · rolling avg · ▲ = 9-hole round</span></div>
+        <div class="chart-title">📈 Scoring Trend <span class="badge-pill" id="badge-scoring">Score vs Par · HCP 5 = +3 · rolling avg · ▲ = 9-hole round</span></div>
         <canvas id="chartScoring"></canvas>
       </div>
       <div class="chart-card" id="cc-gir">
-        <div class="chart-title">🎯 GIR % per Round <span class="badge-pill">Target ≥ 58%</span></div>
+        <div class="chart-title">🎯 GIR % per Round <span class="badge-pill" id="badge-gir">Target ≥ 58%</span></div>
         <canvas id="chartGir"></canvas>
       </div>
       <div class="chart-card" id="cc-fw">
-        <div class="chart-title">🏌️ Fairway % per Round <span class="badge-pill">Target ≥ 60%</span></div>
+        <div class="chart-title">🏌️ Fairway % per Round <span class="badge-pill" id="badge-fw">Target ≥ 60%</span></div>
         <canvas id="chartFw"></canvas>
       </div>
       <div class="chart-card" id="cc-radar">
-        <div class="chart-title">🕸️ KPI vs HCP 5 Benchmarks <span class="badge-pill">100% = on target</span></div>
+        <div class="chart-title">🕸️ KPI vs Benchmark <span class="badge-pill" id="badge-radar">100% = on target</span></div>
         <canvas id="chartRadar"></canvas>
       </div>
       <div class="chart-card" id="cc-scr">
-        <div class="chart-title">🔄 Scrambling % per Round <span class="badge-pill">Target ≥ 55%</span></div>
+        <div class="chart-title">🔄 Scrambling % per Round <span class="badge-pill" id="badge-scr">Target ≥ 55%</span></div>
         <canvas id="chartScrambling"></canvas>
       </div>
     </div>
@@ -474,6 +527,12 @@
     <div class="section-wrap" id="practiceFocusSection">
       <div class="section-head">🎯 Next Practice Focus</div>
       <div class="practice-grid" id="practiceFocusGrid"><p style="color:var(--muted);font-size:.85rem">Loading…</p></div>
+    </div>
+
+    <!-- Practice → Course Transfer (All tab only) -->
+    <div class="section-wrap" id="transferSection" style="display:none">
+      <div class="section-head">🔗 Practice → Course Transfer</div>
+      <div id="transferGrid" class="practice-grid"><p style="color:var(--muted);font-size:.85rem">Loading…</p></div>
     </div>
 
     <!-- Round History -->
@@ -591,6 +650,38 @@
   </div>
 </div>
 
+<!-- ── AI Coach Drawer ────────────────────────────────────────────────────── -->
+<div id="coachDrawer" class="coach-drawer">
+  <div class="coach-drawer-header">
+    <div class="coach-drawer-title">
+      🏌️ <span>AI Golf Coach</span>
+      <span id="coachContextLabel" class="badge-pill" style="margin-left:6px;font-size:.62rem"></span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="closeCoach()" aria-label="Close">✕</button>
+  </div>
+  <div class="coach-messages" id="coachMessages">
+    <div class="coach-welcome">
+      <p>Ask me anything about your golf game.</p>
+      <p style="margin-top:4px;font-size:.78rem;color:var(--muted)">I have full access to your stats, rounds, and practice data.</p>
+    </div>
+  </div>
+  <div class="coach-typing" id="coachTyping" style="display:none">
+    <span class="coach-typing-dot"></span>
+    <span class="coach-typing-dot"></span>
+    <span class="coach-typing-dot"></span>
+  </div>
+  <div class="coach-input-area">
+    <textarea id="coachInput" class="coach-input" placeholder="Ask your coach…"
+      rows="2" onkeydown="handleCoachKey(event)"></textarea>
+    <button class="btn btn-primary btn-sm" id="coachSendBtn" onclick="sendCoachMessage()">Send</button>
+  </div>
+  <div class="coach-footer">
+    <button class="btn btn-ghost btn-sm" onclick="clearCoachChat()" style="font-size:.72rem">Clear chat</button>
+    <span style="font-size:.68rem;color:var(--muted)">Context: <span id="coachFooterCtx">Full dashboard</span></span>
+  </div>
+</div>
+<div id="coachBackdrop" class="coach-backdrop" onclick="closeCoach()"></div>
+
 <div id="toast"></div>
 
 <!-- ══════════════════════════════════════════════════════════════════════════
@@ -598,7 +689,14 @@
 ══════════════════════════════════════════════════════════════════════════ -->
 <script>
 /* ── Constants ──────────────────────────────────────────────────────────── */
-const BENCH = {score:3,gir:58,fw:60,scr:55,putts:1.70,drive:240};
+const BENCH_PROFILES = {
+  scratch: {label:"Scratch",score:0, gir:72,fw:72,scr:65,putts:1.58,drive:270},
+  hcp5:    {label:"HCP 5",  score:3, gir:58,fw:60,scr:55,putts:1.70,drive:240},
+  hcp10:   {label:"HCP 10", score:8, gir:45,fw:52,scr:45,putts:1.80,drive:225},
+  hcp15:   {label:"HCP 15", score:13,gir:33,fw:45,scr:35,putts:1.90,drive:215},
+  hcp20:   {label:"HCP 20", score:18,gir:22,fw:38,scr:25,putts:2.00,drive:205},
+};
+let BENCH = BENCH_PROFILES.hcp5;   // mutable — updated by setTarget()
 const DAMAGE_BENCH = {doubles:1.5,triples:0.3,threePutts:1.0,ob:0.5};
 const APPROACH_BUCKETS = [
   {label:"< 80m",min:0,max:80},{label:"80–110m",min:80,max:110},
@@ -630,6 +728,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (k) document.getElementById("apiKey").value = k;
   evaluations = JSON.parse(localStorage.getItem("golf_evals") || "{}");
 
+  // Restore saved benchmark target
+  const savedTarget = localStorage.getItem("golf_target") || "hcp5";
+  BENCH = BENCH_PROFILES[savedTarget] || BENCH_PROFILES.hcp5;
+  const sel = document.getElementById("targetSelect");
+  if(sel) sel.value = savedTarget;
+  // badges update after DOM is ready (charts not rendered yet, safe to call)
+  setTimeout(updateBadgeLabels, 0);
+
   const dz = document.getElementById("dropZone");
   dz.addEventListener("dragover",  e=>{e.preventDefault();dz.classList.add("drag-over");});
   dz.addEventListener("dragleave", ()=>dz.classList.remove("drag-over"));
@@ -643,6 +749,28 @@ function saveKey(){
   if(!k) return showToast("Enter an API key first","error");
   localStorage.setItem("golf_api_key",k);
   showToast("API key saved ✓","success");
+}
+
+function setTarget(key){
+  if(!BENCH_PROFILES[key]) return;
+  BENCH = BENCH_PROFILES[key];
+  localStorage.setItem("golf_target", key);
+  updateBadgeLabels();
+  renderAll();
+}
+
+function updateBadgeLabels(){
+  const lbl = BENCH.label;
+  const scoring = document.getElementById("badge-scoring");
+  if(scoring) scoring.textContent = `Score vs Par · ${lbl} = ${BENCH.score>0?"+"+BENCH.score:BENCH.score===0?"E":BENCH.score} · rolling avg · ▲ = 9-hole round`;
+  const gir = document.getElementById("badge-gir");
+  if(gir) gir.textContent = `Target ≥ ${BENCH.gir}%`;
+  const fw  = document.getElementById("badge-fw");
+  if(fw)  fw.textContent  = `Target ≥ ${BENCH.fw}%`;
+  const scr = document.getElementById("badge-scr");
+  if(scr) scr.textContent = `Target ≥ ${BENCH.scr}%`;
+  const radar = document.getElementById("badge-radar");
+  if(radar) radar.textContent = `100% = on target`;
 }
 
 /* ── Tab system ─────────────────────────────────────────────────────────── */
@@ -681,6 +809,9 @@ function setTab(tab) {
   // Practice Focus only on All tab
   const pfEl=document.getElementById("practiceFocusSection");
   if(pfEl) pfEl.style.display = isAll ? "" : "none";
+  // Transfer section only on All tab
+  const trEl=document.getElementById("transferSection");
+  if(trEl) trEl.style.display = isAll ? "" : "none";
   // Score Damage: hide 3-putts and OB on Real tab (scorecard can't provide that)
   ["dmg-3putts","dmg-ob"].forEach(id=>{
     const el=document.getElementById(id);if(el)el.style.display=isReal?"none":"";
@@ -720,7 +851,13 @@ async function fetchRounds(){
     const r=await fetch("/api/rounds");
     if(!r.ok) throw new Error("Server not responding — is golf_server.py running?");
     const data=await r.json();
-    rounds        = data.rounds||[];
+    // Sort chronologically — null dates go to end
+    rounds = (data.rounds||[]).sort((a,b)=>{
+      if(!a.date && !b.date) return 0;
+      if(!a.date) return 1;
+      if(!b.date) return -1;
+      return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
+    });
     rangeSessions = data.range_sessions||[];
     updateTabCounts();
     renderAll();
@@ -913,6 +1050,7 @@ function renderAll(){
     if(activeTab==="real") renderCoachingReal(fr);
     else renderCoaching(full);
     if(activeTab==="all") renderPracticeFocus(full);
+    if(activeTab==="all") renderPracticeTransfer();
     renderTable(fr);
   }
 }
@@ -984,44 +1122,64 @@ function renderKPIs(full){
   document.getElementById("v-rounds").textContent=full.length;
   document.getElementById("d-rounds").textContent=full.length+" full rounds";
   document.getElementById("d-rounds").className="kpi-delta";
+  const tn = BENCH.label;
   setScore(mean(full,"score_vs_par"));
-  setHigh("gir", mean(full,"gir_pct"),         BENCH.gir, "% vs 58%");
-  setHigh("fw",  mean(full,"fairways_hit_pct"), BENCH.fw,  "% vs 60%");
-  setHigh("scr", mean(full,"scrambling_pct"),   BENCH.scr, "% vs 55%");
-  setLow("putts",mean(full,"putts_per_hole"),   BENCH.putts," vs 1.70");
-  setHigh("drive",mean(full,"avg_drive_m"),     BENCH.drive,"m vs 240m");
+  setHigh("gir", mean(full,"gir_pct"),         BENCH.gir, `% vs ${BENCH.gir}%`);
+  setHigh("fw",  mean(full,"fairways_hit_pct"), BENCH.fw,  `% vs ${BENCH.fw}%`);
+  setHigh("scr", mean(full,"scrambling_pct"),   BENCH.scr, `% vs ${BENCH.scr}%`);
+  setLow("putts",mean(full,"putts_per_hole"),   BENCH.putts,` vs ${BENCH.putts.toFixed(2)}`);
+  setHigh("drive",mean(full,"avg_drive_m"),     BENCH.drive,`m vs ${BENCH.drive}m`);
 
-  // Estimated handicap — separate Sim vs Real calculation
+  // Estimated handicap — All tab: prefer real rounds if ≥3 exist, else simulator
   const isRealTab = activeTab === "real";
-  const hcp      = isRealTab ? calcRealHCP(full) : calcEstHCP(full);
+  const isAllTab  = activeTab === "all";
   const lblEl    = document.getElementById("lbl-hcp");
   const hEl      = document.getElementById("v-hcp");
   const hDEl     = document.getElementById("d-hcp");
   const hCard    = document.getElementById("kpi-hcp");
 
-  lblEl.textContent = isRealTab ? "Est. HCP (Real)" : "Est. HCP (Sim)";
+  let hcp, hcpSrc;
+  if(isAllTab){
+    const realRounds = rounds.filter(r=>r.source_type==="real");
+    const simRounds  = rounds.filter(r=>!r.source_type||r.source_type==="simulator");
+    const realHcp = calcRealHCP(realRounds);
+    if(realHcp !== null){
+      hcp = realHcp; hcpSrc = "real";
+    } else {
+      hcp = calcEstHCP(simRounds); hcpSrc = "sim";
+    }
+  } else if(isRealTab){
+    hcp = calcRealHCP(full); hcpSrc = "real";
+  } else {
+    hcp = calcEstHCP(full); hcpSrc = "sim";
+  }
+
+  if(isAllTab && hcpSrc==="real")      lblEl.textContent = "Est. HCP (Real)";
+  else if(isAllTab)                    lblEl.textContent = "Est. HCP (Sim)";
+  else if(isRealTab)                   lblEl.textContent = "Est. HCP (Real)";
+  else                                 lblEl.textContent = "Est. HCP (Sim)";
 
   if(hcp===null){
     hEl.textContent="—";
-    const need = isRealTab
-      ? (full.filter(r=>r.score_vs_par!=null&&r.holes_played>=9).length<3 ? "Need 3+ rounds" : "Calculating…")
-      : (full.filter(r=>r.holes_played>=18&&r.score_vs_par!=null).length<3 ? "Need 3+ 18H rounds" : "Calculating…");
-    hDEl.textContent=need;
+    hDEl.textContent = hcpSrc==="real"
+      ? "Need 3+ real rounds"
+      : "Need 3+ 18H rounds";
     hDEl.className="kpi-delta";
     hCard.title="";
   } else {
     hEl.textContent=hcp.toFixed(1);
-    const gap = hcp - 5;
-    hDEl.textContent = gap<=0 ? "✓ HCP 5 achieved!" : `${gap.toFixed(1)} away from HCP 5`;
+    const gap = hcp - BENCH.score;
+    hDEl.textContent = gap<=0
+      ? `✓ ${tn} achieved!`
+      : `${gap.toFixed(1)} away from ${tn}`;
     hDEl.className = "kpi-delta "+(gap<=0?"good":gap<=3?"warn":"bad");
-    // tooltip explaining method
-    if(isRealTab){
-      const eligible = full.filter(r=>r.score_vs_par!=null&&r.holes_played>=9);
+    if(hcpSrc==="real"){
+      const eligible = (isAllTab ? rounds.filter(r=>r.source_type==="real") : full).filter(r=>r.score_vs_par!=null&&r.holes_played>=9);
       const n = eligible.length;
       const count = n<=5?1:n<=8?2:n<=11?3:n<=14?4:n<=16?5:n<=18?6:n===19?7:8;
-      hCard.title=`WHS simplified: best ${count} of ${n} rounds × 0.96 (9H rounds normalised ×2)`;
+      hCard.title=`WHS simplified: best ${count} of ${n} real rounds × 0.96`;
     } else {
-      const eligible = full.filter(r=>r.holes_played>=18&&r.score_vs_par!=null);
+      const eligible = (isAllTab ? rounds.filter(r=>!r.source_type||r.source_type==="simulator") : full).filter(r=>r.holes_played>=18&&r.score_vs_par!=null);
       const n = eligible.length;
       const count = n<=5?1:n<=8?2:n<=11?3:n<=14?4:n<=16?5:n<=18?6:n===19?7:8;
       hCard.title=`WHS simplified (simulator): best ${count} of ${n} rounds × 0.96\n⚠ Simulator scores may not reflect real-course difficulty`;
@@ -1058,7 +1216,7 @@ function renderCharts(full, allRounds){
         pointBackgroundColor:trendRounds.map(r=>r.score_vs_par<=3?"#22c55e":r.score_vs_par<=6?"#f59e0b":"#ef4444"),
         pointStyle:trendRounds.map(r=>is9(r)?"triangle":"circle"),
         pointRadius:trendRounds.map(r=>is9(r)?7:6),pointHoverRadius:9,tension:.35,fill:true},
-      {label:"HCP5 (+3)",data:trendRounds.map(()=>3),borderColor:"#22c55e",borderDash:[7,4],pointRadius:0,borderWidth:2},
+      {label:`${BENCH.label} (${BENCH.score>0?"+"+BENCH.score:BENCH.score===0?"E":BENCH.score})`,data:trendRounds.map(()=>BENCH.score),borderColor:"#22c55e",borderDash:[7,4],pointRadius:0,borderWidth:2},
       {label:"3-Rnd Avg",data:trendRounds.map((_,i)=>{const s=trendRounds.slice(Math.max(0,i-2),i+1);return mean(s,"score_vs_par");}),
         borderColor:"#a855f7",borderDash:[3,3],pointRadius:0,borderWidth:2},
     ]},
@@ -1085,12 +1243,14 @@ function renderCharts(full, allRounds){
       x:{...AXIS_OPTS,ticks:{color:TICK_COLOR,font:{size:10}}},y:{...AXIS_OPTS,min:0,max:100},
     }}});
   };
+  const tgir=BENCH.gir, tfw=BENCH.fw, tscr=BENCH.scr;
   barChart("chartGir",full.map(r=>r.gir_pct),
-    full.map(r=>r.gir_pct>=58?"rgba(34,197,94,.65)":r.gir_pct>=44?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),58,"GIR %");
+    full.map(r=>r.gir_pct>=tgir?"rgba(34,197,94,.65)":r.gir_pct>=(tgir-14)?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),tgir,"GIR %");
   barChart("chartFw",full.map(r=>r.fairways_hit_pct),
-    full.map(r=>r.fairways_hit_pct==null?"rgba(100,116,139,.3)":r.fairways_hit_pct>=60?"rgba(34,197,94,.65)":r.fairways_hit_pct>=45?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),60,"FW %");
+    full.map(r=>r.fairways_hit_pct==null?"rgba(100,116,139,.3)":r.fairways_hit_pct>=tfw?"rgba(34,197,94,.65)":r.fairways_hit_pct>=(tfw-15)?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),tfw,"FW %");
   barChart("chartScrambling",full.map(r=>r.scrambling_pct),
-    full.map(r=>r.scrambling_pct==null?"rgba(100,116,139,.3)":r.scrambling_pct>=55?"rgba(34,197,94,.65)":r.scrambling_pct>=40?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),55,"Scrambling %");
+    full.map(r=>r.scrambling_pct==null?"rgba(100,116,139,.3)":r.scrambling_pct>=tscr?"rgba(34,197,94,.65)":r.scrambling_pct>=(tscr-15)?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),tscr,"Scrambling %");
+  updateBadgeLabels();
 
   destroyChart("chartRadar");
   const ag=mean(full,"gir_pct")??0,af=mean(full,"fairways_hit_pct")??0,
@@ -1103,7 +1263,7 @@ function renderCharts(full, allRounds){
       {label:"Current",data:[nm(ag,BENCH.gir),nm(af,BENCH.fw),nm(as,BENCH.scr),
         nm(BENCH.putts,ap),nm(ad,BENCH.drive),nm(BENCH.score+1,asc+1)],
         borderColor:"#3b82f6",backgroundColor:"rgba(59,130,246,.18)",pointBackgroundColor:"#3b82f6",pointRadius:4},
-      {label:"HCP 5",data:[100,100,100,100,100,100],borderColor:"#22c55e",
+      {label:BENCH.label,data:[100,100,100,100,100,100],borderColor:"#22c55e",
         borderDash:[5,4],backgroundColor:"rgba(34,197,94,.04)",pointRadius:0},
     ]},options:{...CHART_OPTS,scales:{r:{min:0,max:100,
       ticks:{color:TICK_COLOR,backdropColor:"transparent",stepSize:25},
@@ -1370,6 +1530,77 @@ function renderPracticeFocus(full){
   }).join("");
 }
 
+/* ── Practice → Course Transfer ─────────────────────────────────────────── */
+function renderPracticeTransfer(){
+  const el = document.getElementById("transferGrid");
+  if(!el) return;
+
+  // Need both range data and rounds with hole-level distance+gir data
+  const sessionsWithClub = rangeSessions.filter(s=>s.club && s.avg_carry_m!=null);
+  const roundsWithHoles  = rounds.filter(r=>(r.holes||[]).some(h=>h.distance_m!=null && h.gir!=null));
+
+  if(!sessionsWithClub.length || !roundsWithHoles.length){
+    el.innerHTML=`<div class="practice-item" style="grid-column:1/-1">
+      <p style="color:var(--muted);font-size:.85rem">
+        ${!sessionsWithClub.length
+          ? "No range carry data yet — drop range screenshots on the Practice tab."
+          : "No on-course distance data yet — new screenshots will populate this once analysed."}
+      </p></div>`;
+    return;
+  }
+
+  // Build latest carry per club (most recent session wins)
+  const carryByClub = {};
+  for(const s of sessionsWithClub){
+    const key = s.club.toUpperCase();
+    if(!carryByClub[key] || (s.date && (!carryByClub[key].date || s.date > carryByClub[key].date)))
+      carryByClub[key] = s;
+  }
+
+  // Compute on-course GIR% by carry distance zone from round hole data
+  const ZONES = [
+    {label:"< 80m",  min:0,   max:80},
+    {label:"80–110m",min:80,  max:110},
+    {label:"110–130m",min:110,max:130},
+    {label:"130–150m",min:130,max:150},
+    {label:"150–170m",min:150,max:170},
+    {label:"170–200m",min:170,max:200},
+    {label:"200m+",  min:200, max:9999},
+  ];
+  const zoneStats = ZONES.map(z=>({...z, hits:0, total:0}));
+  for(const r of roundsWithHoles){
+    for(const h of r.holes||[]){
+      if(h.distance_m==null || h.gir==null) continue;
+      const z = zoneStats.find(z=>h.distance_m>=z.min && h.distance_m<z.max);
+      if(z){ z.total++; if(h.gir) z.hits++; }
+    }
+  }
+
+  // For each club, find which zone its carry falls in and show on-course GIR% for that zone
+  const rows = Object.values(carryByClub).map(s=>{
+    const carry = s.avg_carry_m;
+    const zone  = zoneStats.find(z=>carry>=z.min && carry<z.max);
+    const girPct = zone && zone.total>=3 ? Math.round(zone.hits/zone.total*100) : null;
+    return {club:s.club, carry, zone:zone?.label, girPct, samples:zone?.total??0};
+  }).filter(r=>r.zone).sort((a,b)=>b.carry-a.carry);
+
+  if(!rows.length){
+    el.innerHTML=`<div class="practice-item" style="grid-column:1/-1"><p style="color:var(--muted)">Not enough overlap between range clubs and course distance data yet.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = rows.map(r=>{
+    const colr = r.girPct==null ? "var(--muted)" : r.girPct>=BENCH.gir ? "var(--accent)" : r.girPct>=(BENCH.gir-15) ? "var(--warn)" : "var(--danger)";
+    const girLabel = r.girPct!=null ? `${r.girPct}% GIR` : `< 3 samples`;
+    return `<div class="practice-item">
+      <div class="prio-label" style="color:${colr}">${r.club}</div>
+      <h4>${r.carry}m avg carry → ${r.zone}</h4>
+      <p>On-course GIR: <strong>${girLabel}</strong>${r.samples>=3?" ("+r.samples+" holes)":""}</p>
+      ${r.girPct!=null && r.girPct<BENCH.gir ? `<p style="color:var(--warn);font-size:.78rem;margin-top:4px">Gap: ${BENCH.gir-r.girPct}% below ${BENCH.label} target</p>`:""}
+    </div>`;
+  }).join("");
+}
+
 /* ── Round History Table ────────────────────────────────────────────────── */
 function renderTable(all){
   const body=document.getElementById("roundBody");
@@ -1397,8 +1628,12 @@ function renderTable(all){
         <td><span class="pill ${sp}">${sc!=null?fmtScore(sc):"—"}</span></td>
         <td>${r.total_strokes??"—"}</td>
         <td style="color:var(--muted)">${par??"—"}</td>
-        <td><button class="btn btn-ghost btn-sm" onclick="openRateModal(${fi})"
-          style="${he?"color:var(--accent);border-color:var(--accent)":""}">${he?"★":"Rate"}</button></td>
+        <td style="display:flex;gap:4px;flex-wrap:nowrap">
+          <button class="btn btn-ghost btn-sm" onclick="openRateModal(${fi})"
+            style="${he?"color:var(--accent);border-color:var(--accent)":""}">${he?"★":"Rate"}</button>
+          <button class="btn btn-ghost btn-sm" onclick="openCoach('round',${fi})"
+            style="color:var(--blue);border-color:rgba(59,130,246,.35)">Ask</button>
+        </td>
       </tr>`;}).join("");
   } else {
     // Full header for All/Simulator tabs
@@ -1423,8 +1658,12 @@ function renderTable(all){
         <td class="${gc}">${fmtPct(r.gir_pct)}</td>
         <td class="${sc2}">${fmtPct(r.scrambling_pct)}</td>
         <td class="${pc}">${r.putts_per_hole!=null?r.putts_per_hole.toFixed(2):"—"}</td>
-        <td><button class="btn btn-ghost btn-sm" onclick="openRateModal(${fi})"
-          style="${he?"color:var(--accent);border-color:var(--accent)":""}">${he?"★":"Rate"}</button></td>
+        <td style="display:flex;gap:4px;flex-wrap:nowrap">
+          <button class="btn btn-ghost btn-sm" onclick="openRateModal(${fi})"
+            style="${he?"color:var(--accent);border-color:var(--accent)":""}">${he?"★":"Rate"}</button>
+          <button class="btn btn-ghost btn-sm" onclick="openCoach('round',${fi})"
+            style="color:var(--blue);border-color:rgba(59,130,246,.35)">Ask</button>
+        </td>
       </tr>`;}).join("");
   }
 }
@@ -1689,6 +1928,8 @@ function renderClubCards(){
       ${acc!=null?`<div class="club-accuracy ${accCls}">${acc}% target hit</div>`:""}
       ${trendHtml}
       <div class="club-sessions">${sessions.length} session${sessions.length>1?"s":""}</div>
+      <button class="btn btn-ghost btn-sm" onclick="openCoach('club',${JSON.stringify(club)})"
+        style="margin-top:10px;width:100%;color:var(--blue);border-color:rgba(59,130,246,.35);font-size:.73rem">💬 Ask Coach</button>
     </div>`;
   }).join("");
 }
@@ -1802,6 +2043,287 @@ function renderRangeTable(){
 function showToast(msg,type="success"){
   const t=document.getElementById("toast");t.textContent=msg;t.className="show "+type;
   setTimeout(()=>{t.className="";},3500);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   AI COACH CHAT MODULE
+════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Coach state ────────────────────────────────────────────────────────── */
+let coachHistory = [];   // [{role:"user"|"assistant", content:"..."}]
+let coachCtx     = null; // {type, text, label}
+let coachBusy    = false;
+let coachCtxId   = 0;    // incremented on each new context to detect changes
+
+/* ── Context builders ───────────────────────────────────────────────────── */
+function buildDashboardContext(){
+  const fr    = rounds;
+  const full  = fr.filter(r=>r.holes_played>=18);
+  const avgScore = mean(full,"score_vs_par");
+  const sorted   = [...full].filter(r=>r.score_vs_par!=null).sort((a,b)=>a.score_vs_par-b.score_vs_par);
+  const best     = sorted[0];
+  const recent3  = full.slice(-3);
+  const recentAvg = mean(recent3,"score_vs_par");
+
+  // Hole-level damage stats
+  let doubles=0,triples=0,threePutts=0,holeRounds=0;
+  for(const r of fr){
+    if(!(r.holes||[]).length) continue;
+    holeRounds++;
+    for(const h of r.holes){
+      if(h.strokes&&h.par){const d=h.strokes-h.par;if(d>=2)doubles++;if(d>=3)triples++;}
+      if(h.putts>=3) threePutts++;
+    }
+  }
+  const dpr = holeRounds?(doubles/holeRounds).toFixed(2):"n/a";
+  const tpr = holeRounds?(triples/holeRounds).toFixed(2):"n/a";
+  const pp3 = holeRounds?(threePutts/holeRounds).toFixed(2):"n/a";
+
+  // Practice summary (latest session per club)
+  const clubs=[...new Set(rangeSessions.map(s=>s.club))];
+  const practiceSummary = clubs.length
+    ? clubs.map(club=>{
+        const sessions=rangeSessions.filter(s=>s.club===club).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+        const l=sessions[sessions.length-1];
+        return `  ${club}: ${l.avg_carry_m!=null?l.avg_carry_m+"m carry":"-"}`
+             + (l.target_hit_pct!=null?`, ${l.target_hit_pct}% target hit`:"")
+             + ` (${sessions.length} session${sessions.length>1?"s":""})`;
+      }).join("\n")
+    : "  No range sessions recorded.";
+
+  const simRounds  = fr.filter(r=>!r.source_type||r.source_type==="simulator");
+  const realRounds = fr.filter(r=>r.source_type==="real");
+  const hcp = calcRealHCP(realRounds) ?? calcEstHCP(simRounds.filter(r=>r.holes_played>=18));
+
+  const fmt = v => v!=null?(v>0?"+":"")+v.toFixed(1):"n/a";
+
+  return `PLAYER DATA — ${new Date().toISOString().slice(0,10)}
+Target benchmark: ${BENCH.label} (${BENCH.score>0?"+"+BENCH.score:BENCH.score===0?"E":BENCH.score})
+
+ROUNDS: ${fr.length} total, ${full.length} full 18-hole
+  Avg score vs par: ${fmt(avgScore)}
+  Best round: ${best?best.course+" ("+fmtScore(best.score_vs_par)+")"+(best.date?" on "+best.date:""):"n/a"}
+  Recent 3-round avg: ${fmt(recentAvg)}
+  Est. handicap: ${hcp!=null?hcp.toFixed(1):"Need 3+ rounds"}
+
+SHOT STATS (18H rounds):
+  GIR: ${fmtPct(mean(full,"gir_pct"))} (target ${BENCH.gir}%)
+  Fairways: ${fmtPct(mean(full,"fairways_hit_pct"))} (target ${BENCH.fw}%)
+  Scrambling: ${fmtPct(mean(full,"scrambling_pct"))} (target ${BENCH.scr}%)
+  Putts/hole: ${mean(full,"putts_per_hole")!=null?mean(full,"putts_per_hole").toFixed(2):"—"} (target ≤${BENCH.putts.toFixed(2)})
+  Avg drive: ${mean(full,"avg_drive_m")!=null?Math.round(mean(full,"avg_drive_m"))+"m":"—"} (target ${BENCH.drive}m)
+
+SCORE DAMAGE (${holeRounds} round${holeRounds!==1?"s":""} with hole data):
+  Doubles/round: ${dpr} (target ≤1.5)
+  Triples+/round: ${tpr} (target ≤0.3)
+  3-putts/round: ${pp3} (target ≤1.0)
+
+PRACTICE (${rangeSessions.length} session${rangeSessions.length!==1?"s":""}):
+${practiceSummary}`;
+}
+
+function buildRoundContext(round){
+  const full = rounds.filter(r=>r.holes_played>=18);
+  const cmp=(val,key)=>{
+    if(val==null) return "n/a";
+    const avg=mean(full,key);
+    if(avg==null) return String(val)+" (no avg yet)";
+    const d=val-avg;
+    return `${val} (your avg: ${avg.toFixed(1)}, delta: ${d>=0?"+":""}${d.toFixed(1)})`;
+  };
+  const holesText=(round.holes||[]).length>0
+    ? "\n\nHOLE DATA:\n"+(round.holes||[]).map(h=>
+        `  H${h.number} (Par ${h.par}): ${h.strokes} strokes`
+        +(h.gir!=null?`, GIR: ${h.gir?"✓":"✗"}`:"")
+        +(h.putts!=null?`, ${h.putts} putts`:"")
+        +(h.fairway_hit!=null&&h.par>3?`, FW: ${h.fairway_hit?"✓":"✗"}`:"")
+        +(h.drive_m!=null?`, drive: ${h.drive_m}m`:"")
+        +(h.distance_m!=null?`, dist: ${h.distance_m}m`:"")
+      ).join("\n")
+    : "";
+
+  return `ROUND UNDER ANALYSIS:
+  Course: ${round.course||"Unknown"}  |  Date: ${round.date||"Unknown"}
+  Type: ${round.source_type==="real"?"Real course":"Simulator"}
+  Score: ${round.score_vs_par!=null?fmtScore(round.score_vs_par):"—"}  |  Strokes: ${round.total_strokes??"—"}  |  Holes: ${round.holes_played??"—"}
+
+VS YOUR AVERAGES (${full.length} 18H rounds):
+  GIR: ${cmp(round.gir_pct,"gir_pct")}
+  Fairways: ${cmp(round.fairways_hit_pct,"fairways_hit_pct")}
+  Scrambling: ${cmp(round.scrambling_pct,"scrambling_pct")}
+  Putts/hole: ${cmp(round.putts_per_hole,"putts_per_hole")}
+  Drive: ${round.avg_drive_m!=null?round.avg_drive_m+"m":"n/a"}${holesText}`;
+}
+
+function buildClubContext(clubName){
+  const sessions=rangeSessions.filter(s=>s.club===clubName)
+    .sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  if(!sessions.length) return `Club: ${clubName}\nNo range session data yet.`;
+  const latest=sessions[sessions.length-1];
+  const prev=sessions.length>1?sessions[sessions.length-2]:null;
+  const trend=prev&&prev.avg_carry_m&&latest.avg_carry_m
+    ?(latest.avg_carry_m-prev.avg_carry_m>=0?"+":"")+(latest.avg_carry_m-prev.avg_carry_m)+"m vs previous session"
+    :"insufficient data";
+
+  // On-course GIR for this club's carry distance zone
+  const carry=latest.avg_carry_m;
+  let onCourseGir="n/a";
+  if(carry!=null){
+    const ZONES=[{label:"< 80m",min:0,max:80},{label:"80–110m",min:80,max:110},
+      {label:"110–130m",min:110,max:130},{label:"130–150m",min:130,max:150},
+      {label:"150–170m",min:150,max:170},{label:"170–200m",min:170,max:200},
+      {label:"200m+",min:200,max:9999}];
+    const zone=ZONES.find(z=>carry>=z.min&&carry<z.max);
+    if(zone){
+      let hits=0,total=0;
+      for(const r of rounds) for(const h of r.holes||[]){
+        if(h.distance_m!=null&&h.gir!=null&&h.distance_m>=zone.min&&h.distance_m<zone.max){
+          total++;if(h.gir)hits++;
+        }
+      }
+      onCourseGir=total>=3?`${Math.round(hits/total*100)}% GIR from ${zone.label} (${total} holes)`:`< 3 on-course samples in ${zone.label} zone`;
+    }
+  }
+
+  const history=sessions.map((s,i)=>
+    `  Session ${i+1}${s.date?" ("+s.date+")":""}: `
+    +`carry ${s.avg_carry_m!=null?s.avg_carry_m+"m":"-"}`
+    +(s.target_hit_pct!=null?`, ${s.target_hit_pct}% target hit`:"")
+    +(s.dispersion_m!=null?`, ±${s.dispersion_m}m dispersion`:"")
+  ).join("\n");
+
+  return `CLUB UNDER ANALYSIS: ${clubName}
+  Sessions: ${sessions.length}
+  Latest carry: ${latest.avg_carry_m!=null?latest.avg_carry_m+"m":"n/a"}
+  Carry range: ${latest.min_carry_m!=null&&(latest.max_carry_m||latest.longest_m)!=null?latest.min_carry_m+"–"+(latest.max_carry_m||latest.longest_m)+"m":"n/a"}
+  Target hit %: ${latest.target_hit_pct!=null?latest.target_hit_pct+"%":"n/a"}
+  Dispersion: ${latest.dispersion_m!=null?"±"+latest.dispersion_m+"m":"n/a"}
+  Carry trend: ${trend}
+  On-course GIR: ${onCourseGir}
+  Target benchmark: ${BENCH.label}
+
+SESSION HISTORY:
+${history}`;
+}
+
+/* ── Drawer open / close ────────────────────────────────────────────────── */
+function openCoach(type, data){
+  const newId = ++coachCtxId;
+
+  if(type==="round"&&data!=null){
+    const round = typeof data==="number" ? filteredRounds()[data] : data;
+    if(!round){ showToast("Round not found","error"); return; }
+    const lbl = (round.course||"Round").slice(0,22)+(round.date?" · "+round.date:"");
+    coachCtx = {type:"round", text:buildRoundContext(round), label:lbl};
+  } else if(type==="club"&&data!=null){
+    coachCtx = {type:"club", text:buildClubContext(data), label:String(data)};
+  } else {
+    coachCtx = {type:"dashboard", text:buildDashboardContext(), label:"Full dashboard"};
+  }
+
+  // Clear chat when context changes
+  const prevId = parseInt(document.getElementById("coachDrawer").dataset.ctxId||"0");
+  if(prevId !== newId){
+    coachHistory=[];
+    document.getElementById("coachMessages").innerHTML=`
+      <div class="coach-welcome">
+        <p>Ask me anything about your golf game.</p>
+        <p style="margin-top:4px;font-size:.78rem;color:var(--muted)">I have full access to your stats, rounds, and practice data.</p>
+      </div>`;
+  }
+  document.getElementById("coachDrawer").dataset.ctxId = newId;
+  document.getElementById("coachContextLabel").textContent = coachCtx.label;
+  document.getElementById("coachFooterCtx").textContent = coachCtx.label;
+
+  document.getElementById("coachDrawer").classList.add("open");
+  document.getElementById("coachBackdrop").classList.add("active");
+  document.body.classList.add("coach-open");
+  setTimeout(()=>document.getElementById("coachInput").focus(), 300);
+}
+
+function closeCoach(){
+  document.getElementById("coachDrawer").classList.remove("open");
+  document.getElementById("coachBackdrop").classList.remove("active");
+  document.body.classList.remove("coach-open");
+}
+
+function clearCoachChat(){
+  coachHistory=[];
+  document.getElementById("coachMessages").innerHTML=`
+    <div class="coach-welcome">
+      <p>Ask me anything about your golf game.</p>
+      <p style="margin-top:4px;font-size:.78rem;color:var(--muted)">I have full access to your stats, rounds, and practice data.</p>
+    </div>`;
+}
+
+/* ── Send message ───────────────────────────────────────────────────────── */
+function handleCoachKey(event){
+  if(event.key==="Enter"&&!event.shiftKey){ event.preventDefault(); sendCoachMessage(); }
+}
+
+async function sendCoachMessage(){
+  if(coachBusy) return;
+  const input=document.getElementById("coachInput");
+  const text=input.value.trim();
+  if(!text) return;
+
+  const apiKey=document.getElementById("apiKey").value.trim();
+  if(!apiKey){ showToast("Enter your Anthropic API key first","error"); return; }
+
+  input.value="";
+  coachHistory.push({role:"user",content:text});
+  appendCoachMsg("user",text);
+
+  coachBusy=true;
+  document.getElementById("coachSendBtn").disabled=true;
+  document.getElementById("coachInput").disabled=true;
+  document.getElementById("coachTyping").style.display="flex";
+  scrollCoachBottom();
+
+  try{
+    // Send context text only on the first message of a conversation
+    const contextToSend = coachHistory.length===1 && coachCtx
+      ? {type:coachCtx.type, text:coachCtx.text}
+      : {type:(coachCtx?.type||"dashboard"), text:""};
+
+    const resp=await fetch("/api/coach",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({api_key:apiKey, messages:coachHistory, context:contextToSend}),
+    });
+    const result=await resp.json();
+    document.getElementById("coachTyping").style.display="none";
+
+    if(!resp.ok||result.error){
+      appendCoachMsg("error","Sorry, I couldn't connect: "+(result.error||"unknown error"));
+    } else {
+      coachHistory.push({role:"assistant",content:result.reply});
+      appendCoachMsg("assistant",result.reply);
+    }
+  }catch(e){
+    document.getElementById("coachTyping").style.display="none";
+    appendCoachMsg("error","Network error: "+e.message);
+  }finally{
+    coachBusy=false;
+    document.getElementById("coachSendBtn").disabled=false;
+    document.getElementById("coachInput").disabled=false;
+    document.getElementById("coachInput").focus();
+    scrollCoachBottom();
+  }
+}
+
+function appendCoachMsg(role,text){
+  const msgs=document.getElementById("coachMessages");
+  const div=document.createElement("div");
+  div.className="coach-msg "+role;
+  div.textContent=text;
+  msgs.appendChild(div);
+  scrollCoachBottom();
+}
+
+function scrollCoachBottom(){
+  const msgs=document.getElementById("coachMessages");
+  setTimeout(()=>{msgs.scrollTop=msgs.scrollHeight;},30);
 }
 </script>
 </body>
