@@ -319,9 +319,21 @@ class GolfHandler(BaseHTTPRequestHandler):
         if not images:
             self._send({"error": "No images provided"}, 400); return
 
+        mode   = payload.get("mode", "round")   # "round" | "real_round" | "range"
+
+        # Mode-specific limits:
+        #   range  — many small screenshots, large JSON output (12+ fields/session)
+        #   round  — fewer images but rich per-hole data
+        if mode == "range":
+            img_cap    = 60    # range screenshots are lighter; allow more
+            max_tokens = 8192  # many sessions × many fields = large JSON
+        else:
+            img_cap    = 40    # scorecard images can be large/complex
+            max_tokens = 4096
+
         # Build message content
         content = []
-        for img in images[:40]:   # cap at 40 to stay within token limits
+        for img in images[:img_cap]:
             content.append({
                 "type":   "image",
                 "source": {
@@ -332,13 +344,12 @@ class GolfHandler(BaseHTTPRequestHandler):
             })
             if img.get("name"):
                 content.append({"type": "text", "text": f"[Filename: {img['name']}]"})
-        mode   = payload.get("mode", "round")   # "round" | "real_round" | "range"
         prompt = PROMPTS.get(mode, ANALYSIS_PROMPT)
         content.append({"type": "text", "text": prompt})
 
         body = json.dumps({
             "model":      CLAUDE_MODEL,
-            "max_tokens": 4096,
+            "max_tokens": max_tokens,
             "messages":   [{"role": "user", "content": content}],
         }).encode()
 
@@ -352,11 +363,18 @@ class GolfHandler(BaseHTTPRequestHandler):
             method="POST",
         )
 
-        print(f"  → Sending {len(images)} image(s) to Claude ({CLAUDE_MODEL})…")
+        sent = min(len(images), img_cap)
+        if len(images) > img_cap:
+            print(f"  ℹ {len(images)} image(s) received — capped at {img_cap} for mode={mode}")
+        print(f"  → Sending {sent} image(s) to Claude ({CLAUDE_MODEL}, max_tokens={max_tokens})…")
         try:
             with urllib.request.urlopen(req, timeout=180) as resp:
                 result = json.loads(resp.read())
             text = result["content"][0]["text"].strip()
+            stop_reason = result.get("stop_reason", "")
+            if stop_reason == "max_tokens":
+                print(f"  ⚠ Response hit max_tokens ({max_tokens}) — JSON may be truncated. "
+                      f"Try sending fewer images or splitting into batches.")
 
             # Extract the JSON block (Claude may wrap in fences even when asked not to)
             if "```" in text:
