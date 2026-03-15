@@ -393,7 +393,8 @@
       <div class="kpi-card" id="kpi-scr"><div class="kpi-value" id="v-scr">—</div><div class="kpi-label">Scrambling</div><div class="kpi-delta" id="d-scr"></div></div>
       <div class="kpi-card" id="kpi-putts"><div class="kpi-value" id="v-putts">—</div><div class="kpi-label">Putts / Hole</div><div class="kpi-delta" id="d-putts"></div></div>
       <div class="kpi-card" id="kpi-drive"><div class="kpi-value" id="v-drive">—</div><div class="kpi-label">Avg Drive</div><div class="kpi-delta" id="d-drive"></div></div>
-      <div class="kpi-card kpi-hcp" id="kpi-hcp"><div class="kpi-value" id="v-hcp">—</div><div class="kpi-label" id="lbl-hcp">Est. HCP (Sim)</div><div class="kpi-delta" id="d-hcp"></div></div>
+      <div class="kpi-card kpi-hcp" id="kpi-hcp-real" style="display:none"><div class="kpi-value" id="v-hcp-real">—</div><div class="kpi-label">Est. HCP (Real)</div><div class="kpi-delta" id="d-hcp-real"></div></div>
+      <div class="kpi-card kpi-hcp" id="kpi-hcp-sim"><div class="kpi-value" id="v-hcp-sim">—</div><div class="kpi-label">Est. HCP (Sim)</div><div class="kpi-delta" id="d-hcp-sim"></div></div>
     </div>
 
     <!-- Charts -->
@@ -816,6 +817,11 @@ function setTab(tab) {
   ["dmg-3putts","dmg-ob"].forEach(id=>{
     const el=document.getElementById(id);if(el)el.style.display=isReal?"none":"";
   });
+  // HCP cards: Real tab = real only; Sim tab = sim only; All tab = both; Practice = neither
+  const hcpReal=document.getElementById("kpi-hcp-real");
+  const hcpSim =document.getElementById("kpi-hcp-sim");
+  if(hcpReal) hcpReal.style.display = (isAll||isReal) && !isPractice ? "" : "none";
+  if(hcpSim)  hcpSim.style.display  = (isAll||tab==="simulator") && !isPractice ? "" : "none";
 
   if (!isAll) {
     const cfg = DZ_CONFIG[tab];
@@ -1062,37 +1068,73 @@ function fmtPct(n){return n!=null?Math.round(n)+"%":"—"}
 function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function destroyChart(id){const e=Chart.getChart(id);if(e)e.destroy()}
 
-/* ── Estimated Handicap (WHS simplified) ────────────────────────────────── */
-function calcEstHCP(rounds){
-  // Need ≥3 18-hole rounds with a score
-  const eligible = rounds.filter(r=>r.holes_played>=18 && r.score_vs_par!=null);
+/* ── Handicap Calculation ────────────────────────────────────────────────── */
+// Uses best 20 rounds (or all rounds if fewer than 20).
+// allowNineHole=true: 9-hole rounds are included, score_vs_par doubled to normalise to 18H.
+// Requires ≥3 eligible rounds; returns null otherwise.
+function calcHCP(rounds, allowNineHole=false){
+  let eligible = allowNineHole
+    ? rounds.filter(r=>r.score_vs_par!=null && r.holes_played>=9)
+    : rounds.filter(r=>r.score_vs_par!=null && r.holes_played>=18);
   if(eligible.length<3) return null;
-  // Sort ascending (best first)
+  if(allowNineHole){
+    eligible = eligible.map(r=>({
+      ...r,
+      score_vs_par: r.holes_played>=18 ? r.score_vs_par : r.score_vs_par*2
+    }));
+  }
   const sorted = [...eligible].sort((a,b)=>a.score_vs_par-b.score_vs_par);
-  const n = eligible.length;
-  // WHS: number of best differentials to use
-  const count = n<=5?1 : n<=8?2 : n<=11?3 : n<=14?4 : n<=16?5 : n<=18?6 : n===19?7 : 8;
-  const best = sorted.slice(0,count);
-  const avg  = best.reduce((s,r)=>s+r.score_vs_par,0)/count;
-  // 0.96 WHS adjustment; floor at 0 (no + handicaps in this tool)
+  const best   = sorted.slice(0, Math.min(20, sorted.length));
+  const avg    = best.reduce((s,r)=>s+r.score_vs_par, 0) / best.length;
   return Math.max(0, Math.round(avg*0.96*10)/10);
 }
 
-/* ── Real HCP estimate (includes 9-hole rounds normalised to 18H) ────────── */
-function calcRealHCP(rounds){
-  // Accept 9-hole rounds by doubling their score_vs_par
-  const eligible = rounds.filter(r=>r.score_vs_par!=null && r.holes_played>=9);
-  if(eligible.length<3) return null;
-  const normalized = eligible.map(r=>({
-    ...r,
-    score_vs_par: r.holes_played>=18 ? r.score_vs_par : r.score_vs_par*2
-  }));
-  const sorted = [...normalized].sort((a,b)=>a.score_vs_par-b.score_vs_par);
-  const n = eligible.length;
-  const count = n<=5?1 : n<=8?2 : n<=11?3 : n<=14?4 : n<=16?5 : n<=18?6 : n===19?7 : 8;
-  const best = sorted.slice(0,count);
-  const avg  = best.reduce((s,r)=>s+r.score_vs_par,0)/count;
-  return Math.max(0, Math.round(avg*0.96*10)/10);
+/* ── Club Performance Score (0–100) ─────────────────────────────────────── */
+// Weighted average of accuracy (target_hit_pct) and carry consistency
+// (100 – dispersion% of avg carry). Uses last 3 sessions per club.
+function calcClubPerformanceScore(clubName){
+  const sessions = rangeSessions.filter(s=>s.club===clubName);
+  if(!sessions.length) return null;
+  const recent = sessions.slice(-3);
+  const scores = [];
+  const accVals = recent.filter(s=>s.target_hit_pct!=null).map(s=>s.target_hit_pct);
+  if(accVals.length) scores.push(accVals.reduce((a,b)=>a+b,0)/accVals.length);
+  const conVals = recent.filter(s=>s.avg_carry_m&&s.dispersion_m!=null)
+    .map(s=>Math.max(0,100-(s.dispersion_m/s.avg_carry_m*100)));
+  if(conVals.length) scores.push(conVals.reduce((a,b)=>a+b,0)/conVals.length);
+  return scores.length ? Math.min(100,Math.round(scores.reduce((a,b)=>a+b,0)/scores.length)) : null;
+}
+
+/* ── Club Implied HCP ────────────────────────────────────────────────────── */
+// Maps on-course GIR% (for the carry zone this club lands in) to an HCP equivalent
+// using the same breakpoints as BENCH_PROFILES. Needs ≥3 on-course holes in the zone.
+function calcClubHCP(clubName){
+  const sessions = rangeSessions.filter(s=>s.club===clubName);
+  if(!sessions.length) return null;
+  const latest = [...sessions].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).at(-1);
+  const carry = latest?.avg_carry_m;
+  if(carry==null) return null;
+  const ZONES=[{min:0,max:80},{min:80,max:110},{min:110,max:130},{min:130,max:150},
+               {min:150,max:170},{min:170,max:200},{min:200,max:9999}];
+  const zone = ZONES.find(z=>carry>=z.min&&carry<z.max);
+  if(!zone) return null;
+  let hits=0,total=0;
+  for(const r of rounds) for(const h of r.holes||[])
+    if(h.distance_m!=null&&h.gir!=null&&h.distance_m>=zone.min&&h.distance_m<zone.max){total++;if(h.gir)hits++;}
+  if(total<3) return null;
+  const girPct = hits/total*100;
+  // GIR% → HCP breakpoints (match BENCH_PROFILES gir values)
+  const MAP=[{gir:72,hcp:0},{gir:58,hcp:5},{gir:45,hcp:10},{gir:33,hcp:15},{gir:22,hcp:20}];
+  if(girPct>=72) return 0;
+  if(girPct<=22) return Math.min(36, Math.round((20+(22-girPct)*0.8)*10)/10);
+  for(let i=0;i<MAP.length-1;i++){
+    const u=MAP[i],l=MAP[i+1];
+    if(girPct<=u.gir&&girPct>=l.gir){
+      const t=(u.gir-girPct)/(u.gir-l.gir);
+      return Math.round((u.hcp+t*(l.hcp-u.hcp))*10)/10;
+    }
+  }
+  return null;
 }
 
 /* ── KPI cards ──────────────────────────────────────────────────────────── */
@@ -1130,61 +1172,41 @@ function renderKPIs(full){
   setLow("putts",mean(full,"putts_per_hole"),   BENCH.putts,` vs ${BENCH.putts.toFixed(2)}`);
   setHigh("drive",mean(full,"avg_drive_m"),     BENCH.drive,`m vs ${BENCH.drive}m`);
 
-  // Estimated handicap — All tab: prefer real rounds if ≥3 exist, else simulator
-  const isRealTab = activeTab === "real";
-  const isAllTab  = activeTab === "all";
-  const lblEl    = document.getElementById("lbl-hcp");
-  const hEl      = document.getElementById("v-hcp");
-  const hDEl     = document.getElementById("d-hcp");
-  const hCard    = document.getElementById("kpi-hcp");
+  // ── Estimated Handicap — two independent cards (Real + Sim) ──────────────
+  // Always computed from the full global rounds array, not the filtered subset.
+  const allReal = rounds.filter(r=>r.source_type==="real");
+  const allSim  = rounds.filter(r=>!r.source_type||r.source_type==="simulator");
 
-  let hcp, hcpSrc;
-  if(isAllTab){
-    const realRounds = rounds.filter(r=>r.source_type==="real");
-    const simRounds  = rounds.filter(r=>!r.source_type||r.source_type==="simulator");
-    const realHcp = calcRealHCP(realRounds);
-    if(realHcp !== null){
-      hcp = realHcp; hcpSrc = "real";
+  function fillHcpCard(cardId, valId, deltaId, hcp, eligibleArr, isReal){
+    const card  = document.getElementById(cardId);
+    const vEl   = document.getElementById(valId);
+    const dEl   = document.getElementById(deltaId);
+    if(!card) return;
+    if(hcp===null){
+      vEl.textContent="—";
+      dEl.textContent = isReal ? "Need 3+ real rounds" : "Need 3+ 18H rounds";
+      dEl.className="kpi-delta";
+      card.title="";
+      card.className="kpi-card kpi-hcp";
     } else {
-      hcp = calcEstHCP(simRounds); hcpSrc = "sim";
-    }
-  } else if(isRealTab){
-    hcp = calcRealHCP(full); hcpSrc = "real";
-  } else {
-    hcp = calcEstHCP(full); hcpSrc = "sim";
-  }
-
-  if(isAllTab && hcpSrc==="real")      lblEl.textContent = "Est. HCP (Real)";
-  else if(isAllTab)                    lblEl.textContent = "Est. HCP (Sim)";
-  else if(isRealTab)                   lblEl.textContent = "Est. HCP (Real)";
-  else                                 lblEl.textContent = "Est. HCP (Sim)";
-
-  if(hcp===null){
-    hEl.textContent="—";
-    hDEl.textContent = hcpSrc==="real"
-      ? "Need 3+ real rounds"
-      : "Need 3+ 18H rounds";
-    hDEl.className="kpi-delta";
-    hCard.title="";
-  } else {
-    hEl.textContent=hcp.toFixed(1);
-    const gap = hcp - BENCH.score;
-    hDEl.textContent = gap<=0
-      ? `✓ ${tn} achieved!`
-      : `${gap.toFixed(1)} away from ${tn}`;
-    hDEl.className = "kpi-delta "+(gap<=0?"good":gap<=3?"warn":"bad");
-    if(hcpSrc==="real"){
-      const eligible = (isAllTab ? rounds.filter(r=>r.source_type==="real") : full).filter(r=>r.score_vs_par!=null&&r.holes_played>=9);
-      const n = eligible.length;
-      const count = n<=5?1:n<=8?2:n<=11?3:n<=14?4:n<=16?5:n<=18?6:n===19?7:8;
-      hCard.title=`WHS simplified: best ${count} of ${n} real rounds × 0.96`;
-    } else {
-      const eligible = (isAllTab ? rounds.filter(r=>!r.source_type||r.source_type==="simulator") : full).filter(r=>r.holes_played>=18&&r.score_vs_par!=null);
-      const n = eligible.length;
-      const count = n<=5?1:n<=8?2:n<=11?3:n<=14?4:n<=16?5:n<=18?6:n===19?7:8;
-      hCard.title=`WHS simplified (simulator): best ${count} of ${n} rounds × 0.96\n⚠ Simulator scores may not reflect real-course difficulty`;
+      vEl.textContent=hcp.toFixed(1);
+      const gap=hcp-BENCH.score;
+      dEl.textContent=gap<=0?`✓ ${tn} achieved!`:`${gap.toFixed(1)} away from ${tn}`;
+      dEl.className="kpi-delta "+(gap<=0?"good":gap<=3?"warn":"bad");
+      card.className="kpi-card kpi-hcp "+(gap<=0?"good":gap<=3?"warn":"bad");
+      const n=eligibleArr.length, used=Math.min(20,n);
+      const src=isReal?"real rounds (9H normalised to 18H)":"simulator rounds";
+      card.title=`Best ${used} of ${n} ${src} × 0.96`
+        +(isReal?"":`\n⚠ Simulator scores may not reflect real-course difficulty`);
     }
   }
+
+  fillHcpCard("kpi-hcp-real","v-hcp-real","d-hcp-real",
+    calcHCP(allReal,true),
+    allReal.filter(r=>r.score_vs_par!=null&&r.holes_played>=9), true);
+  fillHcpCard("kpi-hcp-sim","v-hcp-sim","d-hcp-sim",
+    calcHCP(allSim,false),
+    allSim.filter(r=>r.score_vs_par!=null&&r.holes_played>=18), false);
 }
 
 /* ── Charts ─────────────────────────────────────────────────────────────── */
@@ -1928,6 +1950,13 @@ function renderClubCards(){
       ${acc!=null?`<div class="club-accuracy ${accCls}">${acc}% target hit</div>`:""}
       ${trendHtml}
       <div class="club-sessions">${sessions.length} session${sessions.length>1?"s":""}</div>
+      ${(()=>{
+        const perf=calcClubPerformanceScore(club);
+        const chcp=calcClubHCP(club);
+        const perfCls=perf==null?"":perf>=70?"col-good":perf>=50?"col-warn":"col-bad";
+        return(perf!=null?`<div class="${perfCls}" style="font-size:.82rem;font-weight:700;margin-top:8px;border-top:1px solid var(--border);padding-top:6px">Performance: ${perf}/100</div>`:"")
+          +(chcp!=null?`<div style="font-size:.75rem;color:var(--muted);margin-top:2px">Course HCP: <strong style="color:var(--text)">${chcp.toFixed(1)}</strong></div>`:"");
+      })()}
       <button class="btn btn-ghost btn-sm" onclick="openCoach('club',${JSON.stringify(club)})"
         style="margin-top:10px;width:100%;color:var(--blue);border-color:rgba(59,130,246,.35);font-size:.73rem">💬 Ask Coach</button>
     </div>`;
@@ -2093,7 +2122,7 @@ function buildDashboardContext(){
 
   const simRounds  = fr.filter(r=>!r.source_type||r.source_type==="simulator");
   const realRounds = fr.filter(r=>r.source_type==="real");
-  const hcp = calcRealHCP(realRounds) ?? calcEstHCP(simRounds.filter(r=>r.holes_played>=18));
+  const hcp = calcHCP(realRounds,true) ?? calcHCP(simRounds,false);
 
   const fmt = v => v!=null?(v>0?"+":"")+v.toFixed(1):"n/a";
 
