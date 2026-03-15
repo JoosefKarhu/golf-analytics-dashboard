@@ -343,13 +343,15 @@ class GolfHandler(BaseHTTPRequestHandler):
 
         # Mode-specific limits:
         #   range  — many small screenshots, large JSON output (12+ fields/session)
-        #   round  — fewer images but rich per-hole data
+        #   round  — fewer images but rich per-hole data; shots[] array added per
+        #            hole pushes output well past 4096 (18 holes × ~3 shots × 5
+        #            fields ≈ 270 extra values on top of hole-level data)
         if mode == "range":
             img_cap    = 60    # range screenshots are lighter; allow more
             max_tokens = 8192  # many sessions × many fields = large JSON
         else:
             img_cap    = 40    # scorecard images can be large/complex
-            max_tokens = 4096
+            max_tokens = 8192  # bumped from 4096: shots[] per hole ~doubles output
 
         # Build message content
         content = []
