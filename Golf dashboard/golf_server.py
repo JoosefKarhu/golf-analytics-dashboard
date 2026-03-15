@@ -109,7 +109,7 @@ Compute session averages from all visible shot rows. Extract all club data and r
       "target_hit_pct": integer or null (% of shots on target — compute from Target Hit count / total shots),
       "avg_from_pin_m": float or null (average distance from pin — may be absent for some clubs),
       "avg_carry_side_m": float or null (average lateral offset in metres — positive=right, negative=left; derive sign from R/L suffix),
-      "dominant_shape": "derive from avg Spin Axis: >+10 -> 'hook', +3 to +10 -> 'draw', -3 to +3 -> 'straight', -10 to -3 -> 'fade', <-10 -> 'slice'. Null if spin axis not shown.",
+      "dominant_shape": "derive from avg Spin Axis: >+8 -> 'hook', +2 to +8 -> 'draw', -2 to +2 -> 'straight', -8 to -2 -> 'fade', <-8 -> 'slice'. Null if spin axis not shown.",
       "avg_face_angle": float or null (average Face Angle in degrees; negative=open, positive=closed for right-handed golfer),
       "avg_club_path": float or null (average Club Path in degrees; negative=out-to-in, positive=in-to-out),
       "avg_face_to_path": float or null (average Face-to-Path in degrees; negative=fade/slice tendency, positive=draw/hook),

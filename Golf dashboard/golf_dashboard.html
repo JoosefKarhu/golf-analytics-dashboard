@@ -1162,7 +1162,8 @@ function calcClubPerformanceScore(clubName){
 
 /* ── Club Implied HCP ────────────────────────────────────────────────────── */
 // Maps on-course GIR% (for the carry zone this club lands in) to an HCP equivalent
-// using the same breakpoints as BENCH_PROFILES. Needs ≥3 on-course holes in the zone.
+// using the same breakpoints as BENCH_PROFILES. Only uses real-course rounds (not simulator)
+// since simulator GIR rates are inflated. Needs ≥5 real-course holes in the zone.
 function calcClubHCP(clubName){
   const sessions = rangeSessions.filter(s=>s.club===clubName);
   if(!sessions.length) return null;
@@ -1173,23 +1174,29 @@ function calcClubHCP(clubName){
                {min:150,max:170},{min:170,max:200},{min:200,max:9999}];
   const zone = ZONES.find(z=>carry>=z.min&&carry<z.max);
   if(!zone) return null;
+  // Filter to real-course rounds only — simulator GIR is not comparable
+  const realRounds = rounds.filter(r=>r.source_type==="real");
   let hits=0,total=0;
-  for(const r of rounds) for(const h of r.holes||[])
+  for(const r of realRounds) for(const h of r.holes||[])
     if(h.distance_m!=null&&h.gir!=null&&h.distance_m>=zone.min&&h.distance_m<zone.max){total++;if(h.gir)hits++;}
-  if(total<3) return null;
+  if(total<5) return null;
   const girPct = hits/total*100;
   // GIR% → HCP breakpoints (match BENCH_PROFILES gir values)
   const MAP=[{gir:72,hcp:0},{gir:58,hcp:5},{gir:45,hcp:10},{gir:33,hcp:15},{gir:22,hcp:20}];
-  if(girPct>=72) return 0;
-  if(girPct<=22) return Math.min(36, Math.round((20+(22-girPct)*0.8)*10)/10);
-  for(let i=0;i<MAP.length-1;i++){
-    const u=MAP[i],l=MAP[i+1];
-    if(girPct<=u.gir&&girPct>=l.gir){
-      const t=(u.gir-girPct)/(u.gir-l.gir);
-      return Math.round((u.hcp+t*(l.hcp-u.hcp))*10)/10;
+  let hcp;
+  if(girPct>=72) hcp=0;
+  else if(girPct<=22) hcp=Math.min(36, Math.round((20+(22-girPct)*0.8)*10)/10);
+  else {
+    for(let i=0;i<MAP.length-1;i++){
+      const u=MAP[i],l=MAP[i+1];
+      if(girPct<=u.gir&&girPct>=l.gir){
+        const t=(u.gir-girPct)/(u.gir-l.gir);
+        hcp=Math.round((u.hcp+t*(l.hcp-u.hcp))*10)/10;
+        break;
+      }
     }
   }
-  return null;
+  return hcp!=null ? {hcp, holes:total} : null;
 }
 
 /* ── KPI cards ──────────────────────────────────────────────────────────── */
@@ -2033,7 +2040,7 @@ function renderClubCards(){
         const perfCls=perf==null?"":perf>=70?"col-good":perf>=50?"col-warn":"col-bad";
         return shapeHtml+statsHtml
           +(perf!=null?`<div class="${perfCls}" style="font-size:.82rem;font-weight:700;margin-top:8px;border-top:1px solid var(--border);padding-top:6px">Performance: ${perf}/100</div>`:"")
-          +(chcp!=null?`<div style="font-size:.75rem;color:var(--muted);margin-top:2px">Course HCP: <strong style="color:var(--text)">${chcp.toFixed(1)}</strong></div>`:"");
+          +(chcp!=null?`<div style="font-size:.75rem;color:var(--muted);margin-top:2px">Course HCP: <strong style="color:var(--text)">${chcp.hcp.toFixed(1)}</strong> <span style="font-size:.68rem;opacity:.65">(${chcp.holes} real holes)</span></div>`:"");
       })()}
       <div class="club-sessions" style="margin-top:6px">${sessions.length} session${sessions.length>1?"s":""}</div>
       <button class="btn btn-ghost btn-sm" onclick="openCoach('club',${JSON.stringify(club)})"
