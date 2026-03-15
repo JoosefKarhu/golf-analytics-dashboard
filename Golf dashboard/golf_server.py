@@ -62,7 +62,16 @@ Examine ALL provided images carefully and return a single JSON object with this 
           "gir": true or false or null (reached green in regulation: strokes to reach green <= par - 2),
           "putts": integer or null (number of putts on this hole),
           "fairway_hit": true or false or null (tee shot on fairway — par 4/5 only, null for par 3),
-          "drive_m": integer or null (tee shot carry distance in metres — par 4/5 only)
+          "drive_m": integer or null (tee shot carry distance in metres — par 4/5 only),
+          "shots": [
+            {
+              "n": integer (shot number starting from 1),
+              "club": string (canonical short form: Dr, 3W, 5W, 7W, 2I–9I, PW, GW, AW, or degree like 56deg),
+              "carry_m": integer or null (shot distance in metres as shown on the label),
+              "result": string or null ("fairway", "rough", "green", "fringe", "bunker", "penalty"),
+              "remaining_m": integer or null (distance to hole remaining after this shot)
+            }
+          ]
         }
       ],
       "source_images": []
@@ -78,6 +87,7 @@ Rules:
 - Extract hole-level data from hole map images when visible. Leave holes: [] if only a summary screen is provided.
 - GIR = true if the player reached the green in (par - 2) strokes or fewer before putting. Infer from shot maps where possible.
 - fairway_hit and drive_m apply to par 4 and par 5 holes only; use null for par 3s.
+- Shot extraction from hole maps: numbered orange circles on the map show each shot. Each label reads "<n> <Club> • <distance>m" (e.g. "1 Dr • 199m", "2 7i • 114m"). The finish shot "F" shows putts (e.g. "F 2 Putts") — omit it from shots[]. The bottom detail panel shows result location ("199m to rough", "132m to hole") — use these for carry_m, result, and remaining_m. Use canonical club names (Dr not Driver, 7I not 7i, PW not P). Leave shots: [] if no shot labels are visible on the hole map.
 - Return ONLY the JSON object — no explanation, no markdown fences.
 - If a field is genuinely not visible, use null.
 """

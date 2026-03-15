@@ -607,6 +607,12 @@
       </div>
     </div>
 
+    <!-- On-Course Club Usage (simulator) — hidden until shot data present -->
+    <div class="chart-card full" id="cc-simclubs" style="display:none">
+      <div class="chart-title">🏌️ On-Course Club Usage <span class="badge-pill">Simulator · Shots · Carry · Accuracy</span></div>
+      <div id="simClubsWrap"></div>
+    </div>
+
     <!-- Range session history -->
     <div class="table-card">
       <div class="section-head" style="margin-bottom:12px">📋 Range Session History</div>
@@ -765,6 +771,50 @@ function getFaceAngle(s){
     return Math.round((s.avg_face_to_path + s.avg_club_path)*10)/10;
   if(s.avg_face_angle!=null && Math.abs(s.avg_face_angle)<=10) return s.avg_face_angle;
   return null;
+}
+
+// ── Simulator shot-level analytics ──────────────────────────────────────────
+// Flattens all non-putt shots from simulator rounds into a single array.
+// Each entry: { club, carry_m, result, par, gir, hole_strokes, round_date }
+function getSimShots(){
+  return rounds
+    .filter(r=>!r.source_type||r.source_type==="simulator")
+    .flatMap(r=>(r.holes||[]).flatMap(h=>
+      (h.shots||[])
+        .filter(s=>s.club)
+        .map(s=>({
+          club:        normalizeClub(s.club),
+          carry_m:     s.carry_m,
+          result:      s.result,
+          remaining_m: s.remaining_m,
+          par:         h.par,
+          gir:         h.gir,
+          hole_strokes:h.strokes,
+          round_date:  r.date,
+        }))
+    ));
+}
+
+// Aggregates simulator shots by club.
+// Returns { [club]: { count, carries[], results{}, rangeSessionCount } }
+function getSimClubStats(){
+  const shots = getSimShots();
+  if(!shots.length) return {};
+  const byClub = latestByClub();
+  const out = {};
+  for(const s of shots){
+    if(!out[s.club]) out[s.club]={
+      club: s.club, count: 0, carries: [],
+      results: {fairway:0,rough:0,green:0,fringe:0,bunker:0,penalty:0,other:0},
+      rangeSessions: (byClub[s.club]||[]).length,
+    };
+    const c = out[s.club];
+    c.count++;
+    if(s.carry_m>0) c.carries.push(s.carry_m);
+    const r = s.result||"other";
+    c.results[r] = (c.results[r]||0)+1;
+  }
+  return out;
 }
 
 const DAMAGE_BENCH = {doubles:1.5,triples:0.3,threePutts:1.0,ob:0.5};
@@ -1983,7 +2033,7 @@ function renderPractice(){
       document.getElementById(id).innerHTML=`<div class="no-data"><div class="nd-icon">📊</div><p>Awaiting data</p></div>`;
     });
     document.getElementById("rangeBody").innerHTML=`<tr><td colspan="19" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;
-    ["cc-ballflight","cc-strikequality"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
+    ["cc-ballflight","cc-strikequality","cc-simclubs"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
     return;
   }
 
@@ -1993,6 +2043,7 @@ function renderPractice(){
   renderClubAccuracy();
   renderBallFlight();
   renderStrikeQuality();
+  renderSimClubUsage();
   renderRangeTable();
 }
 
@@ -2311,6 +2362,139 @@ function renderStrikeQuality(){
     v=>v==null?"transparent":v>4000?"rgba(239,68,68,.55)":v>3000?"rgba(245,158,11,.55)":"rgba(34,197,94,.6)");
 }
 
+/* ── On-Course Club Usage (Simulator) ──────────────────────────────────── */
+function renderSimClubUsage(){
+  const cc   = document.getElementById("cc-simclubs");
+  const wrap = document.getElementById("simClubsWrap");
+  if(!cc||!wrap) return;
+
+  const stats = getSimClubStats();
+  const clubs = Object.keys(stats).sort((a,b)=>stats[b].count-stats[a].count);
+
+  if(!clubs.length){ cc.style.display="none"; return; }
+  cc.style.display="";
+
+  const byClub = latestByClub();
+  const h = Math.max(180, clubs.length*38);
+
+  // avgCarry helper
+  const avgArr = arr => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : null;
+
+  // ── 1. Usage frequency + range sessions side-by-side ─────────────────────
+  // ── 2. Course vs. Range carry (only clubs with both datasets) ─────────────
+  const carryClubs = clubs.filter(c=>stats[c].carries.length>0 && byClub[c]?.at(-1)?.avg_carry_m);
+  const hc = Math.max(140, carryClubs.length*38);
+
+  wrap.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:6px">Shot Frequency vs Practice</div>
+        <canvas id="chartSimUsage" style="width:100%;height:${h}px"></canvas>
+      </div>
+      <div id="simCarryBlock">
+        ${carryClubs.length ? `
+          <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:6px">Course Carry vs Range Carry</div>
+          <canvas id="chartSimCarry" style="width:100%;height:${hc}px"></canvas>
+        ` : `<div class="no-data" style="height:100%;min-height:120px"><div class="nd-icon" style="font-size:1.4rem">📏</div><p style="font-size:.78rem">Upload range sessions to compare carries</p></div>`}
+      </div>
+    </div>
+    <div id="simAccuracyBlock" style="margin-top:16px"></div>`;
+
+  // Usage chart
+  destroyChart("chartSimUsage");
+  new Chart("chartSimUsage",{
+    type:"bar",
+    data:{
+      labels:clubs,
+      datasets:[
+        {label:"On-course shots",  data:clubs.map(c=>stats[c].count),
+         backgroundColor:"rgba(59,130,246,.55)", borderRadius:3},
+        {label:"Practice sessions",data:clubs.map(c=>stats[c].rangeSessions),
+         backgroundColor:"rgba(34,197,94,.45)",  borderRadius:3},
+      ]
+    },
+    options:{
+      indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:TICK_COLOR,font:{size:11},boxWidth:12}}},
+      scales:{
+        x:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR},title:{display:true,text:"Count",color:TICK_COLOR}},
+        y:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+      }
+    }
+  });
+
+  // Carry comparison chart
+  if(carryClubs.length){
+    destroyChart("chartSimCarry");
+    new Chart("chartSimCarry",{
+      type:"bar",
+      data:{
+        labels:carryClubs,
+        datasets:[
+          {label:"Course avg", data:carryClubs.map(c=>avgArr(stats[c].carries)),
+           backgroundColor:"rgba(59,130,246,.55)",borderRadius:3},
+          {label:"Range avg",  data:carryClubs.map(c=>byClub[c].at(-1).avg_carry_m),
+           backgroundColor:"rgba(100,116,139,.45)",borderRadius:3},
+        ]
+      },
+      options:{
+        indexAxis:"y", responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:TICK_COLOR,font:{size:11},boxWidth:12}}},
+        scales:{
+          x:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR},title:{display:true,text:"Carry (m)",color:TICK_COLOR}},
+          y:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+        }
+      }
+    });
+  }
+
+  // ── 3. On-course accuracy table (clubs with ≥3 shots) ─────────────────────
+  const tableClubs = clubs.filter(c=>stats[c].count>=3);
+  if(tableClubs.length){
+    const rows = tableClubs.map(c=>{
+      const s = stats[c];
+      const onTarget = (s.results.green||0)+(s.results.fairway||0)+(s.results.fringe||0);
+      const rough    = s.results.rough||0;
+      const penalty  = (s.results.bunker||0)+(s.results.penalty||0);
+      const onPct    = Math.round(onTarget/s.count*100);
+      const roughPct = Math.round(rough/s.count*100);
+      const cls      = onPct>=70?"col-good":onPct>=50?"col-warn":"col-bad";
+      const carry    = avgArr(s.carries);
+      // Gap vs range: positive = hitting further on course (unusual), negative = shorter under pressure
+      const rangeCarry = byClub[c]?.at(-1)?.avg_carry_m;
+      const gap = carry&&rangeCarry ? carry-rangeCarry : null;
+      const gapHtml = gap!=null
+        ? `<span class="${Math.abs(gap)<=5?'col-good':gap>0?'col-good':'col-bad'}">${gap>0?"+":""}${gap}m</span>`
+        : "—";
+      return`<tr>
+        <td><span class="pill pill-practice" style="font-size:.7rem">${esc(c)}</span></td>
+        <td style="color:var(--muted)">${s.count}</td>
+        <td class="${cls}">${onPct}%</td>
+        <td style="color:#fca5a5">${roughPct}%</td>
+        ${penalty?`<td style="color:#f87171">${Math.round(penalty/s.count*100)}%</td>`:`<td style="color:var(--muted)">—</td>`}
+        <td style="color:var(--muted)">${carry!=null?carry+"m":"—"}</td>
+        <td>${gapHtml}</td>
+      </tr>`;
+    }).join("");
+    document.getElementById("simAccuracyBlock").innerHTML=`
+      <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:8px">🎯 On-Course Accuracy (clubs with ≥ 3 shots)</div>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+        <thead><tr style="color:var(--muted);font-size:.72rem;border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:5px 8px">Club</th>
+          <th style="padding:5px 8px">Shots</th>
+          <th style="padding:5px 8px">On Target</th>
+          <th style="padding:5px 8px">Rough</th>
+          <th style="padding:5px 8px">Hazard</th>
+          <th style="padding:5px 8px">Course Carry</th>
+          <th style="padding:5px 8px">vs Range</th>
+        </tr></thead>
+        <tbody style="color:var(--text)">${rows}</tbody>
+      </table>
+      </div>`;
+  }
+}
+
 /* ── Toast ──────────────────────────────────────────────────────────────── */
 function showToast(msg,type="success"){
   const t=document.getElementById("toast");t.textContent=msg;t.className="show "+type;
@@ -2397,7 +2581,25 @@ SCORE DAMAGE (${holeRounds} round${holeRounds!==1?"s":""} with hole data):
   3-putts/round: ${pp3} (target ≤1.0)
 
 PRACTICE (${rangeSessions.length} session${rangeSessions.length!==1?"s":""}):
-${practiceSummary}`;
+${practiceSummary}
+
+ON-COURSE CLUB USAGE (simulator — shots extracted from hole maps):
+${(()=>{
+  const simStats = getSimClubStats();
+  const simClubs = Object.keys(simStats).sort((a,b)=>simStats[b].count-simStats[a].count);
+  if(!simClubs.length) return "  No shot-level data yet (upload hole map screenshots).";
+  const avgArr = arr => arr.length ? Math.round(arr.reduce((a,b)=>a+b)/arr.length) : null;
+  return simClubs.map(c=>{
+    const s = simStats[c];
+    const onTarget = (s.results.green||0)+(s.results.fairway||0)+(s.results.fringe||0);
+    const rough    = s.results.rough||0;
+    const carry    = avgArr(s.carries);
+    return `  ${c}: ${s.count} shots`
+         + (carry!=null?`, avg carry ${carry}m`:"")
+         + (s.count?`, on-target ${Math.round(onTarget/s.count*100)}%`:"")
+         + (s.count?`, rough ${Math.round(rough/s.count*100)}%`:"");
+  }).join("\n");
+})()}`;
 }
 
 function buildRoundContext(round){
