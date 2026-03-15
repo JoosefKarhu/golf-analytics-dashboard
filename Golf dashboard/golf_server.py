@@ -231,10 +231,17 @@ def _is_duplicate_round(store, r):
 
 
 def _is_duplicate_session(store, s):
-    """True if a range session with the same club + date + avg_carry already exists."""
+    """True if an identical range session already exists.
+
+    Key = club + date + shots + avg_carry_m.
+    Including shot count prevents false positives when the same club is
+    practised twice on the same day (same avg carry is plausible, but
+    hitting exactly the same number of balls is unlikely).
+    """
     club  = (s.get("club") or "").strip().lower()
     date  = s.get("date")
     carry = s.get("avg_carry_m")
+    shots = s.get("shots")          # None is allowed — treated as wildcard below
     if not club or not date or carry is None:
         return False
     for existing in store.get("range_sessions", []):
@@ -242,6 +249,9 @@ def _is_duplicate_session(store, s):
             (existing.get("club") or "").strip().lower() == club
             and existing.get("date") == date
             and existing.get("avg_carry_m") == carry
+            # Only compare shots when both sides have a value
+            and (shots is None or existing.get("shots") is None
+                 or existing.get("shots") == shots)
         ):
             return True
     return False

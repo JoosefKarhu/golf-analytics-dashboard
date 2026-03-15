@@ -279,6 +279,7 @@
     #toast.show{transform:translateX(-50%) translateY(0)}
     #toast.success{border-color:var(--accent);color:var(--accent)}
     #toast.error{border-color:var(--danger);color:var(--danger)}
+    #toast.warn{border-color:#f59e0b;color:#f59e0b}
 
     @media(max-width:900px){
       .charts-grid,.par3-grid,.feedback-grid,.practice-grid,.par-type-grid{grid-template-columns:1fr}
@@ -925,8 +926,13 @@ async function fetchRounds(){
     const r=await fetch("/api/rounds");
     if(!r.ok) throw new Error("Server not responding — is golf_server.py running?");
     const data=await r.json();
+    // Normalise rounds: infer holes_played from holes array if not set by Claude
+    const rawRounds = (data.rounds||[]).map(r=>({
+      ...r,
+      holes_played: r.holes_played ?? (r.holes?.length || null),
+    }));
     // Sort chronologically — null dates go to end
-    rounds = (data.rounds||[]).sort((a,b)=>{
+    rounds = rawRounds.sort((a,b)=>{
       if(!a.date && !b.date) return 0;
       if(!a.date) return 1;
       if(!b.date) return -1;
@@ -1071,10 +1077,18 @@ async function confirmSave(){
 
   // Collect any manually entered dates before saving
   if(pendingData.type==="rounds"){
+    let missingDate=false;
     pendingData.items.forEach((item,i)=>{
       const field=document.getElementById(`date-field-${i}`);
       if(field&&field.value) item.date=field.value;
+      if(!item.date) missingDate=true;
     });
+    if(missingDate){
+      // Re-show overlay so the user can fill in the missing date
+      document.getElementById("resultsOverlay").classList.add("active");
+      showToast("Please enter a date for every round before saving","warn");
+      return;
+    }
   }
 
   try{
@@ -1167,7 +1181,7 @@ function calcClubPerformanceScore(clubName){
   const scores = [];
   const accVals = recent.filter(s=>s.target_hit_pct!=null).map(s=>s.target_hit_pct);
   if(accVals.length) scores.push(accVals.reduce((a,b)=>a+b,0)/accVals.length);
-  const conVals = recent.filter(s=>s.avg_carry_m&&s.dispersion_m!=null)
+  const conVals = recent.filter(s=>s.avg_carry_m>0&&s.dispersion_m!=null)
     .map(s=>Math.max(0,100-(s.dispersion_m/s.avg_carry_m*100)));
   if(conVals.length) scores.push(conVals.reduce((a,b)=>a+b,0)/conVals.length);
   return scores.length ? Math.min(100,Math.round(scores.reduce((a,b)=>a+b,0)/scores.length)) : null;
@@ -1708,14 +1722,12 @@ function renderTable(all){
     if(head)head.innerHTML=`<th colspan="${colspan}" style="text-align:center;color:var(--muted)">No rounds in this view</th>`;
     body.innerHTML="";return;
   }
-  const fr=filteredRounds();
-
   if(isReal){
     // Simplified header for Real tab — score-focused, no shot stats
     if(head)head.innerHTML=`<th>#</th><th>Course</th><th>Date</th><th>Holes</th><th>Score</th><th>Strokes</th><th>Par</th><th>Eval</th>`;
     body.innerHTML=all.map((r,i)=>{
       const sc=r.score_vs_par,sp=sc!=null?(sc<=3?"pill-good":sc<=6?"pill-warn":"pill-bad"):"pill-neutral";
-      const he=!!evaluations[evalKey(r)],fi=fr.indexOf(r);
+      const he=!!evaluations[evalKey(r)],fi=i;
       const par=r.par||(r.total_strokes!=null&&sc!=null?r.total_strokes-sc:null);
       return`<tr>
         <td style="color:var(--muted)">${i+1}</td>
@@ -1742,7 +1754,7 @@ function renderTable(all){
       const fc=r.fairways_hit_pct==null?"":r.fairways_hit_pct>=60?"col-good":r.fairways_hit_pct>=45?"col-warn":"col-bad";
       const sc2=r.scrambling_pct==null?"":r.scrambling_pct>=55?"col-good":r.scrambling_pct>=40?"col-warn":"col-bad";
       const pc=r.putts_per_hole==null?"":r.putts_per_hole<=1.70?"col-good":r.putts_per_hole<=1.85?"col-warn":"col-bad";
-      const he=!!evaluations[evalKey(r)],fi=fr.indexOf(r);
+      const he=!!evaluations[evalKey(r)],fi=i;
       return`<tr>
         <td style="color:var(--muted)">${i+1}</td>
         <td><span class="pill ${tp}">${tl}</span></td>
