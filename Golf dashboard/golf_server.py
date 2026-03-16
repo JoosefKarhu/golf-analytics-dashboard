@@ -68,7 +68,7 @@ Examine ALL provided images carefully and return a single JSON object with this 
               "n": integer (shot number starting from 1),
               "club": string (canonical short form: Dr, 3W, 5W, 7W, 2I–9I, PW, GW, AW, or degree like 56deg),
               "carry_m": integer or null (shot distance in metres as shown on the label),
-              "result": string or null ("fairway", "rough", "green", "fringe", "bunker", "penalty"),
+              "result": string or null ("fairway", "rough" (deep/penalising), "playable_rough" (light rough, still manageable), "green", "fringe", "bunker", "penalty"),
               "remaining_m": integer or null (distance to hole remaining after this shot)
             }
           ]

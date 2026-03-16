@@ -337,6 +337,13 @@
     .shape-slice   {background:rgba(239,68,68,.2);color:#fca5a5}
     .shape-hook    {background:rgba(249,115,22,.2);color:#fdba74}
 
+    /* ── Confidence badge ──────────────────────────────────────────────── */
+    .conf-badge{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:8px;
+      margin-top:4px;display:inline-block}
+    .conf-low   {background:rgba(239,68,68,.15);color:#fca5a5}
+    .conf-medium{background:rgba(245,158,11,.15);color:#fde68a}
+    .conf-high  {background:rgba(34,197,94,.15); color:#86efac}
+
     /* ── Club card stats mini-row ──────────────────────────────────────── */
     .bf-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:6px;
       border-top:1px solid var(--border);font-size:.72rem}
@@ -371,6 +378,31 @@
              placeholder="Anthropic API key (sk-ant-…)" autocomplete="off">
       <button class="btn btn-ghost" onclick="saveKey()">Save Key</button>
     </div>
+  </div>
+  <!-- Period filter bar — affects all tabs -->
+  <div id="periodFilterBar" style="display:flex;align-items:center;gap:8px;padding:7px 20px;
+    background:var(--bg);border-bottom:1px solid var(--border);flex-wrap:wrap">
+    <span style="font-size:.75rem;color:var(--muted);font-weight:600">📅 Period:</span>
+    <select id="selYear" onchange="setPeriodFilter()"
+      style="background:var(--card);color:var(--text);border:1px solid var(--border);
+      border-radius:6px;padding:3px 8px;font-size:.78rem">
+      <option value="">All years</option>
+    </select>
+    <select id="selMonth" onchange="setPeriodFilter()" disabled
+      style="background:var(--card);color:var(--text);border:1px solid var(--border);
+      border-radius:6px;padding:3px 8px;font-size:.78rem;opacity:.5">
+      <option value="">All months</option>
+      <option value="01">January</option><option value="02">February</option>
+      <option value="03">March</option><option value="04">April</option>
+      <option value="05">May</option><option value="06">June</option>
+      <option value="07">July</option><option value="08">August</option>
+      <option value="09">September</option><option value="10">October</option>
+      <option value="11">November</option><option value="12">December</option>
+    </select>
+    <button onclick="clearPeriodFilter()"
+      style="background:none;border:1px solid var(--border);border-radius:6px;
+      color:var(--muted);padding:3px 8px;font-size:.75rem;cursor:pointer">✕ Clear</button>
+    <span id="periodFilterInfo" style="font-size:.73rem;color:var(--muted);margin-left:auto"></span>
   </div>
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="all"       onclick="setTab('all')">All Rounds <span class="tab-count" id="tc-all">0</span></button>
@@ -592,7 +624,7 @@
         <div id="clubConsistWrap"><div class="no-data"><div class="nd-icon">📏</div><p>Awaiting data</p></div></div>
       </div>
       <div class="chart-card">
-        <div class="chart-title">🎯 Accuracy / Target Hit Rate <span class="badge-pill">Target ≥ 65%</span></div>
+        <div class="chart-title">🎯 Accuracy / Target Hit Rate <span class="badge-pill">Target ≥ 65%</span> <span style="font-size:.7rem;color:var(--muted);font-weight:400">(target-size dependent)</span></div>
         <div id="clubAccuracyWrap"><div class="no-data"><div class="nd-icon">🎯</div><p>Awaiting data</p></div></div>
       </div>
       <!-- Ball Flight Pattern — shown only when face/path/F→P data present -->
@@ -621,7 +653,7 @@
           <thead><tr>
             <th>#</th><th>Date</th><th>Club</th><th>Shots</th>
             <th>Avg Carry</th><th>Avg Total</th><th>Max Carry</th>
-            <th>Min Carry</th><th>Dispersion</th><th>Target Hit</th>
+            <th>Min Carry</th><th>Dispersion</th><th title="Accuracy depends on the target size you set — smaller target = lower %">Target Hit ⓘ</th>
             <th>Shape</th><th>Smash</th><th>Speed</th><th>Spin rpm</th>
             <th>Axis°</th><th>Face°</th><th>Path°</th><th>F→P°</th><th>Attack°</th>
           </tr></thead>
@@ -800,7 +832,7 @@ function medianOf(arr){
 // Derives a club's stock shape from the MEDIAN spin axis across all its
 // range sessions, preventing single-session outliers from changing the badge.
 function getStockShape(clubName){
-  const axes=rangeSessions
+  const axes=filteredRangeSessions()
     .filter(s=>s.club===clubName && s.avg_spin_axis_deg!=null)
     .map(s=>s.avg_spin_axis_deg);
   return classifyShape(medianOf(axes));
@@ -838,7 +870,7 @@ function getSimClubStats(){
   for(const s of shots){
     if(!out[s.club]) out[s.club]={
       club: s.club, count: 0, carries: [],
-      results: {fairway:0,rough:0,green:0,fringe:0,bunker:0,penalty:0,other:0},
+      results: {fairway:0,rough:0,playable_rough:0,green:0,fringe:0,bunker:0,penalty:0,other:0},
       rangeSessions: (byClub[s.club]||[]).length,
     };
     const c = out[s.club];
@@ -871,6 +903,8 @@ const CLUB_COLORS = ["#22c55e","#3b82f6","#f59e0b","#a855f7","#ef4444",
 let rounds        = [];
 let rangeSessions = [];
 let activeTab     = "all";
+let filterYear    = "";
+let filterMonth   = "";
 let pendingData   = null;   // {type:"rounds"|"range", items:[]}
 let evaluations   = {};
 let currentEvalKey = null;
@@ -988,19 +1022,69 @@ function setTab(tab) {
   renderAll();
 }
 
+/* ── Period filter helpers ───────────────────────────────────────────────── */
+function periodFilter(dateStr){
+  if(!filterYear || !dateStr) return true;
+  if(!dateStr.startsWith(filterYear)) return false;
+  if(filterMonth && dateStr.slice(5,7) !== filterMonth) return false;
+  return true;
+}
+function filteredRangeSessions(){
+  return rangeSessions.filter(s => periodFilter(s.date));
+}
+
 function updateTabCounts(){
-  const sim  = rounds.filter(r=>!r.source_type||r.source_type==="simulator");
-  const real = rounds.filter(r=>r.source_type==="real");
-  document.getElementById("tc-all").textContent  = rounds.length;
+  const all  = rounds.filter(r=>periodFilter(r.date));
+  const sim  = all.filter(r=>!r.source_type||r.source_type==="simulator");
+  const real = all.filter(r=>r.source_type==="real");
+  document.getElementById("tc-all").textContent  = all.length;
   document.getElementById("tc-sim").textContent  = sim.length;
   document.getElementById("tc-real").textContent = real.length;
-  document.getElementById("tc-prac").textContent = rangeSessions.length;
+  document.getElementById("tc-prac").textContent = filteredRangeSessions().length;
 }
 
 function filteredRounds(){
-  if(activeTab==="simulator") return rounds.filter(r=>!r.source_type||r.source_type==="simulator");
-  if(activeTab==="real")      return rounds.filter(r=>r.source_type==="real");
-  return rounds;
+  let r = rounds;
+  if(activeTab==="simulator") r = r.filter(r=>!r.source_type||r.source_type==="simulator");
+  if(activeTab==="real")      r = r.filter(r=>r.source_type==="real");
+  return r.filter(r => periodFilter(r.date));
+}
+
+function populatePeriodFilter(){
+  const years = [...new Set([
+    ...rounds.map(r=>r.date?.slice(0,4)),
+    ...rangeSessions.map(s=>s.date?.slice(0,4))
+  ].filter(Boolean))].sort((a,b)=>b-a);
+  const sel = document.getElementById("selYear");
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">All years</option>`
+    + years.map(y=>`<option value="${y}"${y===cur?" selected":""}>${y}</option>`).join("");
+}
+
+function setPeriodFilter(){
+  filterYear  = document.getElementById("selYear").value;
+  const mSel  = document.getElementById("selMonth");
+  mSel.disabled = !filterYear;
+  mSel.style.opacity = filterYear ? "1" : ".5";
+  if(!filterYear){ mSel.value=""; }
+  filterMonth = filterYear ? mSel.value : "";
+  const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const info  = filterYear
+    ? `Showing: ${filterYear}${filterMonth?" / "+MONTHS[+filterMonth-1]:""}`
+    : "";
+  document.getElementById("periodFilterInfo").textContent = info;
+  updateTabCounts();
+  renderAll();
+}
+
+function clearPeriodFilter(){
+  filterYear=""; filterMonth="";
+  document.getElementById("selYear").value="";
+  const mSel=document.getElementById("selMonth");
+  mSel.value=""; mSel.disabled=true; mSel.style.opacity=".5";
+  document.getElementById("periodFilterInfo").textContent="";
+  updateTabCounts();
+  renderAll();
 }
 
 /* ── Data loading ───────────────────────────────────────────────────────── */
@@ -1022,6 +1106,7 @@ async function fetchRounds(){
       return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
     });
     rangeSessions = (data.range_sessions||[]).map(s=>({...s, club: normalizeClub(s.club)}));
+    populatePeriodFilter();
     updateTabCounts();
     renderAll();
   }catch(e){ showToast("Cannot reach server: "+e.message,"error"); }
@@ -1255,19 +1340,55 @@ function calcHCP(rounds, allowNineHole=false){
 }
 
 /* ── Club Performance Score (0–100) ─────────────────────────────────────── */
-// Weighted average of accuracy (target_hit_pct) and carry consistency
-// (100 – dispersion% of avg carry). Uses last 3 sessions per club.
+// Returns {overall, accuracy, consistency, distanceControl, strikeQuality}
+// or null if no data. Uses last 3 sessions for recent metrics, all sessions
+// for distance stability.
 function calcClubPerformanceScore(clubName){
-  const sessions = rangeSessions.filter(s=>s.club===clubName);
+  const sessions = filteredRangeSessions().filter(s=>s.club===clubName);
   if(!sessions.length) return null;
   const recent = sessions.slice(-3);
-  const scores = [];
+  const comp = {};
+
+  // Accuracy: avg target_hit_pct over last 3 sessions
   const accVals = recent.filter(s=>s.target_hit_pct!=null).map(s=>s.target_hit_pct);
-  if(accVals.length) scores.push(accVals.reduce((a,b)=>a+b,0)/accVals.length);
+  if(accVals.length) comp.accuracy = Math.round(accVals.reduce((a,b)=>a+b,0)/accVals.length);
+
+  // Consistency: avg of (100 − dispersion%·carry) over last 3 sessions
   const conVals = recent.filter(s=>s.avg_carry_m>0&&s.dispersion_m!=null)
     .map(s=>Math.max(0,100-(s.dispersion_m/s.avg_carry_m*100)));
-  if(conVals.length) scores.push(conVals.reduce((a,b)=>a+b,0)/conVals.length);
-  return scores.length ? Math.min(100,Math.round(scores.reduce((a,b)=>a+b,0)/scores.length)) : null;
+  if(conVals.length) comp.consistency = Math.round(conVals.reduce((a,b)=>a+b,0)/conVals.length);
+
+  // Distance control: carry stability across all sessions (low stdev = high score)
+  const carVals = sessions.filter(s=>s.avg_carry_m>0).map(s=>s.avg_carry_m);
+  if(carVals.length>=2){
+    const mean = carVals.reduce((a,b)=>a+b,0)/carVals.length;
+    const stdev = Math.sqrt(carVals.map(v=>(v-mean)**2).reduce((a,b)=>a+b,0)/carVals.length);
+    comp.distanceControl = Math.min(100,Math.max(0,Math.round(100-(stdev/mean*100)*3)));
+  }
+
+  // Strike quality: smash factor scaled 1.20→0% to 1.50→100%
+  const smVals = recent.filter(s=>s.avg_smash_factor!=null).map(s=>s.avg_smash_factor);
+  if(smVals.length){
+    const avg = smVals.reduce((a,b)=>a+b,0)/smVals.length;
+    comp.strikeQuality = Math.min(100,Math.max(0,Math.round((avg-1.20)/(1.50-1.20)*100)));
+  }
+
+  const vals = Object.values(comp);
+  if(!vals.length) return null;
+  return { overall: Math.min(100,Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)), ...comp };
+}
+
+/* ── Club Confidence Score ───────────────────────────────────────────────── */
+// Based on total shots recorded across all sessions for this club.
+// low < 30 shots · medium 30–99 · high ≥ 100
+// Falls back to session count when shots field is absent.
+function calcClubConfidence(clubName){
+  const sessions = filteredRangeSessions().filter(s=>s.club===clubName);
+  const totalShots = sessions.reduce((acc,s)=>acc+(s.shots||0),0);
+  if(totalShots>0)
+    return { level: totalShots>=100?'high':totalShots>=30?'medium':'low', shots: totalShots };
+  const n = sessions.length;
+  return { level: n>=8?'high':n>=3?'medium':'low', shots: 0, sessions: n };
 }
 
 /* ── Club Implied HCP ────────────────────────────────────────────────────── */
@@ -1275,7 +1396,7 @@ function calcClubPerformanceScore(clubName){
 // using the same breakpoints as BENCH_PROFILES. Only uses real-course rounds (not simulator)
 // since simulator GIR rates are inflated. Needs ≥5 real-course holes in the zone.
 function calcClubHCP(clubName){
-  const sessions = rangeSessions.filter(s=>s.club===clubName);
+  const sessions = filteredRangeSessions().filter(s=>s.club===clubName);
   if(!sessions.length) return null;
   const latest = [...sessions].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).at(-1);
   const carry = latest?.avg_carry_m;
@@ -1730,7 +1851,7 @@ function renderPracticeTransfer(){
   if(!el) return;
 
   // Need both range data and rounds with hole-level distance+gir data
-  const sessionsWithClub = rangeSessions.filter(s=>s.club && s.avg_carry_m!=null);
+  const sessionsWithClub = filteredRangeSessions().filter(s=>s.club && s.avg_carry_m!=null);
   const roundsWithHoles  = rounds.filter(r=>(r.holes||[]).some(h=>h.distance_m!=null && h.gir!=null));
 
   if(!sessionsWithClub.length || !roundsWithHoles.length){
@@ -2057,10 +2178,11 @@ function renderHoleDifficulty(fr){
    PRACTICE TAB
 ════════════════════════════════════════════════════════════════════════════ */
 function renderPractice(){
+  const fr=filteredRangeSessions();
   document.getElementById("roundCount").textContent =
-    `${rangeSessions.length} range session(s) · ${new Set(rangeSessions.map(s=>s.club)).size} clubs tracked`;
+    `${fr.length} range session(s) · ${new Set(fr.map(s=>s.club)).size} clubs tracked`;
 
-  if(!rangeSessions.length){
+  if(!fr.length){
     document.getElementById("clubGrid").innerHTML=`<div class="no-data" style="padding:24px;grid-column:1/-1"><div class="nd-icon">🏌️</div><p>No practice sessions yet</p><p class="nd-sub">Drop range screenshots above to start tracking</p></div>`;
     ["clubTrendWrap","clubConsistWrap","clubAccuracyWrap"].forEach(id=>{
       document.getElementById(id).innerHTML=`<div class="no-data"><div class="nd-icon">📊</div><p>Awaiting data</p></div>`;
@@ -2083,7 +2205,7 @@ function renderPractice(){
 /* Get unique clubs sorted by typical bag order */
 function getClubs(){
   const order=["Dr","3W","5W","7W","2I","3I","4I","5I","6I","7I","8I","9I","PW","GW","AW","48°","50°","52°","54°","56°","58°","60°"];
-  const clubs=[...new Set(rangeSessions.map(s=>s.club))];
+  const clubs=[...new Set(filteredRangeSessions().map(s=>s.club))];
   clubs.sort((a,b)=>{const ia=order.findIndex(x=>x.toLowerCase()===a.toLowerCase()),ib=order.findIndex(x=>x.toLowerCase()===b.toLowerCase());if(ia>=0&&ib>=0)return ia-ib;if(ia>=0)return-1;if(ib>=0)return 1;return a.localeCompare(b);});
   return clubs;
 }
@@ -2092,10 +2214,33 @@ function getClubs(){
 function latestByClub(){
   const clubs=getClubs(),result={};
   for(const club of clubs){
-    const sessions=rangeSessions.filter(s=>s.club===club).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+    const sessions=filteredRangeSessions().filter(s=>s.club===club).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
     result[club]=sessions;
   }
   return result;
+}
+
+/* Returns shape distribution across sessions that have spin axis data */
+function getShapeDistribution(clubName){
+  const sessions = filteredRangeSessions()
+    .filter(s=>s.club===clubName && s.avg_spin_axis_deg!=null);
+  if(sessions.length < 2) return null;
+  const counts = {hook:0,draw:0,straight:0,fade:0,slice:0};
+  sessions.forEach(s=>{ const sh=classifyShape(s.avg_spin_axis_deg); if(sh) counts[sh]++; });
+  return { counts, total: sessions.length };
+}
+
+/* Detects long-term carry trend: compares first-half avg vs last-half avg across sessions */
+function detectLongTermTrend(clubName){
+  const s = filteredRangeSessions()
+    .filter(s=>s.club===clubName && s.avg_carry_m>0)
+    .sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  if(s.length < 4) return null;
+  const half = Math.floor(s.length/2);
+  const avg  = arr => arr.reduce((a,b)=>a+b,0)/arr.length;
+  const diff = avg(s.slice(-half).map(x=>x.avg_carry_m)) - avg(s.slice(0,half).map(x=>x.avg_carry_m));
+  if(Math.abs(diff) < 3) return null;
+  return { direction: diff>0?'gaining':'losing', metres: Math.abs(Math.round(diff)), n: s.length };
 }
 
 function renderClubCards(){
@@ -2110,27 +2255,49 @@ function renderClubCards(){
     const minC=latest.min_carry_m;
     const acc=latest.target_hit_pct;
     const accCls=acc==null?"":acc>=65?"col-good":acc>=45?"col-warn":"col-bad";
+
+    // Short-term: vs previous session
     let trendHtml="";
     if(prev&&prev.avg_carry_m&&carry){
       const d=carry-prev.avg_carry_m;
       if(Math.abs(d)>=2)trendHtml=`<div class="club-trend ${d>0?"trend-up":"trend-down"}">${d>0?"▲":"▼"} ${Math.abs(d)}m vs prev</div>`;
       else trendHtml=`<div class="club-trend trend-flat">— stable</div>`;
     }
+
+    // Long-term: across all sessions
+    const longTrend = detectLongTermTrend(club);
+    const longTrendHtml = longTrend
+      ? `<div class="club-trend ${longTrend.direction==='gaining'?'trend-up':'trend-down'}"
+           style="font-size:.68rem;opacity:.85">${longTrend.direction==='gaining'?'📈':'📉'} ${longTrend.metres}m overall (${longTrend.n} sessions)</div>`
+      : "";
+
     const color=CLUB_COLORS[ci%CLUB_COLORS.length];
     return`<div class="club-card" style="border-top:3px solid ${color}">
       <div class="club-name">${esc(club)}</div>
       ${carry!=null?`<div class="club-carry">${carry}</div><div class="club-carry-unit">avg carry (m)</div>`:"<div style='color:var(--muted);font-size:.8rem'>No carry data</div>"}
       ${maxC!=null&&minC!=null?`<div class="club-range">${minC}–${maxC}m range</div>`:(maxC!=null?`<div class="club-range">max ${maxC}m</div>`:"") }
-      ${acc!=null?`<div class="club-accuracy ${accCls}">${acc}% target hit</div>`:""}
-      ${trendHtml}
+      ${acc!=null?`<div class="club-accuracy ${accCls}">${acc}% target hit</div><div style="font-size:.62rem;color:var(--muted);margin-top:1px">ⓘ Depends on target size set</div>`:""}
+      ${trendHtml}${longTrendHtml}
       ${(()=>{
-        // Shape badge — median spin axis across all sessions for this club,
-        // so a single outlier session can't flip the displayed stock shape.
+        // Stock shape badge (median across all sessions)
         const shape = getStockShape(club);
         const shapeHtml = shape
           ? `<div class="shape-badge shape-${shape}">${shape.toUpperCase()}</div>`
           : "";
-        // Key launch-monitor stats mini-row
+
+        // Shape distribution % (only if ≥2 sessions with spin data)
+        const shapeDist = getShapeDistribution(club);
+        const shapeDistHtml = shapeDist ? (() => {
+          const items = Object.entries(shapeDist.counts)
+            .filter(([,n])=>n>0)
+            .map(([sh,n])=>`<span class="shape-badge shape-${sh}"
+              style="font-size:.61rem;padding:1px 6px;margin:0">${sh[0].toUpperCase()+sh.slice(1)} ${Math.round(n/shapeDist.total*100)}%</span>`);
+          return items.length>1
+            ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${items.join("")}</div>`
+            : "";
+        })() : "";
+
+        // Ball flight mini-row
         const smash = latest.avg_smash_factor;
         const cspd  = latest.avg_club_speed_mph;
         const ftp   = latest.avg_face_to_path;
@@ -2144,17 +2311,39 @@ function renderClubCards(){
           ${ftp   !=null?`<span class="bf-stat">F→P: ${bfFmt(ftp)}</span>`:""}
           ${spinAx!=null?`<span class="bf-stat">Axis: ${bfFmt(spinAx)}</span>`:""}
         </div>` : "";
-        // Performance score + course HCP
+
+        // Performance score with component breakdown
         const perf=calcClubPerformanceScore(club);
         const chcp=calcClubHCP(club);
-        const perfCls=perf==null?"":perf>=70?"col-good":perf>=50?"col-warn":"col-bad";
-        return shapeHtml+statsHtml
-          +(perf!=null?`<div class="${perfCls}" style="font-size:.82rem;font-weight:700;margin-top:8px;border-top:1px solid var(--border);padding-top:6px">Performance: ${perf}/100</div>`:"")
-          +(chcp!=null?`<div style="font-size:.75rem;color:var(--muted);margin-top:2px">Course HCP: <strong style="color:var(--text)">${chcp.hcp.toFixed(1)}</strong> <span style="font-size:.68rem;opacity:.65">(${chcp.holes} real holes)</span></div>`:"");
+        const conf=calcClubConfidence(club);
+        const perfCls=perf==null?"":perf.overall>=70?"col-good":perf.overall>=50?"col-warn":"col-bad";
+        const perfHtml = perf!=null ? `<div class="${perfCls}"
+          style="font-size:.82rem;font-weight:700;margin-top:8px;border-top:1px solid var(--border);padding-top:6px">
+          Performance: ${perf.overall}/100
+          <span style="font-size:.67rem;font-weight:400;color:var(--muted);margin-left:4px">${
+            [perf.accuracy      !=null?`Acc ${perf.accuracy}`:null,
+             perf.consistency   !=null?`Con ${perf.consistency}`:null,
+             perf.distanceControl!=null?`Dist ${perf.distanceControl}`:null,
+             perf.strikeQuality !=null?`Strike ${perf.strikeQuality}`:null,
+            ].filter(Boolean).join(' · ')
+          }</span></div>` : "";
+
+        // Confidence badge
+        const confLabel = conf.level==='low'?'⚠️ Low confidence':conf.level==='medium'?'📊 Medium confidence':'✅ High confidence';
+        const confDetail = conf.shots>0?`${conf.shots} shots`:`${conf.sessions||sessions.length} sessions`;
+        const confHtml = `<div class="conf-badge conf-${conf.level}">${confLabel} · ${confDetail}</div>`;
+
+        return shapeHtml+shapeDistHtml+statsHtml+perfHtml
+          +(chcp!=null?`<div style="font-size:.75rem;color:var(--muted);margin-top:2px">Course HCP: <strong style="color:var(--text)">${chcp.hcp.toFixed(1)}</strong> <span style="font-size:.68rem;opacity:.65">(${chcp.holes} real holes)</span></div>`:"")
+          +confHtml;
       })()}
       <div class="club-sessions" style="margin-top:6px">${sessions.length} session${sessions.length>1?"s":""}</div>
-      <button class="btn btn-ghost btn-sm" onclick="openCoach('club',${JSON.stringify(club)})"
-        style="margin-top:10px;width:100%;color:var(--blue);border-color:rgba(59,130,246,.35);font-size:.73rem">💬 Ask Coach</button>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="openClubDetail(${JSON.stringify(club)})"
+          style="flex:1;color:var(--muted);border-color:rgba(100,116,139,.3);font-size:.72rem">↗ Details</button>
+        <button class="btn btn-ghost btn-sm" onclick="openCoach('club',${JSON.stringify(club)})"
+          style="flex:1;color:var(--blue);border-color:rgba(59,130,246,.35);font-size:.72rem">💬 Coach</button>
+      </div>
     </div>`;
   }).join("");
 }
@@ -2167,7 +2356,7 @@ function renderClubTrend(){
   if(!hasData){el.innerHTML=`<div class="no-data"><div class="nd-icon">📈</div><p>No carry distance data yet</p></div>`;return;}
 
   // Build a unified sorted date list
-  const allDates=[...new Set(rangeSessions.map(s=>s.date).filter(Boolean))].sort();
+  const allDates=[...new Set(filteredRangeSessions().map(s=>s.date).filter(Boolean))].sort();
   // For each club, create a dataset; x = session index within that club
   const datasets=clubs.map((club,ci)=>{
     const sessions=byClub[club].filter(s=>s.avg_carry_m!=null);
@@ -2273,8 +2462,9 @@ function renderClubAccuracy(){
 
 function renderRangeTable(){
   const tbody=document.getElementById("rangeBody");
-  if(!rangeSessions.length){tbody.innerHTML=`<tr><td colspan="19" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;return}
-  const sorted=[...rangeSessions].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const frs=filteredRangeSessions();
+  if(!frs.length){tbody.innerHTML=`<tr><td colspan="19" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;return}
+  const sorted=[...frs].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   const degFmt=(v,redNeg=false)=>{
     if(v==null) return"—";
     const cls=Math.abs(v)<1?"":v>0?(redNeg?"col-bad":"col-good"):(redNeg?"col-good":"col-bad");
@@ -2488,14 +2678,15 @@ function renderSimClubUsage(){
     const rows = tableClubs.map(c=>{
       const s = stats[c];
       const onTarget = (s.results.green||0)+(s.results.fairway||0)+(s.results.fringe||0);
-      const rough    = s.results.rough||0;
-      const penalty  = (s.results.bunker||0)+(s.results.penalty||0);
-      const onPct    = Math.round(onTarget/s.count*100);
-      const roughPct = Math.round(rough/s.count*100);
-      const cls      = onPct>=70?"col-good":onPct>=50?"col-warn":"col-bad";
-      const carry    = avgArr(s.carries);
-      // Gap vs range: positive = hitting further on course (unusual), negative = shorter under pressure
-      const rangeCarry = byClub[c]?.at(-1)?.avg_carry_m;
+      const rough       = s.results.rough||0;
+      const playRough   = s.results.playable_rough||0;
+      const penalty     = (s.results.bunker||0)+(s.results.penalty||0);
+      const onPct       = Math.round(onTarget/s.count*100);
+      const roughPct    = Math.round(rough/s.count*100);
+      const playRoughPct= Math.round(playRough/s.count*100);
+      const cls         = onPct>=70?"col-good":onPct>=50?"col-warn":"col-bad";
+      const carry       = avgArr(s.carries);
+      const rangeCarry  = byClub[c]?.at(-1)?.avg_carry_m;
       const gap = carry&&rangeCarry ? carry-rangeCarry : null;
       const gapHtml = gap!=null
         ? `<span class="${Math.abs(gap)<=5?'col-good':gap>0?'col-good':'col-bad'}">${gap>0?"+":""}${gap}m</span>`
@@ -2504,7 +2695,8 @@ function renderSimClubUsage(){
         <td><span class="pill pill-practice" style="font-size:.7rem">${esc(c)}</span></td>
         <td style="color:var(--muted)">${s.count}</td>
         <td class="${cls}">${onPct}%</td>
-        <td style="color:#fca5a5">${roughPct}%</td>
+        <td style="color:#fca5a5">${roughPct>0?roughPct+"%":"—"}</td>
+        <td style="color:#fde68a">${playRoughPct>0?playRoughPct+"%":"—"}</td>
         ${penalty?`<td style="color:#f87171">${Math.round(penalty/s.count*100)}%</td>`:`<td style="color:var(--muted)">—</td>`}
         <td style="color:var(--muted)">${carry!=null?carry+"m":"—"}</td>
         <td>${gapHtml}</td>
@@ -2519,6 +2711,7 @@ function renderSimClubUsage(){
           <th style="padding:5px 8px">Shots</th>
           <th style="padding:5px 8px">On Target</th>
           <th style="padding:5px 8px">Rough</th>
+          <th style="padding:5px 8px">Play.Rough</th>
           <th style="padding:5px 8px">Hazard</th>
           <th style="padding:5px 8px">Course Carry</th>
           <th style="padding:5px 8px">vs Range</th>
@@ -2570,11 +2763,12 @@ function buildDashboardContext(){
   const pp3 = holeRounds?(threePutts/holeRounds).toFixed(2):"n/a";
 
   // Practice summary (latest session per club)
-  const clubs=[...new Set(rangeSessions.map(s=>s.club))];
+  const clubs=[...new Set(filteredRangeSessions().map(s=>s.club))];
   const practiceSummary = clubs.length
     ? clubs.map(club=>{
-        const sessions=rangeSessions.filter(s=>s.club===club).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+        const sessions=filteredRangeSessions().filter(s=>s.club===club).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
         const l=sessions[sessions.length-1];
+        const perf=calcClubPerformanceScore(club);
         return `  ${club}: ${l.avg_carry_m!=null?l.avg_carry_m+"m carry":"-"}`
              + (l.target_hit_pct!=null?`, ${l.target_hit_pct}% target hit`:"")
              + (()=>{ const sh=getStockShape(club); return sh?` shape:${sh}`:""; })()
@@ -2583,6 +2777,7 @@ function buildDashboardContext(){
              + (l.avg_club_speed_mph!=null?` spd:${Math.round(l.avg_club_speed_mph)}mph`:"")
              + (l.avg_spin_rate_rpm!=null?` spin:${Math.round(l.avg_spin_rate_rpm)}rpm`:"")
              + (l.avg_attack_angle_deg!=null?` AoA:${l.avg_attack_angle_deg>0?"+":""}${l.avg_attack_angle_deg.toFixed(1)}°`:"")
+             + (perf!=null?` perf:${perf.overall}/100`:"")
              + ` (${sessions.length} session${sessions.length>1?"s":""})`;
       }).join("\n")
     : "  No range sessions recorded.";
@@ -2614,7 +2809,7 @@ SCORE DAMAGE (${holeRounds} round${holeRounds!==1?"s":""} with hole data):
   Triples+/round: ${tpr} (target ≤0.3)
   3-putts/round: ${pp3} (target ≤1.0)
 
-PRACTICE (${rangeSessions.length} session${rangeSessions.length!==1?"s":""}):
+PRACTICE (${filteredRangeSessions().length} session${filteredRangeSessions().length!==1?"s":""}):
 ${practiceSummary}
 
 ON-COURSE CLUB USAGE (simulator — shots extracted from hole maps):
@@ -2670,7 +2865,7 @@ VS YOUR AVERAGES (${full.length} 18H rounds):
 }
 
 function buildClubContext(clubName){
-  const sessions=rangeSessions.filter(s=>s.club===clubName)
+  const sessions=filteredRangeSessions().filter(s=>s.club===clubName)
     .sort((a,b)=>(a.date||"").localeCompare(b.date||""));
   if(!sessions.length) return `Club: ${clubName}\nNo range session data yet.`;
   const latest=sessions[sessions.length-1];
@@ -2839,6 +3034,147 @@ function scrollCoachBottom(){
   const msgs=document.getElementById("coachMessages");
   setTimeout(()=>{msgs.scrollTop=msgs.scrollHeight;},30);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CLUB DETAIL MODAL
+══════════════════════════════════════════════════════════════════════════ */
+function openClubDetail(clubName){
+  const modal = document.getElementById("clubDetailModal");
+  const content = document.getElementById("clubDetailContent");
+  if(!modal||!content) return;
+
+  const sessions = filteredRangeSessions()
+    .filter(s=>s.club===clubName)
+    .sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  if(!sessions.length){ showToast("No data for "+clubName,"warn"); return; }
+
+  const shape = getStockShape(clubName);
+  const conf  = calcClubConfidence(clubName);
+  const confDetail = conf.shots>0?`${conf.shots} shots`:`${conf.sessions||sessions.length} sessions`;
+  const degFmt = v => v==null?"—"
+    : `<span style="color:${Math.abs(v)<1?'var(--text)':v>0?'#86efac':'#fca5a5'}">${v>0?"+":""}${v.toFixed(1)}°</span>`;
+
+  // Session history table
+  const tableRows = [...sessions].reverse().map((s,i)=>{
+    const maxC = s.max_carry_m||s.longest_m;
+    const smashCls = s.avg_smash_factor==null?"":s.avg_smash_factor>=1.45?"col-good":s.avg_smash_factor>=1.35?"col-warn":"col-bad";
+    const accCls   = s.target_hit_pct==null?"":s.target_hit_pct>=65?"col-good":s.target_hit_pct>=45?"col-warn":"col-bad";
+    return`<tr style="border-bottom:1px solid var(--border);font-size:.76rem">
+      <td style="color:var(--muted);padding:5px 8px">${s.date||"—"}</td>
+      <td style="padding:5px 8px">${s.avg_carry_m!=null?`<strong>${s.avg_carry_m}m</strong>`:"—"}</td>
+      <td style="padding:5px 8px;color:var(--muted)">${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</td>
+      <td style="padding:5px 8px;color:var(--muted)">${maxC!=null?maxC+"m":"—"}</td>
+      <td style="padding:5px 8px;color:var(--muted)">${s.dispersion_m!=null?"±"+s.dispersion_m+"m":"—"}</td>
+      <td class="${accCls}" style="padding:5px 8px">${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</td>
+      <td style="padding:5px 8px">${s.avg_spin_axis_deg!=null?`<span class="shape-badge shape-${classifyShape(s.avg_spin_axis_deg)||'straight'}" style="margin-top:0;font-size:.62rem;padding:1px 5px">${(classifyShape(s.avg_spin_axis_deg)||"—").toUpperCase()}</span>`:"—"}</td>
+      <td class="${smashCls}" style="padding:5px 8px">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
+      <td style="padding:5px 8px;color:var(--muted)">${s.avg_club_speed_mph!=null?Math.round(s.avg_club_speed_mph)+"mph":"—"}</td>
+      <td style="padding:5px 8px">${degFmt(s.avg_face_to_path)}</td>
+      <td style="padding:5px 8px">${degFmt(s.avg_spin_axis_deg)}</td>
+    </tr>`;
+  }).join("");
+
+  // Shape distribution bar data
+  const shapeDist = getShapeDistribution(clubName);
+
+  content.innerHTML = `
+    <div style="margin-bottom:16px">
+      <div style="font-size:1.4rem;font-weight:800;color:var(--text)">${esc(clubName)}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center">
+        ${shape?`<span class="shape-badge shape-${shape}" style="margin-top:0">${shape.toUpperCase()} Stock</span>`:""}
+        <span class="conf-badge conf-${conf.level}">${conf.level==='low'?'⚠️ Low':conf.level==='medium'?'📊 Medium':'✅ High'} confidence · ${confDetail}</span>
+        <span style="font-size:.76rem;color:var(--muted)">${sessions.length} session${sessions.length>1?"s":""} recorded</span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div>
+        <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:6px">Carry Distance Trend</div>
+        <canvas id="chartDetailTrend" style="width:100%;height:160px"></canvas>
+      </div>
+      <div id="chartDetailShapeWrap">
+        ${shapeDist?`<div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:6px">Shot Shape Distribution</div>
+        <canvas id="chartDetailShape" style="width:100%;height:160px"></canvas>`
+        :`<div class="no-data" style="height:160px"><div class="nd-icon">🌀</div><p style="font-size:.76rem">No spin axis data yet</p></div>`}
+      </div>
+    </div>
+
+    <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:8px">All Sessions</div>
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="color:var(--muted);font-size:.7rem;border-bottom:1px solid var(--border)">
+        <th style="text-align:left;padding:5px 8px">Date</th>
+        <th style="padding:5px 8px">Avg Carry</th><th style="padding:5px 8px">Min</th>
+        <th style="padding:5px 8px">Max</th><th style="padding:5px 8px">Dispersion</th>
+        <th style="padding:5px 8px">Target Hit</th><th style="padding:5px 8px">Shape</th>
+        <th style="padding:5px 8px">Smash</th><th style="padding:5px 8px">Speed</th>
+        <th style="padding:5px 8px">F→P°</th><th style="padding:5px 8px">Axis°</th>
+      </tr></thead>
+      <tbody style="color:var(--text)">${tableRows}</tbody>
+    </table>
+    </div>`;
+
+  // Render carry trend chart
+  destroyChart("chartDetailTrend");
+  const carryData = sessions.map((s,i)=>({x:i+1,y:s.avg_carry_m})).filter(p=>p.y!=null);
+  if(carryData.length){
+    new Chart("chartDetailTrend",{type:"line",
+      data:{datasets:[{label:"Avg Carry",data:carryData,borderColor:"#3b82f6",
+        backgroundColor:"rgba(59,130,246,.15)",pointRadius:5,tension:.3,fill:true}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{type:"linear",title:{display:true,text:"Session",color:TICK_COLOR},
+            grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+          y:{title:{display:true,text:"Carry (m)",color:TICK_COLOR},
+            grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+        }}
+    });
+  }
+
+  // Render shape distribution chart
+  if(shapeDist){
+    destroyChart("chartDetailShape");
+    const SHAPE_ORDER=["hook","draw","straight","fade","slice"];
+    const SHAPE_COLORS={"hook":"rgba(249,115,22,.7)","draw":"rgba(34,197,94,.7)",
+      "straight":"rgba(100,116,139,.7)","fade":"rgba(59,130,246,.7)","slice":"rgba(239,68,68,.7)"};
+    const labels=SHAPE_ORDER.filter(sh=>shapeDist.counts[sh]>0);
+    const data=labels.map(sh=>Math.round(shapeDist.counts[sh]/shapeDist.total*100));
+    new Chart("chartDetailShape",{type:"bar",
+      data:{labels,datasets:[{data,backgroundColor:labels.map(sh=>SHAPE_COLORS[sh]),borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+          y:{title:{display:true,text:"%",color:TICK_COLOR},grid:{color:GRID_COLOR},
+            ticks:{color:TICK_COLOR},max:100}
+        }}
+    });
+  }
+
+  modal.style.display="block";
+  document.body.style.overflow="hidden";
+}
+
+function closeClubDetail(){
+  document.getElementById("clubDetailModal").style.display="none";
+  document.body.style.overflow="";
+  destroyChart("chartDetailTrend");
+  destroyChart("chartDetailShape");
+}
 </script>
+
+<!-- Club Detail Modal -->
+<div id="clubDetailModal" onclick="if(event.target===this)closeClubDetail()"
+  style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.78);
+  overflow-y:auto;padding:20px 12px">
+  <div style="max-width:900px;margin:0 auto;background:var(--card);border-radius:16px;
+    padding:24px;position:relative;min-height:200px">
+    <button onclick="closeClubDetail()"
+      style="position:absolute;top:14px;right:16px;background:none;border:none;
+      color:var(--muted);font-size:1.5rem;cursor:pointer;line-height:1;padding:0">✕</button>
+    <div id="clubDetailContent"></div>
+  </div>
+</div>
 </body>
 </html>
