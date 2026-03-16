@@ -204,17 +204,15 @@
     .col-bad{color:var(--danger);font-weight:600}
 
     /* ── Practice tab ─────────────────────────────────────────────────── */
-    .club-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:20px}
+    .club-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin-bottom:20px;align-items:stretch}
     .club-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-      padding:14px;text-align:center;position:relative;overflow:hidden}
-    .club-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--border)}
-    .club-name{font-size:1rem;font-weight:800;color:var(--accent);margin-bottom:10px}
-    .club-carry{font-size:1.8rem;font-weight:800;line-height:1;letter-spacing:-.03em}
-    .club-carry-unit{font-size:.72rem;color:var(--muted)}
-    .club-range{font-size:.72rem;color:var(--muted);margin-top:4px}
-    .club-accuracy{font-size:.78rem;margin-top:6px;font-weight:600}
-    .club-sessions{font-size:.68rem;color:var(--muted);margin-top:5px}
-    .club-trend{font-size:.8rem;font-weight:700;margin-top:4px}
+      padding:14px;text-align:left;position:relative;overflow:hidden;
+      display:flex;flex-direction:column}
+    .club-name{font-size:1rem;font-weight:800;color:var(--accent);margin:0}
+    .club-carry{font-size:1.9rem;font-weight:800;line-height:1;letter-spacing:-.03em}
+    .club-carry-unit{font-size:.72rem;color:var(--muted);margin-top:1px}
+    .club-accuracy{font-size:.78rem;font-weight:600}
+    .club-trend{font-size:.8rem;font-weight:700}
     .trend-up{color:var(--accent)}.trend-down{color:var(--danger)}.trend-flat{color:var(--muted)}
 
     /* Consistency bar (min-avg-max) */
@@ -2256,92 +2254,108 @@ function renderClubCards(){
     const acc=latest.target_hit_pct;
     const accCls=acc==null?"":acc>=65?"col-good":acc>=45?"col-warn":"col-bad";
 
-    // Short-term: vs previous session
-    let trendHtml="";
+    // ── Single-line trend: short-term + optional long-term suffix ─────────
+    let trendText="", trendCls="trend-flat";
     if(prev&&prev.avg_carry_m&&carry){
       const d=carry-prev.avg_carry_m;
-      if(Math.abs(d)>=2)trendHtml=`<div class="club-trend ${d>0?"trend-up":"trend-down"}">${d>0?"▲":"▼"} ${Math.abs(d)}m vs prev</div>`;
-      else trendHtml=`<div class="club-trend trend-flat">— stable</div>`;
+      if(Math.abs(d)>=2){ trendText=`${d>0?"▲":"▼"}${Math.abs(d)}m`; trendCls=d>0?"trend-up":"trend-down"; }
+      else { trendText="stable"; }
     }
-
-    // Long-term: across all sessions
-    const longTrend = detectLongTermTrend(club);
-    const longTrendHtml = longTrend
-      ? `<div class="club-trend ${longTrend.direction==='gaining'?'trend-up':'trend-down'}"
-           style="font-size:.68rem;opacity:.85">${longTrend.direction==='gaining'?'📈':'📉'} ${longTrend.metres}m overall (${longTrend.n} sessions)</div>`
+    const longTrend=detectLongTermTrend(club);
+    if(longTrend) trendText+=(trendText?" · ":"")+`${longTrend.direction==='gaining'?'📈':'📉'}${longTrend.metres}m trend`;
+    const trendHtml = trendText
+      ? `<span class="club-trend ${trendCls}" style="font-size:.73rem">${trendText}</span>`
       : "";
 
+    // ── Stock shape + confidence (inline right side) ───────────────────────
+    const shape=getStockShape(club);
+    const conf=calcClubConfidence(club);
+    const confDetail=conf.shots>0?`${conf.shots} shots`:`${conf.sessions||sessions.length} sess.`;
+    const confIcon=conf.level==='low'?'⚠️':conf.level==='high'?'✅':'';
+
+    // ── Key stats row (compact) ────────────────────────────────────────────
+    const smash=latest.avg_smash_factor;
+    const cspd =latest.avg_club_speed_mph;
+    const ftp  =latest.avg_face_to_path;
+    const spinAx=latest.avg_spin_axis_deg;
+    const bfFmt=v=>v==null?"—":`<strong class="${Math.abs(v)<1?'bf-neu':v>0?'bf-pos':'bf-neg'}">${v>0?"+":""}${v.toFixed(1)}°</strong>`;
+    const hasStats=smash!=null||cspd!=null||ftp!=null||spinAx!=null;
+
+    // ── Performance score ──────────────────────────────────────────────────
+    const perf=calcClubPerformanceScore(club);
+    const chcp=calcClubHCP(club);
+    const perfColor=perf==null?"#64748b":perf.overall>=70?"#22c55e":perf.overall>=50?"#f59e0b":"#ef4444";
+    const perfComponents=perf?[
+      perf.accuracy       !=null?`Acc ${perf.accuracy}`:null,
+      perf.consistency    !=null?`Con ${perf.consistency}`:null,
+      perf.distanceControl!=null?`Dist ${perf.distanceControl}`:null,
+      perf.strikeQuality  !=null?`Strike ${perf.strikeQuality}`:null,
+    ].filter(Boolean):[];
+
     const color=CLUB_COLORS[ci%CLUB_COLORS.length];
-    return`<div class="club-card" style="border-top:3px solid ${color}">
-      <div class="club-name">${esc(club)}</div>
-      ${carry!=null?`<div class="club-carry">${carry}</div><div class="club-carry-unit">avg carry (m)</div>`:"<div style='color:var(--muted);font-size:.8rem'>No carry data</div>"}
-      ${maxC!=null&&minC!=null?`<div class="club-range">${minC}–${maxC}m range</div>`:(maxC!=null?`<div class="club-range">max ${maxC}m</div>`:"") }
-      ${acc!=null?`<div class="club-accuracy ${accCls}">${acc}% target hit</div><div style="font-size:.62rem;color:var(--muted);margin-top:1px">ⓘ Depends on target size set</div>`:""}
-      ${trendHtml}${longTrendHtml}
-      ${(()=>{
-        // Stock shape badge (median across all sessions)
-        const shape = getStockShape(club);
-        const shapeHtml = shape
-          ? `<div class="shape-badge shape-${shape}">${shape.toUpperCase()}</div>`
-          : "";
+    return`<div class="club-card" style="border-top:3px solid ${color};display:flex;flex-direction:column;gap:0">
 
-        // Shape distribution % (only if ≥2 sessions with spin data)
-        const shapeDist = getShapeDistribution(club);
-        const shapeDistHtml = shapeDist ? (() => {
-          const items = Object.entries(shapeDist.counts)
-            .filter(([,n])=>n>0)
-            .map(([sh,n])=>`<span class="shape-badge shape-${sh}"
-              style="font-size:.61rem;padding:1px 6px;margin:0">${sh[0].toUpperCase()+sh.slice(1)} ${Math.round(n/shapeDist.total*100)}%</span>`);
-          return items.length>1
-            ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${items.join("")}</div>`
-            : "";
-        })() : "";
+      <!-- Header row: name + shape badge -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px">
+        <div class="club-name" style="margin:0">${esc(club)}</div>
+        ${shape?`<span class="shape-badge shape-${shape}" style="margin:2px 0 0;font-size:.62rem;padding:1px 7px;white-space:nowrap">${shape.toUpperCase()}</span>`:""}
+      </div>
 
-        // Ball flight mini-row
-        const smash = latest.avg_smash_factor;
-        const cspd  = latest.avg_club_speed_mph;
-        const ftp   = latest.avg_face_to_path;
-        const spinAx= latest.avg_spin_axis_deg;
-        const bfFmt = v => v==null?"—"
-          : `<strong class="${Math.abs(v)<1?'bf-neu':v>0?'bf-pos':'bf-neg'}">${v>0?"+":""}${v.toFixed(1)}°</strong>`;
-        const hasStats = smash!=null||cspd!=null||ftp!=null||spinAx!=null;
-        const statsHtml = hasStats ? `<div class="bf-row">
-          ${smash !=null?`<span class="bf-stat">Smash: <strong class="${smash>=1.45?'bf-pos':smash>=1.35?'bf-neu':'bf-neg'}">${smash.toFixed(2)}</strong></span>`:""}
-          ${cspd  !=null?`<span class="bf-stat">Speed: <strong class="bf-neu">${Math.round(cspd)}mph</strong></span>`:""}
-          ${ftp   !=null?`<span class="bf-stat">F→P: ${bfFmt(ftp)}</span>`:""}
-          ${spinAx!=null?`<span class="bf-stat">Axis: ${bfFmt(spinAx)}</span>`:""}
-        </div>` : "";
+      <!-- Carry hero + range -->
+      ${carry!=null?`
+      <div style="margin-top:6px">
+        <div class="club-carry" style="margin:0;line-height:1">${carry}</div>
+        <div class="club-carry-unit" style="margin:0">avg carry (m)
+          ${minC!=null&&maxC!=null?`<span style="opacity:.55"> · ${minC}–${maxC}m</span>`:(maxC!=null?`<span style="opacity:.55"> · max ${maxC}m</span>`:"")}
+        </div>
+      </div>`
+      :`<div style="color:var(--muted);font-size:.8rem;margin-top:6px">No carry data</div>`}
 
-        // Performance score with component breakdown
-        const perf=calcClubPerformanceScore(club);
-        const chcp=calcClubHCP(club);
-        const conf=calcClubConfidence(club);
-        const perfCls=perf==null?"":perf.overall>=70?"col-good":perf.overall>=50?"col-warn":"col-bad";
-        const perfHtml = perf!=null ? `<div class="${perfCls}"
-          style="font-size:.82rem;font-weight:700;margin-top:8px;border-top:1px solid var(--border);padding-top:6px">
-          Performance: ${perf.overall}/100
-          <span style="font-size:.67rem;font-weight:400;color:var(--muted);margin-left:4px">${
-            [perf.accuracy      !=null?`Acc ${perf.accuracy}`:null,
-             perf.consistency   !=null?`Con ${perf.consistency}`:null,
-             perf.distanceControl!=null?`Dist ${perf.distanceControl}`:null,
-             perf.strikeQuality !=null?`Strike ${perf.strikeQuality}`:null,
-            ].filter(Boolean).join(' · ')
-          }</span></div>` : "";
+      <!-- Status row: accuracy + trend + confidence -->
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px">
+        ${acc!=null?`<span class="${accCls}" style="font-size:.8rem;font-weight:700"
+          title="Accuracy depends on the target size you set">${acc}% hit</span>`:""}
+        ${trendHtml}
+        <span class="conf-badge conf-${conf.level}" style="font-size:.62rem;padding:1px 6px;margin-left:auto">
+          ${confIcon} ${confDetail}
+        </span>
+      </div>
 
-        // Confidence badge
-        const confLabel = conf.level==='low'?'⚠️ Low confidence':conf.level==='medium'?'📊 Medium confidence':'✅ High confidence';
-        const confDetail = conf.shots>0?`${conf.shots} shots`:`${conf.sessions||sessions.length} sessions`;
-        const confHtml = `<div class="conf-badge conf-${conf.level}">${confLabel} · ${confDetail}</div>`;
+      <!-- Key launch-monitor stats (if present) -->
+      ${hasStats?`<div class="bf-row" style="margin-top:6px">
+        ${smash !=null?`<span class="bf-stat">Smash <strong class="${smash>=1.45?'bf-pos':smash>=1.35?'bf-neu':'bf-neg'}">${smash.toFixed(2)}</strong></span>`:""}
+        ${cspd  !=null?`<span class="bf-stat">Spd <strong class="bf-neu">${Math.round(cspd)}</strong></span>`:""}
+        ${ftp   !=null?`<span class="bf-stat">F→P ${bfFmt(ftp)}</span>`:""}
+        ${spinAx!=null?`<span class="bf-stat">Axis ${bfFmt(spinAx)}</span>`:""}
+      </div>`:""}
 
-        return shapeHtml+shapeDistHtml+statsHtml+perfHtml
-          +(chcp!=null?`<div style="font-size:.75rem;color:var(--muted);margin-top:2px">Course HCP: <strong style="color:var(--text)">${chcp.hcp.toFixed(1)}</strong> <span style="font-size:.68rem;opacity:.65">(${chcp.holes} real holes)</span></div>`:"")
-          +confHtml;
-      })()}
-      <div class="club-sessions" style="margin-top:6px">${sessions.length} session${sessions.length>1?"s":""}</div>
+      <!-- Performance score bar -->
+      ${perf!=null?`
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+          <span style="font-size:.7rem;color:var(--muted);font-weight:600;letter-spacing:.03em">PERFORMANCE</span>
+          <span style="font-size:.86rem;font-weight:800;color:${perfColor}">${perf.overall}<span style="font-size:.65rem;font-weight:400;color:var(--muted)">/100</span></span>
+        </div>
+        <div style="height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${perf.overall}%;background:${perfColor};border-radius:3px;transition:width .4s"></div>
+        </div>
+        ${perfComponents.length?`<div style="font-size:.63rem;color:var(--muted);margin-top:3px">${perfComponents.join(' · ')}</div>`:""}
+      </div>`:""}
+
+      <!-- Course HCP (if available) -->
+      ${chcp!=null?`<div style="font-size:.72rem;color:var(--muted);margin-top:5px">
+        HCP equiv: <strong style="color:var(--text)">${chcp.hcp.toFixed(1)}</strong>
+        <span style="font-size:.64rem;opacity:.6">(${chcp.holes} holes)</span>
+      </div>`:""}
+
+      <!-- Spacer pushes buttons to bottom -->
+      <div style="flex:1;min-height:8px"></div>
+
+      <!-- Button row -->
       <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn-ghost btn-sm" onclick="openClubDetail(${JSON.stringify(club)})"
+        <button class="btn btn-ghost btn-sm" onclick="openClubDetail('${club}')"
           style="flex:1;color:var(--muted);border-color:rgba(100,116,139,.3);font-size:.72rem">↗ Details</button>
-        <button class="btn btn-ghost btn-sm" onclick="openCoach('club',${JSON.stringify(club)})"
+        <button class="btn btn-ghost btn-sm" onclick="openCoach('club','${club}')"
           style="flex:1;color:var(--blue);border-color:rgba(59,130,246,.35);font-size:.72rem">💬 Coach</button>
       </div>
     </div>`;
@@ -3048,107 +3062,180 @@ function openClubDetail(clubName){
     .sort((a,b)=>(a.date||"").localeCompare(b.date||""));
   if(!sessions.length){ showToast("No data for "+clubName,"warn"); return; }
 
-  const shape = getStockShape(clubName);
-  const conf  = calcClubConfidence(clubName);
-  const confDetail = conf.shots>0?`${conf.shots} shots`:`${conf.sessions||sessions.length} sessions`;
-  const degFmt = v => v==null?"—"
-    : `<span style="color:${Math.abs(v)<1?'var(--text)':v>0?'#86efac':'#fca5a5'}">${v>0?"+":""}${v.toFixed(1)}°</span>`;
+  const latest   = sessions[sessions.length-1];
+  const shape    = getStockShape(clubName);
+  const conf     = calcClubConfidence(clubName);
+  const perf     = calcClubPerformanceScore(clubName);
+  const chcp     = calcClubHCP(clubName);
+  const shapeDist= getShapeDistribution(clubName);
+  const longTrend= detectLongTermTrend(clubName);
 
-  // Session history table
-  const tableRows = [...sessions].reverse().map((s,i)=>{
-    const maxC = s.max_carry_m||s.longest_m;
-    const smashCls = s.avg_smash_factor==null?"":s.avg_smash_factor>=1.45?"col-good":s.avg_smash_factor>=1.35?"col-warn":"col-bad";
-    const accCls   = s.target_hit_pct==null?"":s.target_hit_pct>=65?"col-good":s.target_hit_pct>=45?"col-warn":"col-bad";
-    return`<tr style="border-bottom:1px solid var(--border);font-size:.76rem">
-      <td style="color:var(--muted);padding:5px 8px">${s.date||"—"}</td>
-      <td style="padding:5px 8px">${s.avg_carry_m!=null?`<strong>${s.avg_carry_m}m</strong>`:"—"}</td>
-      <td style="padding:5px 8px;color:var(--muted)">${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</td>
-      <td style="padding:5px 8px;color:var(--muted)">${maxC!=null?maxC+"m":"—"}</td>
-      <td style="padding:5px 8px;color:var(--muted)">${s.dispersion_m!=null?"±"+s.dispersion_m+"m":"—"}</td>
-      <td class="${accCls}" style="padding:5px 8px">${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</td>
-      <td style="padding:5px 8px">${s.avg_spin_axis_deg!=null?`<span class="shape-badge shape-${classifyShape(s.avg_spin_axis_deg)||'straight'}" style="margin-top:0;font-size:.62rem;padding:1px 5px">${(classifyShape(s.avg_spin_axis_deg)||"—").toUpperCase()}</span>`:"—"}</td>
-      <td class="${smashCls}" style="padding:5px 8px">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
-      <td style="padding:5px 8px;color:var(--muted)">${s.avg_club_speed_mph!=null?Math.round(s.avg_club_speed_mph)+"mph":"—"}</td>
-      <td style="padding:5px 8px">${degFmt(s.avg_face_to_path)}</td>
-      <td style="padding:5px 8px">${degFmt(s.avg_spin_axis_deg)}</td>
+  const confDetail = conf.shots>0?`${conf.shots} shots`:`${conf.sessions||sessions.length} sessions`;
+  const perfColor  = !perf?"#64748b":perf.overall>=70?"#22c55e":perf.overall>=50?"#f59e0b":"#ef4444";
+  const degFmt = (v,flip=false) => {
+    if(v==null) return`<span style="color:var(--muted)">—</span>`;
+    const pos=flip?v<0:v>0;
+    const col=Math.abs(v)<0.5?"var(--text)":pos?"#86efac":"#fca5a5";
+    return`<span style="color:${col}">${v>0?"+":""}${v.toFixed(1)}°</span>`;
+  };
+
+  // ── Summary KPI tiles ──────────────────────────────────────────────────
+  const avgCarryAll = sessions.filter(s=>s.avg_carry_m>0);
+  const avgOverall  = avgCarryAll.length
+    ? Math.round(avgCarryAll.reduce((a,s)=>a+s.avg_carry_m,0)/avgCarryAll.length) : null;
+  const allDisp     = sessions.filter(s=>s.dispersion_m!=null).map(s=>s.dispersion_m);
+  const avgDisp     = allDisp.length ? Math.round(allDisp.reduce((a,b)=>a+b,0)/allDisp.length) : null;
+  const allAcc      = sessions.filter(s=>s.target_hit_pct!=null).map(s=>s.target_hit_pct);
+  const avgAcc      = allAcc.length ? Math.round(allAcc.reduce((a,b)=>a+b,0)/allAcc.length) : null;
+  const allSmash    = sessions.filter(s=>s.avg_smash_factor!=null).map(s=>s.avg_smash_factor);
+  const avgSmash    = allSmash.length ? (allSmash.reduce((a,b)=>a+b,0)/allSmash.length) : null;
+
+  const kpiTile=(label,value,unit="",color="var(--text)")=>
+    `<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;flex:1;min-width:80px">
+      <div style="font-size:.65rem;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase">${label}</div>
+      <div style="font-size:1.4rem;font-weight:800;color:${color};line-height:1.1;margin-top:4px">${value!=null?value:"—"}<span style="font-size:.72rem;font-weight:400;color:var(--muted)"> ${unit}</span></div>
+    </div>`;
+
+  // ── Session table rows ─────────────────────────────────────────────────
+  const tableRows = [...sessions].reverse().map(s=>{
+    const maxC     = s.max_carry_m||s.longest_m;
+    const shapeS   = classifyShape(s.avg_spin_axis_deg);
+    const smashCls = s.avg_smash_factor==null?"":s.avg_smash_factor>=1.45?"#86efac":s.avg_smash_factor>=1.35?"#fde68a":"#fca5a5";
+    const accCls   = s.target_hit_pct==null?"var(--muted)":s.target_hit_pct>=65?"#86efac":s.target_hit_pct>=45?"#fde68a":"#fca5a5";
+    return`<tr style="border-bottom:1px solid rgba(255,255,255,.04)">
+      <td style="color:var(--muted);padding:6px 8px;white-space:nowrap">${s.date||"—"}</td>
+      <td style="padding:6px 8px;font-weight:700">${s.avg_carry_m!=null?s.avg_carry_m+"m":"—"}</td>
+      <td style="padding:6px 8px;color:var(--muted)">${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</td>
+      <td style="padding:6px 8px;color:var(--muted)">${maxC!=null?maxC+"m":"—"}</td>
+      <td style="padding:6px 8px;color:var(--muted)">${s.dispersion_m!=null?"±"+s.dispersion_m+"m":"—"}</td>
+      <td style="padding:6px 8px;color:${accCls}">${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</td>
+      <td style="padding:6px 8px">${shapeS?`<span class="shape-badge shape-${shapeS}" style="margin:0;font-size:.6rem;padding:1px 5px">${shapeS.toUpperCase()}</span>`:"—"}</td>
+      <td style="padding:6px 8px;color:${smashCls||'var(--muted)'}">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
+      <td style="padding:6px 8px;color:var(--muted)">${s.avg_club_speed_mph!=null?Math.round(s.avg_club_speed_mph)+"mph":"—"}</td>
+      <td style="padding:6px 8px">${degFmt(s.avg_face_to_path)}</td>
+      <td style="padding:6px 8px">${degFmt(s.avg_spin_axis_deg)}</td>
+      <td style="padding:6px 8px">${degFmt(s.avg_club_path)}</td>
+      <td style="padding:6px 8px">${degFmt(s.avg_attack_angle_deg)}</td>
     </tr>`;
   }).join("");
 
-  // Shape distribution bar data
-  const shapeDist = getShapeDistribution(clubName);
-
   content.innerHTML = `
-    <div style="margin-bottom:16px">
-      <div style="font-size:1.4rem;font-weight:800;color:var(--text)">${esc(clubName)}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center">
-        ${shape?`<span class="shape-badge shape-${shape}" style="margin-top:0">${shape.toUpperCase()} Stock</span>`:""}
-        <span class="conf-badge conf-${conf.level}">${conf.level==='low'?'⚠️ Low':conf.level==='medium'?'📊 Medium':'✅ High'} confidence · ${confDetail}</span>
-        <span style="font-size:.76rem;color:var(--muted)">${sessions.length} session${sessions.length>1?"s":""} recorded</span>
-      </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:18px">
       <div>
-        <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:6px">Carry Distance Trend</div>
-        <canvas id="chartDetailTrend" style="width:100%;height:160px"></canvas>
+        <div style="font-size:2rem;font-weight:800;color:var(--text);line-height:1">${esc(clubName)}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center">
+          ${shape?`<span class="shape-badge shape-${shape}" style="margin:0">${shape.toUpperCase()} stock</span>`:""}
+          <span class="conf-badge conf-${conf.level}" style="margin:0">${conf.level==='low'?'⚠️ Low':conf.level==='medium'?'📊 Medium':'✅ High'} confidence · ${confDetail}</span>
+          ${longTrend?`<span class="club-trend ${longTrend.direction==='gaining'?'trend-up':'trend-down'}" style="font-size:.72rem;font-weight:600">${longTrend.direction==='gaining'?'📈':'📉'} ${longTrend.metres}m ${longTrend.direction} over ${longTrend.n} sessions</span>`:""}
+        </div>
       </div>
-      <div id="chartDetailShapeWrap">
-        ${shapeDist?`<div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:6px">Shot Shape Distribution</div>
-        <canvas id="chartDetailShape" style="width:100%;height:160px"></canvas>`
-        :`<div class="no-data" style="height:160px"><div class="nd-icon">🌀</div><p style="font-size:.76rem">No spin axis data yet</p></div>`}
-      </div>
+      ${perf!=null?`<div style="text-align:right">
+        <div style="font-size:.65rem;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Performance</div>
+        <div style="font-size:2.2rem;font-weight:800;color:${perfColor};line-height:1">${perf.overall}<span style="font-size:.9rem;color:var(--muted);font-weight:400">/100</span></div>
+        <div style="font-size:.65rem;color:var(--muted);margin-top:2px">${
+          [perf.accuracy!=null?`Acc ${perf.accuracy}`:null,
+           perf.consistency!=null?`Con ${perf.consistency}`:null,
+           perf.distanceControl!=null?`Dist ${perf.distanceControl}`:null,
+           perf.strikeQuality!=null?`Strike ${perf.strikeQuality}`:null]
+          .filter(Boolean).join(' · ')}</div>
+      </div>`:""}
     </div>
 
-    <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:8px">All Sessions</div>
-    <div style="overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr style="color:var(--muted);font-size:.7rem;border-bottom:1px solid var(--border)">
-        <th style="text-align:left;padding:5px 8px">Date</th>
-        <th style="padding:5px 8px">Avg Carry</th><th style="padding:5px 8px">Min</th>
-        <th style="padding:5px 8px">Max</th><th style="padding:5px 8px">Dispersion</th>
-        <th style="padding:5px 8px">Target Hit</th><th style="padding:5px 8px">Shape</th>
-        <th style="padding:5px 8px">Smash</th><th style="padding:5px 8px">Speed</th>
-        <th style="padding:5px 8px">F→P°</th><th style="padding:5px 8px">Axis°</th>
+    <!-- KPI tiles -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      ${kpiTile("Avg Carry",avgOverall,"m","var(--text)")}
+      ${kpiTile("Dispersion",avgDisp!=null?"±"+avgDisp:"","m","var(--muted)")}
+      ${kpiTile("Target Hit",avgAcc!=null?avgAcc+"%":null,"",avgAcc==null?"var(--muted)":avgAcc>=65?"#86efac":avgAcc>=45?"#fde68a":"#fca5a5")}
+      ${avgSmash!=null?kpiTile("Smash",avgSmash.toFixed(2),"",avgSmash>=1.45?"#86efac":avgSmash>=1.35?"#fde68a":"#fca5a5"):""}
+      ${chcp!=null?kpiTile("HCP Equiv",chcp.hcp.toFixed(1),"","var(--text)"):""}
+    </div>
+
+    <!-- Charts row -->
+    <div style="display:grid;grid-template-columns:${shapeDist?'3fr 2fr':'1fr'};gap:16px;margin-bottom:22px">
+      <div>
+        <div style="font-size:.74rem;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Carry Distance per Session</div>
+        <canvas id="chartDetailTrend" style="width:100%;height:180px"></canvas>
+      </div>
+      ${shapeDist?`<div>
+        <div style="font-size:.74rem;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Shot Shape Distribution</div>
+        <canvas id="chartDetailShape" style="width:100%;height:180px"></canvas>
+      </div>`:""}
+    </div>
+
+    <!-- Session table -->
+    <div style="font-size:.74rem;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Session History</div>
+    <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+    <table style="width:100%;border-collapse:collapse;font-size:.76rem">
+      <thead><tr style="background:var(--bg);color:var(--muted);font-size:.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase">
+        <th style="text-align:left;padding:8px 8px;border-bottom:1px solid var(--border)">Date</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Carry</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Min</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Max</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Disp</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)" title="Depends on target size">Hit% ⓘ</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Shape</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Smash</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Speed</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">F→P°</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Axis°</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Path°</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">AoA°</th>
       </tr></thead>
       <tbody style="color:var(--text)">${tableRows}</tbody>
     </table>
     </div>`;
 
-  // Render carry trend chart
+  // Carry trend chart — min/max band + avg line
   destroyChart("chartDetailTrend");
-  const carryData = sessions.map((s,i)=>({x:i+1,y:s.avg_carry_m})).filter(p=>p.y!=null);
-  if(carryData.length){
-    new Chart("chartDetailTrend",{type:"line",
-      data:{datasets:[{label:"Avg Carry",data:carryData,borderColor:"#3b82f6",
-        backgroundColor:"rgba(59,130,246,.15)",pointRadius:5,tension:.3,fill:true}]},
-      options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false}},
-        scales:{
-          x:{type:"linear",title:{display:true,text:"Session",color:TICK_COLOR},
-            grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
-          y:{title:{display:true,text:"Carry (m)",color:TICK_COLOR},
-            grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
-        }}
-    });
-  }
+  const carryLabels = sessions.map((s,i)=>s.date||`#${i+1}`);
+  const carryAvg    = sessions.map(s=>s.avg_carry_m??null);
+  const carryMin    = sessions.map(s=>s.min_carry_m??null);
+  const carryMax    = sessions.map(s=>s.max_carry_m||s.longest_m||null);
+  const hasRange    = carryMin.some(v=>v!=null)&&carryMax.some(v=>v!=null);
+  const carryDS     = [{
+    label:"Avg Carry",data:carryAvg,borderColor:"#3b82f6",
+    backgroundColor:"rgba(59,130,246,.12)",pointRadius:5,pointHoverRadius:7,tension:.3,
+    fill:hasRange?"stack":true,order:1,
+  }];
+  if(hasRange) carryDS.push(
+    {label:"Max",data:carryMax,borderColor:"rgba(59,130,246,.3)",pointRadius:3,tension:.3,
+     fill:"+1",backgroundColor:"rgba(59,130,246,.08)",borderDash:[4,3],order:0},
+    {label:"Min",data:carryMin,borderColor:"rgba(59,130,246,.3)",pointRadius:3,tension:.3,
+     fill:false,borderDash:[4,3],order:2}
+  );
+  new Chart("chartDetailTrend",{type:"line",data:{labels:carryLabels,datasets:carryDS},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:hasRange,labels:{color:TICK_COLOR,font:{size:10},boxWidth:10}}},
+      scales:{
+        x:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR,maxRotation:45,font:{size:10}}},
+        y:{title:{display:true,text:"Carry (m)",color:TICK_COLOR},grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+      }}
+  });
 
-  // Render shape distribution chart
+  // Shape distribution chart
   if(shapeDist){
     destroyChart("chartDetailShape");
     const SHAPE_ORDER=["hook","draw","straight","fade","slice"];
-    const SHAPE_COLORS={"hook":"rgba(249,115,22,.7)","draw":"rgba(34,197,94,.7)",
-      "straight":"rgba(100,116,139,.7)","fade":"rgba(59,130,246,.7)","slice":"rgba(239,68,68,.7)"};
+    const SHAPE_COL={"hook":"rgba(249,115,22,.8)","draw":"rgba(34,197,94,.8)",
+      "straight":"rgba(100,116,139,.8)","fade":"rgba(59,130,246,.8)","slice":"rgba(239,68,68,.8)"};
     const labels=SHAPE_ORDER.filter(sh=>shapeDist.counts[sh]>0);
     const data=labels.map(sh=>Math.round(shapeDist.counts[sh]/shapeDist.total*100));
-    new Chart("chartDetailShape",{type:"bar",
-      data:{labels,datasets:[{data,backgroundColor:labels.map(sh=>SHAPE_COLORS[sh]),borderRadius:4}]},
+    new Chart("chartDetailShape",{type:"doughnut",
+      data:{labels,datasets:[{data,backgroundColor:labels.map(sh=>SHAPE_COL[sh]),
+        borderWidth:2,borderColor:"var(--card)"}]},
       options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false}},
-        scales:{
-          x:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
-          y:{title:{display:true,text:"%",color:TICK_COLOR},grid:{color:GRID_COLOR},
-            ticks:{color:TICK_COLOR},max:100}
-        }}
+        plugins:{legend:{position:"right",labels:{color:TICK_COLOR,font:{size:11},boxWidth:12,
+          generateLabels:chart=>{
+            const ds=chart.data.datasets[0];
+            return chart.data.labels.map((l,i)=>({
+              text:`${l.charAt(0).toUpperCase()+l.slice(1)} ${ds.data[i]}%`,
+              fillStyle:ds.backgroundColor[i],strokeStyle:ds.borderColor,lineWidth:1,
+              hidden:false,index:i,
+            }));
+          }
+        }}}
+      }
     });
   }
 
