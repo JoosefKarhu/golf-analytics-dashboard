@@ -108,7 +108,7 @@ Compute session averages from all visible shot rows. Extract all club data and r
 {
   "range_sessions": [
     {
-      "date": "YYYY-MM-DD or null",
+      "date": "YYYY-MM-DD or null — look carefully at the app header, navigation bar, date picker, session title, or any visible timestamp in the screenshot",
       "club": "canonical short form: Dr (driver), 3W/5W/7W (fairway woods), 2I-9I (irons), PW/GW/AW (wedges), then degree notation like 52 deg/56 deg/60 deg",
       "shots": integer or null,
       "avg_carry_m": integer or null,
@@ -139,6 +139,7 @@ Rules:
 - Create one entry per club. If multiple clubs appear, create multiple entries.
 - If individual shot distances are shown in a table, compute avg/max/min from those rows.
 - For L/R direction fields (Carry Side, Launch Dir etc.): treat L as negative, R as positive for right-handed golfer.
+- DATE (important): Actively scan every part of the screenshot for a date — app title bar, session header, navigation arrows, settings panel, or any text that looks like a date/time. Common formats include "Jan 14", "14.1.2026", "Monday Jan 14", "2026-01-14". Convert to YYYY-MM-DD. Only return null if there is genuinely no date visible anywhere.
 - Return ONLY the JSON object — no markdown fences, no explanation.
 - Use null for any field not visible in the screenshots.
 """
@@ -326,6 +327,8 @@ class GolfHandler(BaseHTTPRequestHandler):
             self._handle_save(payload)
         elif self.path == "/api/coach":
             self._handle_coach(payload)
+        elif self.path == "/api/delete":
+            self._handle_delete(payload)
         else:
             self._send({"error": "Not found"}, 404)
 
@@ -364,8 +367,12 @@ class GolfHandler(BaseHTTPRequestHandler):
                     "data":       img["data"],
                 },
             })
-            if img.get("name"):
-                content.append({"type": "text", "text": f"[Filename: {img['name']}]"})
+            # Add filename and file date as context hints for Claude
+            parts = []
+            if img.get("name"):         parts.append(f"Filename: {img['name']}")
+            if img.get("lastModified"): parts.append(f"File date: {img['lastModified']}")
+            if parts:
+                content.append({"type": "text", "text": "[" + " | ".join(parts) + "]"})
         prompt = PROMPTS.get(mode, ANALYSIS_PROMPT)
         content.append({"type": "text", "text": prompt})
 
@@ -412,6 +419,20 @@ class GolfHandler(BaseHTTPRequestHandler):
             rounds  = extracted.get("rounds", [])
             range_s = extracted.get("range_sessions", [])
             print(f"  ✓ Extracted {len(rounds)} round(s), {len(range_s)} range session(s)  [mode={mode}]")
+
+            # Apply file-date fallback: if Claude couldn't find a date in the screenshot,
+            # use the file's lastModified date (sent by the browser) as a fallback.
+            # This is better than leaving date=null, which forces manual entry every time.
+            if mode == "range" and range_s:
+                file_dates = [img.get("lastModified") for img in images[:img_cap]
+                              if img.get("lastModified")]
+                if file_dates:
+                    fallback = file_dates[0]
+                    for s in range_s:
+                        if not s.get("date"):
+                            s["date"] = fallback
+                            print(f"  📅 Date fallback applied for {s.get('club','?')} → {fallback} (file date)")
+
             self._send({"success": True, "data": extracted, "mode": mode})
 
         except urllib.error.HTTPError as e:
@@ -469,6 +490,36 @@ class GolfHandler(BaseHTTPRequestHandler):
             self._send({"success": True, "saved": saved, "skipped": skipped, "total_rounds": total})
 
         DATA_FILE.write_text(json.dumps(store, indent=2, ensure_ascii=False))
+
+    # ── Delete a round or range session ───────────────────────────────────
+    def _handle_delete(self, payload: dict):
+        item_type = payload.get("type")          # "round" or "range"
+        index     = payload.get("index")         # index in full array
+
+        if item_type not in ("round", "range") or not isinstance(index, int):
+            self._send({"error": "Invalid request: need type (round|range) and integer index"}, 400)
+            return
+
+        if not DATA_FILE.exists():
+            self._send({"error": "No data file found"}, 404)
+            return
+
+        store = json.loads(DATA_FILE.read_text())
+        key   = "rounds" if item_type == "round" else "range_sessions"
+        items = store.get(key, [])
+
+        if index < 0 or index >= len(items):
+            self._send({"error": f"Index {index} out of range (0–{len(items)-1})"}, 400)
+            return
+
+        deleted = items.pop(index)
+        store[key] = items
+        DATA_FILE.write_text(json.dumps(store, ensure_ascii=False, indent=2))
+
+        label = deleted.get("course") or deleted.get("club", "?")
+        date  = deleted.get("date", "")
+        print(f"  🗑 Deleted {item_type}: {label} {date}")
+        self._send({"ok": True, "deleted": label})
 
     # ── AI Coach chat ─────────────────────────────────────────────────────
     def _handle_coach(self, payload: dict):

@@ -357,7 +357,7 @@
 <!-- ── Header ───────────────────────────────────────────────────────────── -->
 <header>
   <div class="header-top">
-    <div class="logo">⛳ Joonas <span>Golf Analytics</span></div>
+    <div class="logo">⛳ <span id="logoName">Golf</span> <span>Analytics</span></div>
     <div class="header-right">
       <span id="roundCount" style="font-size:.8rem;color:var(--muted)"></span>
       <label style="font-size:.75rem;color:var(--muted);white-space:nowrap">Target:
@@ -406,7 +406,8 @@
     <button class="tab-btn active" data-tab="all"       onclick="setTab('all')">All Rounds <span class="tab-count" id="tc-all">0</span></button>
     <button class="tab-btn"        data-tab="simulator" onclick="setTab('simulator')">Simulator <span class="tab-count" id="tc-sim">0</span></button>
     <button class="tab-btn"        data-tab="real"      onclick="setTab('real')">Real Course <span class="tab-count" id="tc-real">0</span></button>
-    <button class="tab-btn"        data-tab="practice"  onclick="setTab('practice')">Practice <span class="tab-count" id="tc-prac">0</span></button>
+    <button class="tab-btn"        data-tab="practice"  onclick="setTab('practice')">My Bag <span class="tab-count" id="tc-prac">0</span></button>
+    <button class="tab-btn"        data-tab="profile"   onclick="setTab('profile')">👤 Profile</button>
   </div>
 </header>
 
@@ -427,7 +428,7 @@
   <!-- All-tab hint -->
   <div class="all-tab-hint" id="allHint" style="display:none">
     Use the <strong>Simulator</strong>, <strong>Real Course</strong>, or
-    <strong>Practice</strong> tabs to add new data via drag-and-drop.
+    <strong>My Bag</strong> tabs to add new data via drag-and-drop.
   </div>
 
   <!-- ── ROUNDS CONTENT (All / Simulator / Real tabs) ─────────────────── -->
@@ -605,7 +606,7 @@
       <div class="club-grid" id="clubGrid">
         <div class="no-data" style="padding:24px;grid-column:1/-1">
           <div class="nd-icon">🏌️</div>
-          <p>No practice sessions yet</p>
+          <p>No club data yet</p>
           <p class="nd-sub">Drop range screenshots above to start tracking</p>
         </div>
       </div>
@@ -651,9 +652,9 @@
           <thead><tr>
             <th>#</th><th>Date</th><th>Club</th><th>Shots</th>
             <th>Avg Carry</th><th>Avg Total</th><th>Max Carry</th>
-            <th>Min Carry</th><th>Dispersion</th><th title="Accuracy depends on the target size you set — smaller target = lower %">Target Hit ⓘ</th>
+            <th>Min Carry</th><th title="Carry spread (max − min) within the session">Spread</th><th title="Accuracy depends on the target size you set — smaller target = lower %">Target Hit ⓘ</th>
             <th>Shape</th><th>Smash</th><th>Speed</th><th>Spin rpm</th>
-            <th>Axis°</th><th>Face°</th><th>Path°</th><th>F→P°</th><th>Attack°</th>
+            <th>Axis°</th><th>Face°</th><th>Path°</th><th>F→P°</th><th>Attack°</th><th></th>
           </tr></thead>
           <tbody id="rangeBody"></tbody>
         </table>
@@ -661,6 +662,75 @@
     </div>
 
   </div><!-- /practiceSection -->
+
+  <!-- ── PLAYER PROFILE TAB ──────────────────────────────────────────────── -->
+  <div id="profileSection" style="display:none;padding:20px 24px 40px">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px;margin:0 auto">
+
+      <!-- Left: profile form card -->
+      <div class="chart-card" style="height:fit-content">
+        <div class="chart-title">👤 Player Info</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+          <div>
+            <label style="font-size:.72rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Name</label>
+            <input id="pfName" type="text" class="api-input" placeholder="Your name" style="width:100%;font-size:.85rem">
+          </div>
+          <div>
+            <label style="font-size:.72rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Age</label>
+            <input id="pfAge" type="number" min="5" max="100" class="api-input" placeholder="e.g. 34" style="width:100%;font-size:.85rem">
+          </div>
+          <div>
+            <label style="font-size:.72rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Current Handicap</label>
+            <input id="pfHCP" type="number" step="0.1" min="-10" max="54" class="api-input" placeholder="e.g. 12.4" style="width:100%;font-size:.85rem">
+          </div>
+          <div>
+            <label style="font-size:.72rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Handedness</label>
+            <select id="pfHand" class="api-input" style="width:100%;font-size:.85rem">
+              <option value="right">Right-handed</option>
+              <option value="left">Left-handed</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label style="font-size:.72rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Goals &amp; Focus Areas</label>
+          <textarea id="pfGoals" class="api-input" rows="4" placeholder="e.g. Reduce handicap to 8, stop slicing driver, improve short game within 80m…"
+            style="width:100%;font-size:.82rem;resize:vertical;line-height:1.5"></textarea>
+        </div>
+
+        <button onclick="saveProfile()" class="btn btn-primary"
+          style="margin-top:14px;width:100%;font-size:.82rem;padding:8px">
+          💾 Save Profile
+        </button>
+
+        <div id="profileSaved" style="display:none;text-align:center;margin-top:8px;font-size:.75rem;color:#86efac">
+          ✓ Saved — shapes &amp; coaching will now reflect your handedness
+        </div>
+      </div>
+
+      <!-- Right: AI coach profile analysis -->
+      <div class="chart-card">
+        <div class="chart-title">🤖 Personalised Coach Analysis</div>
+        <p style="font-size:.8rem;color:var(--muted);margin:8px 0 14px">
+          Save your profile then ask the coach for a holistic assessment that takes your age, HCP, goals and all tracked data into account.
+        </p>
+        <button onclick="openCoach('profile',null)" class="btn btn-ghost"
+          style="width:100%;font-size:.82rem;padding:8px;color:var(--blue);border-color:rgba(59,130,246,.4)">
+          💬 Ask Coach for Full Analysis
+        </button>
+
+        <div style="margin-top:20px">
+          <div style="font-size:.72rem;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">Current Profile</div>
+          <div id="profileSummaryDisplay" style="font-size:.82rem;color:var(--text);line-height:1.8">
+            <span style="color:var(--muted)">No profile saved yet.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /profileSection -->
 
 </main>
 
@@ -812,11 +882,16 @@ function getFaceAngle(s){
 // Effective boundaries: Hook >+9 | Draw >+2 | Straight ≥-2 | Fade ≥-9 | Slice <-9
 function classifyShape(axis){
   if(axis==null) return null;
-  if(axis >  9)  return "hook";
-  if(axis >  2)  return "draw";
-  if(axis >= -2) return "straight";
-  if(axis >= -9) return "fade";
-  return "slice";
+  // Launch monitor spin axis convention:
+  //   Positive = axis tilts RIGHT → ball curves RIGHT for a right-handed golfer (fade / slice)
+  //   Negative = axis tilts LEFT  → ball curves LEFT  for a right-handed golfer (draw / hook)
+  // For a left-handed golfer the direction is mirrored, so we flip the sign.
+  const a = (playerProfile?.handedness === "left") ? -axis : axis;
+  if(a >  9)  return "slice";
+  if(a >  2)  return "fade";
+  if(a >= -2) return "straight";
+  if(a >= -9) return "draw";
+  return "hook";
 }
 
 // Median of an array; returns null for empty input.
@@ -880,6 +955,29 @@ function getSimClubStats(){
   return out;
 }
 
+// Per-club on-course stats (all round types, period-filtered).
+// Returns { total, fairwayPct, onGreenPct } or null if no shots.
+function getCourseClubData(clubName){
+  const shots = rounds
+    .filter(r => periodFilter(r.date))
+    .flatMap(r => (r.holes||[]).flatMap(h =>
+      (h.shots||[])
+        .filter(s => s.club && normalizeClub(s.club) === clubName)
+        .map(s => ({ result: s.result || "other" }))
+    ));
+  if(!shots.length) return null;
+  const total    = shots.length;
+  const fairways = shots.filter(s => s.result==="fairway" || s.result==="playable_rough").length;
+  const onGreen  = shots.filter(s => s.result==="green"   || s.result==="fringe").length;
+  const hasFW    = shots.some(s => ["fairway","rough","playable_rough","bunker","penalty"].includes(s.result));
+  const hasGrn   = shots.some(s => ["green","fringe","rough","bunker"].includes(s.result));
+  return {
+    total,
+    fairwayPct: hasFW  ? Math.round(fairways / total * 100) : null,
+    onGreenPct: hasGrn ? Math.round(onGreen  / total * 100) : null,
+  };
+}
+
 const DAMAGE_BENCH = {doubles:1.5,triples:0.3,threePutts:1.0,ob:0.5};
 const APPROACH_BUCKETS = [
   {label:"< 80m",min:0,max:80},{label:"80–110m",min:80,max:110},
@@ -887,11 +985,16 @@ const APPROACH_BUCKETS = [
   {label:"150–170m",min:150,max:170},{label:"170–200m",min:170,max:200},
 ];
 const GRID_COLOR = "rgba(255,255,255,0.05)";
-const TICK_COLOR = "#475569";
+const TICK_COLOR = "#94a3b8";   // was #475569 — now readable on dark bg
+const LEGEND_COLOR = "#cbd5e1"; // explicit light colour for all chart legends
+// Set Chart.js global defaults so every chart gets readable colours on dark bg
+if(typeof Chart !== "undefined"){
+  Chart.defaults.color = LEGEND_COLOR;
+}
 const AXIS_OPTS  = {ticks:{color:TICK_COLOR},grid:{color:GRID_COLOR}};
 const CHART_OPTS = {
   responsive:true,maintainAspectRatio:true,animation:{duration:600},
-  plugins:{legend:{labels:{color:"#94a3b8",font:{size:11},boxWidth:12}}}
+  plugins:{legend:{labels:{color:LEGEND_COLOR,font:{size:11},boxWidth:12}}}
 };
 // Club colours for trend chart (up to 10 clubs)
 const CLUB_COLORS = ["#22c55e","#3b82f6","#f59e0b","#a855f7","#ef4444",
@@ -904,6 +1007,8 @@ let activeTab     = "all";
 let filterYear    = "";
 let filterMonth   = "";
 let pendingData   = null;   // {type:"rounds"|"range", items:[]}
+let playerProfile = JSON.parse(localStorage.getItem("golf_profile") ||
+  '{"name":"","age":"","hcp":"","handedness":"right","goals":""}');
 let evaluations   = {};
 let currentEvalKey = null;
 
@@ -927,6 +1032,7 @@ document.addEventListener("DOMContentLoaded", () => {
   dz.addEventListener("drop", e=>{e.preventDefault();dz.classList.remove("drag-over");handleFiles(e.dataTransfer.files);});
 
   fetchRounds();
+  loadProfile();
 });
 
 function saveKey(){
@@ -934,6 +1040,50 @@ function saveKey(){
   if(!k) return showToast("Enter an API key first","error");
   localStorage.setItem("golf_api_key",k);
   showToast("API key saved ✓","success");
+}
+
+/* ── Player Profile ─────────────────────────────────────────────────────── */
+function loadProfile(){
+  document.getElementById("pfName").value = playerProfile.name  || "";
+  document.getElementById("pfAge").value  = playerProfile.age   || "";
+  document.getElementById("pfHCP").value  = playerProfile.hcp   || "";
+  document.getElementById("pfHand").value = playerProfile.handedness || "right";
+  document.getElementById("pfGoals").value= playerProfile.goals || "";
+  renderProfileSummary();
+}
+
+function saveProfile(){
+  playerProfile = {
+    name:       document.getElementById("pfName").value.trim(),
+    age:        document.getElementById("pfAge").value.trim(),
+    hcp:        document.getElementById("pfHCP").value.trim(),
+    handedness: document.getElementById("pfHand").value,
+    goals:      document.getElementById("pfGoals").value.trim(),
+  };
+  localStorage.setItem("golf_profile", JSON.stringify(playerProfile));
+  renderProfileSummary();
+  const saved = document.getElementById("profileSaved");
+  if(saved){ saved.style.display="block"; setTimeout(()=>saved.style.display="none", 3000); }
+  // Re-render My Bag so shape badges and stock shapes reflect new handedness
+  renderAll();
+}
+
+function renderProfileSummary(){
+  const el = document.getElementById("profileSummaryDisplay");
+  const p = playerProfile;
+  // Update header logo name
+  const logoEl = document.getElementById("logoName");
+  if(logoEl) logoEl.textContent = p.name ? p.name : "Golf";
+  if(!el) return;
+  const hasData = p.name||p.age||p.hcp||p.goals;
+  if(!hasData){ el.innerHTML=`<span style="color:var(--muted)">No profile saved yet.</span>`; return; }
+  const rows = [];
+  if(p.name) rows.push(`<strong>Name:</strong> ${esc(p.name)}`);
+  if(p.age)  rows.push(`<strong>Age:</strong> ${esc(p.age)}`);
+  if(p.hcp)  rows.push(`<strong>HCP:</strong> ${esc(p.hcp)}`);
+  rows.push(`<strong>Plays:</strong> ${p.handedness==="left"?"Left-handed 🤚":"Right-handed ✋"}`);
+  if(p.goals) rows.push(`<strong>Goals:</strong> <span style="color:var(--muted)">${esc(p.goals)}</span>`);
+  el.innerHTML = rows.join("<br>");
 }
 
 function setTarget(key){
@@ -973,12 +1123,14 @@ function setTab(tab) {
   document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
 
   const isPractice = tab === "practice";
+  const isProfile  = tab === "profile";
   const isAll      = tab === "all";
   const isReal     = tab === "real";
 
-  document.getElementById("roundsContent").style.display  = isPractice ? "none" : "";
+  document.getElementById("roundsContent").style.display   = (isPractice||isProfile) ? "none" : "";
   document.getElementById("practiceSection").style.display = isPractice ? "" : "none";
-  document.getElementById("dropWrap").style.display  = isAll ? "none" : "";
+  document.getElementById("profileSection").style.display  = isProfile  ? "" : "none";
+  document.getElementById("dropWrap").style.display  = (isAll||isProfile) ? "none" : "";
   document.getElementById("allHint").style.display   = isAll ? "" : "none";
   // Real-only section
   document.getElementById("realSection").style.display       = isReal ? "" : "none";
@@ -1007,7 +1159,7 @@ function setTab(tab) {
   if(hcpReal) hcpReal.style.display = (isAll||isReal) && !isPractice ? "" : "none";
   if(hcpSim)  hcpSim.style.display  = (isAll||tab==="simulator") && !isPractice ? "" : "none";
 
-  if (!isAll) {
+  if (!isAll && !isProfile) {
     const cfg = DZ_CONFIG[tab];
     document.getElementById("dzIcon").textContent   = cfg.icon;
     document.getElementById("dzTitle").textContent  = cfg.title;
@@ -1130,7 +1282,7 @@ async function handleFiles(files){
 
   const {maxPx,quality}=compressionFor(files.length);
   const images=[];
-  for(const f of files) images.push({name:f.name,data:await toBase64(f,maxPx,quality),media_type:"image/jpeg"});
+  for(const f of files) images.push({name:f.name,data:await toBase64(f,maxPx,quality),media_type:"image/jpeg",lastModified:new Date(f.lastModified).toISOString().slice(0,10)});
 
   const titles = {round:"Analysing Round Screenshots",real_round:"Analysing Scorecard / Round Summary",range:"Analysing Range Practice Screenshots"};
   document.getElementById("loadingTitle").textContent = titles[mode]||"Analysing…";
@@ -1222,15 +1374,23 @@ function showRoundResults(rds){
 function showRangeResults(sessions){
   document.getElementById("resultsTitle").textContent   = "🏌️ Range Analysis Complete";
   document.getElementById("resultsSubtitle").textContent = "Review extracted club data — confirm to save to Practice history.";
-  document.getElementById("resultsContent").innerHTML = sessions.map(s=>`
+  document.getElementById("resultsContent").innerHTML = sessions.map((s,i)=>`
     <div class="round-preview">
       <h4 style="color:var(--orange)">${esc(s.club)} <span style="font-size:.75rem;color:var(--muted)">${s.date||""} · ${s.shots!=null?s.shots+" shots":"—"}</span></h4>
+      ${!s.date
+        ? `<div style="margin-bottom:8px">
+             <label style="font-size:.75rem;color:var(--warn);font-weight:600;display:block;margin-bottom:4px">⚠ Date not detected — enter manually:</label>
+             <input type="date" id="range-date-${i}"
+               style="background:var(--surface2);border:1px solid var(--warn);color:var(--text);
+                      padding:5px 10px;border-radius:6px;font-size:.82rem;outline:none;width:160px">
+           </div>`
+        : ""}
       <div class="preview-grid">
         <div class="preview-row"><span>Avg Carry</span><span>${s.avg_carry_m!=null?s.avg_carry_m+"m":"—"}</span></div>
         <div class="preview-row"><span>Avg Total</span><span>${s.avg_total_m!=null?s.avg_total_m+"m":"—"}</span></div>
         <div class="preview-row"><span>Max Carry</span><span>${(s.max_carry_m||s.longest_m)!=null?(s.max_carry_m||s.longest_m)+"m":"—"}</span></div>
         <div class="preview-row"><span>Min Carry</span><span>${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</span></div>
-        <div class="preview-row"><span>Dispersion</span><span>${s.dispersion_m!=null?s.dispersion_m+"m":"—"}</span></div>
+        <div class="preview-row"><span>Spread (max−min)</span><span>${(s.max_carry_m!=null&&s.min_carry_m!=null)?(s.max_carry_m-s.min_carry_m)+"m":"—"}</span></div>
         <div class="preview-row"><span>Target Hit</span><span>${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</span></div>
       </div>
     </div>`).join("");
@@ -1253,6 +1413,20 @@ async function confirmSave(){
       // Re-show overlay so the user can fill in the missing date
       document.getElementById("resultsOverlay").classList.add("active");
       showToast("Please enter a date for every round before saving","warn");
+      return;
+    }
+  }
+
+  if(pendingData.type==="range"){
+    let missingDate=false;
+    pendingData.items.forEach((item,i)=>{
+      const field=document.getElementById(`range-date-${i}`);
+      if(field&&field.value) item.date=field.value;
+      if(!item.date) missingDate=true;
+    });
+    if(missingDate){
+      document.getElementById("resultsOverlay").classList.add("active");
+      showToast("Please enter a date for every session before saving","warn");
       return;
     }
   }
@@ -1341,6 +1515,26 @@ function calcHCP(rounds, allowNineHole=false){
 // Returns {overall, accuracy, consistency, distanceControl, strikeQuality}
 // or null if no data. Uses last 3 sessions for recent metrics, all sessions
 // for distance stability.
+// Club-specific smash factor ranges calibrated to PGA Tour benchmarks.
+// max = PGA Tour average (= 100%).  min = max − 0.18 (= 0%, very poor contact).
+// Source: PGA Tour data (Driver 1.49, 3W 1.48 … PW 1.23)
+function getSmashRange(clubName){
+  const n = (clubName||"").toLowerCase().replace(/\s/g,"");
+  if(n==="dr"||n==="1w")                 return {max:1.50,min:1.32}; // Driver
+  if(/^3w/.test(n))                      return {max:1.48,min:1.30}; // 3 Wood
+  if(/^5w/.test(n))                      return {max:1.47,min:1.29}; // 5 Wood
+  if(/^(hy|h[0-9]|[24]w)/.test(n))      return {max:1.46,min:1.28}; // Hybrid / other woods
+  if(/^3i/.test(n))                      return {max:1.45,min:1.27}; // 3 Iron
+  if(/^4i/.test(n))                      return {max:1.43,min:1.25}; // 4 Iron
+  if(/^5i/.test(n))                      return {max:1.41,min:1.23}; // 5 Iron
+  if(/^6i/.test(n))                      return {max:1.38,min:1.20}; // 6 Iron
+  if(/^7i/.test(n))                      return {max:1.33,min:1.15}; // 7 Iron
+  if(/^8i/.test(n))                      return {max:1.32,min:1.14}; // 8 Iron
+  if(/^9i/.test(n))                      return {max:1.28,min:1.10}; // 9 Iron
+  if(/^pw/.test(n)||/\d+deg/.test(n))    return {max:1.23,min:1.05}; // PW / degree wedges
+  return {max:1.40,min:1.22};                                         // Default
+}
+
 function calcClubPerformanceScore(clubName){
   const sessions = filteredRangeSessions().filter(s=>s.club===clubName);
   if(!sessions.length) return null;
@@ -1351,24 +1545,38 @@ function calcClubPerformanceScore(clubName){
   const accVals = recent.filter(s=>s.target_hit_pct!=null).map(s=>s.target_hit_pct);
   if(accVals.length) comp.accuracy = Math.round(accVals.reduce((a,b)=>a+b,0)/accVals.length);
 
-  // Consistency: avg of (100 − dispersion%·carry) over last 3 sessions
-  const conVals = recent.filter(s=>s.avg_carry_m>0&&s.dispersion_m!=null)
-    .map(s=>Math.max(0,100-(s.dispersion_m/s.avg_carry_m*100)));
+  // Consistency: within-session carry spread (max−min / avg).
+  // Using spread instead of dispersion_m because VG3 does not export a dispersion ellipse value.
+  // A tight spread (e.g. 10m across 8 shots) → ~85; wide (30m) → ~55.
+  const conVals = recent.filter(s=>s.avg_carry_m>0&&s.max_carry_m!=null&&s.min_carry_m!=null)
+    .map(s=>Math.max(0,100-((s.max_carry_m-s.min_carry_m)/s.avg_carry_m*100)*1.5));
   if(conVals.length) comp.consistency = Math.round(conVals.reduce((a,b)=>a+b,0)/conVals.length);
 
-  // Distance control: carry stability across all sessions (low stdev = high score)
+  // Distance control: cross-session carry stability (low stdev = high score).
+  // Single-session fallback: use within-session min/max spread instead of cross-session stdev.
   const carVals = sessions.filter(s=>s.avg_carry_m>0).map(s=>s.avg_carry_m);
   if(carVals.length>=2){
     const mean = carVals.reduce((a,b)=>a+b,0)/carVals.length;
     const stdev = Math.sqrt(carVals.map(v=>(v-mean)**2).reduce((a,b)=>a+b,0)/carVals.length);
     comp.distanceControl = Math.min(100,Math.max(0,Math.round(100-(stdev/mean*100)*3)));
+  } else if(carVals.length===1){
+    // Only 1 session — use within-session spread as a proxy for distance control
+    const s1 = sessions.filter(s=>s.avg_carry_m>0)[0];
+    if(s1.max_carry_m!=null&&s1.min_carry_m!=null&&s1.avg_carry_m>0){
+      const spread = s1.max_carry_m - s1.min_carry_m;
+      comp.distanceControl = Math.min(100,Math.max(0,Math.round(100-(spread/s1.avg_carry_m*100)*2)));
+    }
   }
 
-  // Strike quality: smash factor scaled 1.20→0% to 1.50→100%
-  const smVals = recent.filter(s=>s.avg_smash_factor!=null).map(s=>s.avg_smash_factor);
+  // Strike quality: smash factor scaled by club-specific expected range.
+  // Exclude smash < 0.92 — sub-threshold readings are from partial shots or extraction errors.
+  // Don't store strikeQuality = 0 (below minimum range) — hide rather than mislead.
+  const smVals = recent.filter(s=>s.avg_smash_factor!=null&&s.avg_smash_factor>=0.92).map(s=>s.avg_smash_factor);
   if(smVals.length){
     const avg = smVals.reduce((a,b)=>a+b,0)/smVals.length;
-    comp.strikeQuality = Math.min(100,Math.max(0,Math.round((avg-1.20)/(1.50-1.20)*100)));
+    const {min:sMin,max:sMax} = getSmashRange(clubName);
+    const sq = Math.min(100,Math.max(0,Math.round((avg-sMin)/(sMax-sMin)*100)));
+    if(sq > 0) comp.strikeQuality = sq;  // Only set if meaningfully above floor
   }
 
   const vals = Object.values(comp);
@@ -1681,7 +1889,7 @@ function renderDriveDistribution(all){
     labels:["Fairway","Rough","Deep Rough","Sand","OB/Penalty"],
     datasets:[{data:[d.fairway,d.rough,d.deepRough,d.sand,d.ob],
       backgroundColor:["rgba(34,197,94,.75)","rgba(245,158,11,.75)","rgba(239,68,68,.65)","rgba(100,116,139,.65)","rgba(239,68,68,.9)"],
-      borderColor:"var(--surface)",borderWidth:2}]},
+      borderColor:"#162030",borderWidth:2}]},
     options:{responsive:true,maintainAspectRatio:true,
       plugins:{legend:{position:"bottom",labels:{color:"#94a3b8",font:{size:11},padding:10}},
       tooltip:{callbacks:{label:c=>{const v=c.raw;return` ${c.label}: ${v} (${p(v)}%)`}}}}}});
@@ -1931,6 +2139,7 @@ function renderTable(all){
       const sc=r.score_vs_par,sp=sc!=null?(sc<=3?"pill-good":sc<=6?"pill-warn":"pill-bad"):"pill-neutral";
       const he=!!evaluations[evalKey(r)],fi=i;
       const par=r.par||(r.total_strokes!=null&&sc!=null?r.total_strokes-sc:null);
+      const ai=rounds.indexOf(r);
       return`<tr>
         <td style="color:var(--muted)">${i+1}</td>
         <td><strong>${esc(r.course||"—")}</strong></td>
@@ -1940,10 +2149,14 @@ function renderTable(all){
         <td>${r.total_strokes??"—"}</td>
         <td style="color:var(--muted)">${par??"—"}</td>
         <td style="display:flex;gap:4px;flex-wrap:nowrap">
+          <button class="btn btn-ghost btn-sm" onclick="openRoundDetail(${fi})"
+            style="color:var(--muted);border-color:rgba(100,116,139,.3)">↗</button>
           <button class="btn btn-ghost btn-sm" onclick="openRateModal(${fi})"
             style="${he?"color:var(--accent);border-color:var(--accent)":""}">${he?"★":"Rate"}</button>
           <button class="btn btn-ghost btn-sm" onclick="openCoach('round',${fi})"
             style="color:var(--blue);border-color:rgba(59,130,246,.35)">Ask</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteItem('round',${ai})"
+            style="color:var(--danger);border-color:rgba(239,68,68,.3)" title="Delete this round">🗑</button>
         </td>
       </tr>`;}).join("");
   } else {
@@ -1957,6 +2170,7 @@ function renderTable(all){
       const sc2=r.scrambling_pct==null?"":r.scrambling_pct>=55?"col-good":r.scrambling_pct>=40?"col-warn":"col-bad";
       const pc=r.putts_per_hole==null?"":r.putts_per_hole<=1.70?"col-good":r.putts_per_hole<=1.85?"col-warn":"col-bad";
       const he=!!evaluations[evalKey(r)],fi=i;
+      const ai=rounds.indexOf(r);
       return`<tr>
         <td style="color:var(--muted)">${i+1}</td>
         <td><span class="pill ${tp}">${tl}</span></td>
@@ -1970,10 +2184,14 @@ function renderTable(all){
         <td class="${sc2}">${fmtPct(r.scrambling_pct)}</td>
         <td class="${pc}">${r.putts_per_hole!=null?r.putts_per_hole.toFixed(2):"—"}</td>
         <td style="display:flex;gap:4px;flex-wrap:nowrap">
+          <button class="btn btn-ghost btn-sm" onclick="openRoundDetail(${fi})"
+            style="color:var(--muted);border-color:rgba(100,116,139,.3)">↗</button>
           <button class="btn btn-ghost btn-sm" onclick="openRateModal(${fi})"
             style="${he?"color:var(--accent);border-color:var(--accent)":""}">${he?"★":"Rate"}</button>
           <button class="btn btn-ghost btn-sm" onclick="openCoach('round',${fi})"
             style="color:var(--blue);border-color:rgba(59,130,246,.35)">Ask</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteItem('round',${ai})"
+            style="color:var(--danger);border-color:rgba(239,68,68,.3)" title="Delete this round">🗑</button>
         </td>
       </tr>`;}).join("");
   }
@@ -2116,7 +2334,7 @@ function renderScoreDistribution(fr){
     labels:["Eagle","Birdie","Par","Bogey","Double","Triple+"],
     datasets:[{data:[d.eagle,d.birdie,d.par,d.bogey,d.double,d.triple],
       backgroundColor:["#f59e0b","#22c55e","#3b82f6","#f97316","#ef4444","#991b1b"],
-      borderColor:"var(--surface)",borderWidth:2}]
+      borderColor:"#162030",borderWidth:2}]
   },options:{responsive:true,maintainAspectRatio:true,
     plugins:{legend:{position:"bottom",labels:{color:"#94a3b8",font:{size:10},padding:8,boxWidth:10}},
     tooltip:{callbacks:{label:c=>{const v=c.raw;return` ${c.label}: ${v} (${pct(v)}%)`}}}}}});
@@ -2254,26 +2472,30 @@ function renderClubCards(){
     const acc=latest.target_hit_pct;
     const accCls=acc==null?"":acc>=65?"col-good":acc>=45?"col-warn":"col-bad";
 
-    // ── Single-line trend: short-term + optional long-term suffix ─────────
-    let trendText="", trendCls="trend-flat";
+    // ── Short-term trend (prev session delta) ──────────────────────────────
+    let shortTrendHtml="";
     if(prev&&prev.avg_carry_m&&carry){
       const d=carry-prev.avg_carry_m;
-      if(Math.abs(d)>=2){ trendText=`${d>0?"▲":"▼"}${Math.abs(d)}m`; trendCls=d>0?"trend-up":"trend-down"; }
-      else { trendText="stable"; }
+      if(Math.abs(d)>=2){
+        const cls=d>0?"trend-up":"trend-down";
+        shortTrendHtml=`<span class="club-trend ${cls}" style="font-size:.72rem">${d>0?"▲":"▼"}${Math.abs(d)}m vs prev</span>`;
+      }
     }
-    const longTrend=detectLongTermTrend(club);
-    if(longTrend) trendText+=(trendText?" · ":"")+`${longTrend.direction==='gaining'?'📈':'📉'}${longTrend.metres}m trend`;
-    const trendHtml = trendText
-      ? `<span class="club-trend ${trendCls}" style="font-size:.73rem">${trendText}</span>`
-      : "";
 
-    // ── Stock shape + confidence (inline right side) ───────────────────────
+    // ── Long-term trend (separate line) ────────────────────────────────────
+    const longTrend=detectLongTermTrend(club);
+    const longTrendHtml=longTrend
+      ?`<span class="club-trend ${longTrend.direction==='gaining'?'trend-up':'trend-down'}"
+          style="font-size:.68rem;opacity:.85">${longTrend.direction==='gaining'?'📈':'📉'} ${longTrend.metres}m overall (${longTrend.n} sessions)</span>`
+      :"";
+
+    // ── Stock shape + confidence ───────────────────────────────────────────
     const shape=getStockShape(club);
     const conf=calcClubConfidence(club);
     const confDetail=conf.shots>0?`${conf.shots} shots`:`${conf.sessions||sessions.length} sess.`;
     const confIcon=conf.level==='low'?'⚠️':conf.level==='high'?'✅':'';
 
-    // ── Key stats row (compact) ────────────────────────────────────────────
+    // ── Launch-monitor stats (compact row) ────────────────────────────────
     const smash=latest.avg_smash_factor;
     const cspd =latest.avg_club_speed_mph;
     const ftp  =latest.avg_face_to_path;
@@ -2281,82 +2503,103 @@ function renderClubCards(){
     const bfFmt=v=>v==null?"—":`<strong class="${Math.abs(v)<1?'bf-neu':v>0?'bf-pos':'bf-neg'}">${v>0?"+":""}${v.toFixed(1)}°</strong>`;
     const hasStats=smash!=null||cspd!=null||ftp!=null||spinAx!=null;
 
-    // ── Performance score ──────────────────────────────────────────────────
+    // ── Performance + HCP + Course data (bottom anchored) ─────────────────
     const perf=calcClubPerformanceScore(club);
     const chcp=calcClubHCP(club);
+    const courseData=getCourseClubData(club);
     const perfColor=perf==null?"#64748b":perf.overall>=70?"#22c55e":perf.overall>=50?"#f59e0b":"#ef4444";
     const perfComponents=perf?[
       perf.accuracy       !=null?`Acc ${perf.accuracy}`:null,
       perf.consistency    !=null?`Con ${perf.consistency}`:null,
       perf.distanceControl!=null?`Dist ${perf.distanceControl}`:null,
-      perf.strikeQuality  !=null?`Strike ${perf.strikeQuality}`:null,
+      perf.strikeQuality  >0?`Strike ${perf.strikeQuality}`:null,
     ].filter(Boolean):[];
 
     const color=CLUB_COLORS[ci%CLUB_COLORS.length];
-    return`<div class="club-card" style="border-top:3px solid ${color};display:flex;flex-direction:column;gap:0">
+    return`<div class="club-card" style="border-top:3px solid ${color};display:flex;flex-direction:column">
 
-      <!-- Header row: name + shape badge -->
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px">
-        <div class="club-name" style="margin:0">${esc(club)}</div>
-        ${shape?`<span class="shape-badge shape-${shape}" style="margin:2px 0 0;font-size:.62rem;padding:1px 7px;white-space:nowrap">${shape.toUpperCase()}</span>`:""}
+      <!-- ── TOP: variable content ─────────────────────────────────────── -->
+      <div>
+        <!-- Header: name + shape badge -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px">
+          <div class="club-name" style="margin:0">${esc(club)}</div>
+          ${shape?`<span class="shape-badge shape-${shape}" style="margin:2px 0 0;font-size:.62rem;padding:1px 7px;white-space:nowrap">${shape.toUpperCase()}</span>`:""}
+        </div>
+
+        <!-- Carry hero -->
+        ${carry!=null?`
+        <div style="margin-top:6px">
+          <div class="club-carry" style="margin:0;line-height:1">${carry}</div>
+          <div class="club-carry-unit" style="margin:0">avg carry (m)
+            ${minC!=null&&maxC!=null?`<span style="opacity:.55"> · ${minC}–${maxC}m</span>`:(maxC!=null?`<span style="opacity:.55"> · max ${maxC}m</span>`:"")}
+          </div>
+        </div>`
+        :`<div style="color:var(--muted);font-size:.8rem;margin-top:6px">No carry data</div>`}
+
+        <!-- Accuracy + confidence (always 1 line, no wrap) -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:4px">
+          <span class="${accCls}" style="font-size:.8rem;font-weight:700;white-space:nowrap"
+            title="Accuracy depends on the target size you set">${acc!=null?acc+"% hit":""}</span>
+          <span class="conf-badge conf-${conf.level}" style="font-size:.6rem;padding:1px 6px;white-space:nowrap;flex-shrink:0">
+            ${confIcon} ${confDetail}
+          </span>
+        </div>
+
+        <!-- Short-term trend (reserved line, empty when no change) -->
+        <div style="min-height:18px;margin-top:2px">${shortTrendHtml}</div>
+
+        <!-- Long-term trend (reserved line, empty when insufficient data) -->
+        <div style="min-height:16px;margin-bottom:2px">${longTrendHtml}</div>
+
+        <!-- Launch-monitor stats -->
+        ${hasStats?`<div class="bf-row" style="margin-top:4px">
+          ${smash !=null?`<span class="bf-stat">Smash <strong class="${smash>=1.45?'bf-pos':smash>=1.35?'bf-neu':'bf-neg'}">${smash.toFixed(2)}</strong></span>`:""}
+          ${cspd  !=null?`<span class="bf-stat">Spd <strong class="bf-neu">${Math.round(cspd)}</strong></span>`:""}
+          ${ftp   !=null?`<span class="bf-stat">F→P ${bfFmt(ftp)}</span>`:""}
+          ${spinAx!=null?`<span class="bf-stat">Axis ${bfFmt(spinAx)}</span>`:""}
+        </div>`:`<div style="min-height:20px"></div>`}
       </div>
 
-      <!-- Carry hero + range -->
-      ${carry!=null?`
-      <div style="margin-top:6px">
-        <div class="club-carry" style="margin:0;line-height:1">${carry}</div>
-        <div class="club-carry-unit" style="margin:0">avg carry (m)
-          ${minC!=null&&maxC!=null?`<span style="opacity:.55"> · ${minC}–${maxC}m</span>`:(maxC!=null?`<span style="opacity:.55"> · max ${maxC}m</span>`:"")}
+      <!-- ── BOTTOM: always anchored ────────────────────────────────────── -->
+      <div style="margin-top:auto;padding-top:8px">
+
+        <!-- On-course data (shows only when course rounds exist) -->
+        ${courseData?`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;
+            border-top:1px solid var(--border);margin-bottom:6px">
+          <span style="font-size:.63rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">⛳ Course</span>
+          ${courseData.fairwayPct!=null?`<span style="font-size:.72rem"><span style="color:var(--muted)">FW</span>
+            <strong style="color:${courseData.fairwayPct>=60?'#86efac':courseData.fairwayPct>=40?'#fde68a':'#fca5a5'}">${courseData.fairwayPct}%</strong></span>`:""}
+          ${courseData.onGreenPct!=null?`<span style="font-size:.72rem"><span style="color:var(--muted)">Grn</span>
+            <strong style="color:${courseData.onGreenPct>=60?'#86efac':courseData.onGreenPct>=40?'#fde68a':'#fca5a5'}">${courseData.onGreenPct}%</strong></span>`:""}
+          <span style="font-size:.63rem;color:var(--muted);margin-left:auto">${courseData.total} shots</span>
+        </div>`:""}
+
+        <!-- Performance score bar -->
+        ${perf!=null?`
+        <div style="${courseData?"":"padding-top:8px;border-top:1px solid var(--border)"}">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+            <span style="font-size:.7rem;color:var(--muted);font-weight:600;letter-spacing:.03em">PERFORMANCE</span>
+            <span style="font-size:.86rem;font-weight:800;color:${perfColor}">${perf.overall}<span style="font-size:.65rem;font-weight:400;color:var(--muted)">/100</span></span>
+          </div>
+          <div style="height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${perf.overall}%;background:${perfColor};border-radius:3px;transition:width .4s"></div>
+          </div>
+          ${perfComponents.length?`<div style="font-size:.63rem;color:var(--muted);margin-top:3px">${perfComponents.join(' · ')}</div>`:""}
+        </div>`:""}
+
+        <!-- Course HCP (if available) -->
+        ${chcp!=null?`<div style="font-size:.72rem;color:var(--muted);margin-top:5px">
+          HCP equiv: <strong style="color:var(--text)">${chcp.hcp.toFixed(1)}</strong>
+          <span style="font-size:.64rem;opacity:.6">(${chcp.holes} holes)</span>
+        </div>`:""}
+
+        <!-- Buttons -->
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-ghost btn-sm" onclick="openClubDetail('${club}')"
+            style="flex:1;color:var(--muted);border-color:rgba(100,116,139,.3);font-size:.72rem">↗ Details</button>
+          <button class="btn btn-ghost btn-sm" onclick="openCoach('club','${club}')"
+            style="flex:1;color:var(--blue);border-color:rgba(59,130,246,.35);font-size:.72rem">💬 Coach</button>
         </div>
-      </div>`
-      :`<div style="color:var(--muted);font-size:.8rem;margin-top:6px">No carry data</div>`}
-
-      <!-- Status row: accuracy + trend + confidence -->
-      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px">
-        ${acc!=null?`<span class="${accCls}" style="font-size:.8rem;font-weight:700"
-          title="Accuracy depends on the target size you set">${acc}% hit</span>`:""}
-        ${trendHtml}
-        <span class="conf-badge conf-${conf.level}" style="font-size:.62rem;padding:1px 6px;margin-left:auto">
-          ${confIcon} ${confDetail}
-        </span>
-      </div>
-
-      <!-- Key launch-monitor stats (if present) -->
-      ${hasStats?`<div class="bf-row" style="margin-top:6px">
-        ${smash !=null?`<span class="bf-stat">Smash <strong class="${smash>=1.45?'bf-pos':smash>=1.35?'bf-neu':'bf-neg'}">${smash.toFixed(2)}</strong></span>`:""}
-        ${cspd  !=null?`<span class="bf-stat">Spd <strong class="bf-neu">${Math.round(cspd)}</strong></span>`:""}
-        ${ftp   !=null?`<span class="bf-stat">F→P ${bfFmt(ftp)}</span>`:""}
-        ${spinAx!=null?`<span class="bf-stat">Axis ${bfFmt(spinAx)}</span>`:""}
-      </div>`:""}
-
-      <!-- Performance score bar -->
-      ${perf!=null?`
-      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-          <span style="font-size:.7rem;color:var(--muted);font-weight:600;letter-spacing:.03em">PERFORMANCE</span>
-          <span style="font-size:.86rem;font-weight:800;color:${perfColor}">${perf.overall}<span style="font-size:.65rem;font-weight:400;color:var(--muted)">/100</span></span>
-        </div>
-        <div style="height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden">
-          <div style="height:100%;width:${perf.overall}%;background:${perfColor};border-radius:3px;transition:width .4s"></div>
-        </div>
-        ${perfComponents.length?`<div style="font-size:.63rem;color:var(--muted);margin-top:3px">${perfComponents.join(' · ')}</div>`:""}
-      </div>`:""}
-
-      <!-- Course HCP (if available) -->
-      ${chcp!=null?`<div style="font-size:.72rem;color:var(--muted);margin-top:5px">
-        HCP equiv: <strong style="color:var(--text)">${chcp.hcp.toFixed(1)}</strong>
-        <span style="font-size:.64rem;opacity:.6">(${chcp.holes} holes)</span>
-      </div>`:""}
-
-      <!-- Spacer pushes buttons to bottom -->
-      <div style="flex:1;min-height:8px"></div>
-
-      <!-- Button row -->
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn-ghost btn-sm" onclick="openClubDetail('${club}')"
-          style="flex:1;color:var(--muted);border-color:rgba(100,116,139,.3);font-size:.72rem">↗ Details</button>
-        <button class="btn btn-ghost btn-sm" onclick="openCoach('club','${club}')"
-          style="flex:1;color:var(--blue);border-color:rgba(59,130,246,.35);font-size:.72rem">💬 Coach</button>
       </div>
     </div>`;
   }).join("");
@@ -2477,7 +2720,7 @@ function renderClubAccuracy(){
 function renderRangeTable(){
   const tbody=document.getElementById("rangeBody");
   const frs=filteredRangeSessions();
-  if(!frs.length){tbody.innerHTML=`<tr><td colspan="19" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;return}
+  if(!frs.length){tbody.innerHTML=`<tr><td colspan="20" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;return}
   const sorted=[...frs].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   const degFmt=(v,redNeg=false)=>{
     if(v==null) return"—";
@@ -2488,6 +2731,7 @@ function renderRangeTable(){
     const maxC=s.max_carry_m||s.longest_m;
     const accCls=s.target_hit_pct==null?"":s.target_hit_pct>=65?"col-good":s.target_hit_pct>=45?"col-warn":"col-bad";
     const smashCls=s.avg_smash_factor==null?"":s.avg_smash_factor>=1.45?"col-good":s.avg_smash_factor>=1.35?"col-warn":"col-bad";
+    const ai=rangeSessions.indexOf(s);
     return`<tr>
       <td style="color:var(--muted)">${sorted.length-i}</td>
       <td style="color:var(--muted)">${s.date||"—"}</td>
@@ -2497,7 +2741,7 @@ function renderRangeTable(){
       <td>${s.avg_total_m!=null?s.avg_total_m+"m":"—"}</td>
       <td>${maxC!=null?maxC+"m":"—"}</td>
       <td>${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</td>
-      <td>${s.dispersion_m!=null?s.dispersion_m+"m":"—"}</td>
+      <td>${(maxC!=null&&s.min_carry_m!=null)?(maxC-s.min_carry_m)+"m":"—"}</td>
       <td class="${accCls}">${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</td>
       <td>${s.dominant_shape?`<span class="shape-badge shape-${s.dominant_shape}" style="margin-top:0">${s.dominant_shape.toUpperCase()}</span>`:"—"}</td>
       <td class="${smashCls}">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
@@ -2508,6 +2752,10 @@ function renderRangeTable(){
       <td>${degFmt(s.avg_club_path)}</td>
       <td>${degFmt(s.avg_face_to_path)}</td>
       <td>${degFmt(s.avg_attack_angle_deg)}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="deleteItem('range',${ai})"
+          style="color:var(--danger);border-color:rgba(239,68,68,.3)" title="Delete session">🗑</button>
+      </td>
     </tr>`;}).join("");
 }
 
@@ -2802,8 +3050,16 @@ function buildDashboardContext(){
 
   const fmt = v => v!=null?(v>0?"+":"")+v.toFixed(1):"n/a";
 
+  const profileLines = [
+    playerProfile.name  ? `Name: ${playerProfile.name}` : null,
+    playerProfile.age   ? `Age: ${playerProfile.age}` : null,
+    playerProfile.hcp   ? `Self-reported HCP: ${playerProfile.hcp}` : null,
+    `Handedness: ${playerProfile.handedness === "left" ? "Left-handed" : "Right-handed"}`,
+    playerProfile.goals ? `Goals: ${playerProfile.goals}` : null,
+  ].filter(Boolean).join("\n");
+
   return `PLAYER DATA — ${new Date().toISOString().slice(0,10)}
-Target benchmark: ${BENCH.label} (${BENCH.score>0?"+"+BENCH.score:BENCH.score===0?"E":BENCH.score})
+${profileLines ? "PLAYER PROFILE:\n"+profileLines+"\n\n" : ""}Target benchmark: ${BENCH.label} (${BENCH.score>0?"+"+BENCH.score:BENCH.score===0?"E":BENCH.score})
 
 ROUNDS: ${fr.length} total, ${full.length} full 18-hole
   Avg score vs par: ${fmt(avgScore)}
@@ -2912,7 +3168,7 @@ function buildClubContext(clubName){
     `  Session ${i+1}${s.date?" ("+s.date+")":""}: `
     +`carry ${s.avg_carry_m!=null?s.avg_carry_m+"m":"-"}`
     +(s.target_hit_pct!=null?`, ${s.target_hit_pct}% target hit`:"")
-    +(s.dispersion_m!=null?`, ±${s.dispersion_m}m dispersion`:"")
+    +((s.max_carry_m!=null&&s.min_carry_m!=null)?`, ${s.max_carry_m-s.min_carry_m}m carry spread`:"")
   ).join("\n");
 
   return `CLUB UNDER ANALYSIS: ${clubName}
@@ -2920,7 +3176,7 @@ function buildClubContext(clubName){
   Latest carry: ${latest.avg_carry_m!=null?latest.avg_carry_m+"m":"n/a"}
   Carry range: ${latest.min_carry_m!=null&&(latest.max_carry_m||latest.longest_m)!=null?latest.min_carry_m+"–"+(latest.max_carry_m||latest.longest_m)+"m":"n/a"}
   Target hit %: ${latest.target_hit_pct!=null?latest.target_hit_pct+"%":"n/a"}
-  Dispersion: ${latest.dispersion_m!=null?"±"+latest.dispersion_m+"m":"n/a"}
+  Carry spread (max−min): ${(latest.max_carry_m!=null&&latest.min_carry_m!=null)?(latest.max_carry_m-latest.min_carry_m)+"m":"n/a"}
   Carry trend: ${trend}
   On-course GIR: ${onCourseGir}
   Target benchmark: ${BENCH.label}
@@ -2940,6 +3196,9 @@ function openCoach(type, data){
     coachCtx = {type:"round", text:buildRoundContext(round), label:lbl};
   } else if(type==="club"&&data!=null){
     coachCtx = {type:"club", text:buildClubContext(data), label:String(data)};
+  } else if(type==="profile"){
+    const ctx = buildDashboardContext();
+    coachCtx = {type:"profile", text:ctx, label:"Player profile analysis"};
   } else {
     coachCtx = {type:"dashboard", text:buildDashboardContext(), label:"Full dashboard"};
   }
@@ -2948,11 +3207,19 @@ function openCoach(type, data){
   const prevId = parseInt(document.getElementById("coachDrawer").dataset.ctxId||"0");
   if(prevId !== newId){
     coachHistory=[];
+    const isProfileCoach = coachCtx.type==="profile";
     document.getElementById("coachMessages").innerHTML=`
       <div class="coach-welcome">
-        <p>Ask me anything about your golf game.</p>
+        <p>${isProfileCoach?"I'll give you a personalised assessment based on your profile and all tracked data.":"Ask me anything about your golf game."}</p>
         <p style="margin-top:4px;font-size:.78rem;color:var(--muted)">I have full access to your stats, rounds, and practice data.</p>
       </div>`;
+    if(isProfileCoach){
+      // Auto-trigger a profile analysis
+      const name = playerProfile.name ? `, ${playerProfile.name}` : "";
+      document.getElementById("coachInput").value =
+        `Please give me a comprehensive personalised analysis${name}. Consider my profile (age, HCP, handedness, goals) and all my tracked rounds and practice data. Highlight my biggest strengths, top 3 areas to work on, and give concrete next steps.`;
+      setTimeout(()=>sendCoachMessage(), 200);
+    }
   }
   document.getElementById("coachDrawer").dataset.ctxId = newId;
   document.getElementById("coachContextLabel").textContent = coachCtx.label;
@@ -3083,8 +3350,9 @@ function openClubDetail(clubName){
   const avgCarryAll = sessions.filter(s=>s.avg_carry_m>0);
   const avgOverall  = avgCarryAll.length
     ? Math.round(avgCarryAll.reduce((a,s)=>a+s.avg_carry_m,0)/avgCarryAll.length) : null;
-  const allDisp     = sessions.filter(s=>s.dispersion_m!=null).map(s=>s.dispersion_m);
-  const avgDisp     = allDisp.length ? Math.round(allDisp.reduce((a,b)=>a+b,0)/allDisp.length) : null;
+  // Spread = max_carry − min_carry per session (VG3 does not provide a dispersion ellipse)
+  const allSpread   = sessions.filter(s=>s.max_carry_m!=null&&s.min_carry_m!=null).map(s=>s.max_carry_m-s.min_carry_m);
+  const avgSpread   = allSpread.length ? Math.round(allSpread.reduce((a,b)=>a+b,0)/allSpread.length) : null;
   const allAcc      = sessions.filter(s=>s.target_hit_pct!=null).map(s=>s.target_hit_pct);
   const avgAcc      = allAcc.length ? Math.round(allAcc.reduce((a,b)=>a+b,0)/allAcc.length) : null;
   const allSmash    = sessions.filter(s=>s.avg_smash_factor!=null).map(s=>s.avg_smash_factor);
@@ -3095,6 +3363,18 @@ function openClubDetail(clubName){
       <div style="font-size:.65rem;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase">${label}</div>
       <div style="font-size:1.4rem;font-weight:800;color:${color};line-height:1.1;margin-top:4px">${value!=null?value:"—"}<span style="font-size:.72rem;font-weight:400;color:var(--muted)"> ${unit}</span></div>
     </div>`;
+
+  // ── On-course stats ────────────────────────────────────────────────────
+  const crs = getCourseClubData(clubName);
+  const crsShots = crs ? rounds
+    .filter(r=>periodFilter(r.date))
+    .flatMap(r=>(r.holes||[]).flatMap(h=>
+      (h.shots||[]).filter(s=>s.club&&normalizeClub(s.club)===clubName)
+        .map(s=>({result:s.result||"other", hole:h.number, par:h.par, date:r.date, course:r.course}))
+    )) : [];
+  const crsResultCounts = {};
+  crsShots.forEach(s=>{ crsResultCounts[s.result]=(crsResultCounts[s.result]||0)+1; });
+  const crsPct = (key) => crs ? Math.round((crsResultCounts[key]||0)/crs.total*100) : 0;
 
   // ── Session table rows ─────────────────────────────────────────────────
   const tableRows = [...sessions].reverse().map(s=>{
@@ -3107,7 +3387,7 @@ function openClubDetail(clubName){
       <td style="padding:6px 8px;font-weight:700">${s.avg_carry_m!=null?s.avg_carry_m+"m":"—"}</td>
       <td style="padding:6px 8px;color:var(--muted)">${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</td>
       <td style="padding:6px 8px;color:var(--muted)">${maxC!=null?maxC+"m":"—"}</td>
-      <td style="padding:6px 8px;color:var(--muted)">${s.dispersion_m!=null?"±"+s.dispersion_m+"m":"—"}</td>
+      <td style="padding:6px 8px;color:var(--muted)">${(maxC!=null&&s.min_carry_m!=null)?(maxC-s.min_carry_m)+"m":"—"}</td>
       <td style="padding:6px 8px;color:${accCls}">${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</td>
       <td style="padding:6px 8px">${shapeS?`<span class="shape-badge shape-${shapeS}" style="margin:0;font-size:.6rem;padding:1px 5px">${shapeS.toUpperCase()}</span>`:"—"}</td>
       <td style="padding:6px 8px;color:${smashCls||'var(--muted)'}">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
@@ -3137,7 +3417,7 @@ function openClubDetail(clubName){
           [perf.accuracy!=null?`Acc ${perf.accuracy}`:null,
            perf.consistency!=null?`Con ${perf.consistency}`:null,
            perf.distanceControl!=null?`Dist ${perf.distanceControl}`:null,
-           perf.strikeQuality!=null?`Strike ${perf.strikeQuality}`:null]
+           perf.strikeQuality>0?`Strike ${perf.strikeQuality}`:null]
           .filter(Boolean).join(' · ')}</div>
       </div>`:""}
     </div>
@@ -3145,11 +3425,35 @@ function openClubDetail(clubName){
     <!-- KPI tiles -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
       ${kpiTile("Avg Carry",avgOverall,"m","var(--text)")}
-      ${kpiTile("Dispersion",avgDisp!=null?"±"+avgDisp:"","m","var(--muted)")}
+      ${kpiTile("Spread",avgSpread!=null?avgSpread:"","m","var(--muted)")}
       ${kpiTile("Target Hit",avgAcc!=null?avgAcc+"%":null,"",avgAcc==null?"var(--muted)":avgAcc>=65?"#86efac":avgAcc>=45?"#fde68a":"#fca5a5")}
       ${avgSmash!=null?kpiTile("Smash",avgSmash.toFixed(2),"",avgSmash>=1.45?"#86efac":avgSmash>=1.35?"#fde68a":"#fca5a5"):""}
       ${chcp!=null?kpiTile("HCP Equiv",chcp.hcp.toFixed(1),"","var(--text)"):""}
     </div>
+
+    <!-- On-Course section -->
+    ${crs?`
+    <div style="margin-bottom:20px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:12px">
+      <div style="font-size:.7rem;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">
+        ⛳ On-Course Performance · ${crs.total} shots tracked
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch">
+        ${crs.fairwayPct!=null?`<div style="background:var(--surface);border-radius:8px;padding:10px 14px;flex:1;min-width:90px;text-align:center">
+          <div style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Fairway Hit</div>
+          <div style="font-size:1.5rem;font-weight:800;color:${crs.fairwayPct>=60?"#86efac":crs.fairwayPct>=40?"#fde68a":"#fca5a5"}">${crs.fairwayPct}%</div>
+        </div>`:""}
+        ${crs.onGreenPct!=null?`<div style="background:var(--surface);border-radius:8px;padding:10px 14px;flex:1;min-width:90px;text-align:center">
+          <div style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Green / Fringe</div>
+          <div style="font-size:1.5rem;font-weight:800;color:${crs.onGreenPct>=60?"#86efac":crs.onGreenPct>=40?"#fde68a":"#fca5a5"}">${crs.onGreenPct}%</div>
+        </div>`:""}
+        ${Object.keys(crsResultCounts).filter(k=>crsResultCounts[k]>0).sort((a,b)=>crsResultCounts[b]-crsResultCounts[a]).map(k=>`
+          <div style="background:var(--surface);border-radius:8px;padding:10px 14px;flex:1;min-width:70px;text-align:center">
+            <div style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">${k.replace("_"," ")}</div>
+            <div style="font-size:1.2rem;font-weight:700;color:var(--text)">${crsPct(k)}%</div>
+            <div style="font-size:.6rem;color:var(--muted)">${crsResultCounts[k]} shots</div>
+          </div>`).join("")}
+      </div>
+    </div>`:""}
 
     <!-- Charts row -->
     <div style="display:grid;grid-template-columns:${shapeDist?'3fr 2fr':'1fr'};gap:16px;margin-bottom:22px">
@@ -3172,7 +3476,7 @@ function openClubDetail(clubName){
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Carry</th>
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Min</th>
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Max</th>
-        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Disp</th>
+        <th style="padding:8px 8px;border-bottom:1px solid var(--border)" title="Carry spread (max − min)">Spread</th>
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)" title="Depends on target size">Hit% ⓘ</th>
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Shape</th>
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Smash</th>
@@ -3204,12 +3508,13 @@ function openClubDetail(clubName){
     {label:"Min",data:carryMin,borderColor:"rgba(59,130,246,.3)",pointRadius:3,tension:.3,
      fill:false,borderDash:[4,3],order:2}
   );
+  const DET_TICK = "#94a3b8";
   new Chart("chartDetailTrend",{type:"line",data:{labels:carryLabels,datasets:carryDS},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:hasRange,labels:{color:TICK_COLOR,font:{size:10},boxWidth:10}}},
+      plugins:{legend:{display:hasRange,labels:{color:DET_TICK,font:{size:10},boxWidth:10}}},
       scales:{
-        x:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR,maxRotation:45,font:{size:10}}},
-        y:{title:{display:true,text:"Carry (m)",color:TICK_COLOR},grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+        x:{grid:{color:GRID_COLOR},ticks:{color:DET_TICK,maxRotation:45,font:{size:10}}},
+        y:{title:{display:true,text:"Carry (m)",color:DET_TICK},grid:{color:GRID_COLOR},ticks:{color:DET_TICK}},
       }}
   });
 
@@ -3222,19 +3527,24 @@ function openClubDetail(clubName){
     const labels=SHAPE_ORDER.filter(sh=>shapeDist.counts[sh]>0);
     const data=labels.map(sh=>Math.round(shapeDist.counts[sh]/shapeDist.total*100));
     new Chart("chartDetailShape",{type:"doughnut",
-      data:{labels,datasets:[{data,backgroundColor:labels.map(sh=>SHAPE_COL[sh]),
-        borderWidth:2,borderColor:"var(--card)"}]},
+      data:{labels:labels.map(l=>l.charAt(0).toUpperCase()+l.slice(1)),
+        datasets:[{data,backgroundColor:labels.map(sh=>SHAPE_COL[sh]),
+          borderWidth:0}]},
       options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{position:"right",labels:{color:TICK_COLOR,font:{size:11},boxWidth:12,
-          generateLabels:chart=>{
-            const ds=chart.data.datasets[0];
-            return chart.data.labels.map((l,i)=>({
-              text:`${l.charAt(0).toUpperCase()+l.slice(1)} ${ds.data[i]}%`,
-              fillStyle:ds.backgroundColor[i],strokeStyle:ds.borderColor,lineWidth:1,
-              hidden:false,index:i,
-            }));
-          }
-        }}}
+        plugins:{legend:{position:"right",
+          labels:{color:LEGEND_COLOR,font:{size:12},boxWidth:14,padding:12,
+            generateLabels:chart=>{
+              const ds=chart.data.datasets[0];
+              return chart.data.labels.map((l,i)=>({
+                text:`${l} ${ds.data[i]}%`,
+                fillStyle:ds.backgroundColor[i],
+                strokeStyle:"transparent",lineWidth:0,
+                fontColor:LEGEND_COLOR,
+                hidden:!chart.getDataVisibility(i),  // reflects click state → shows strikethrough
+                index:i,
+              }));
+            }
+          }}}
       }
     });
   }
@@ -3248,6 +3558,309 @@ function closeClubDetail(){
   document.body.style.overflow="";
   destroyChart("chartDetailTrend");
   destroyChart("chartDetailShape");
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DELETE ITEM
+══════════════════════════════════════════════════════════════════════════ */
+async function deleteItem(type, actualIndex){
+  const arr  = type === "round" ? rounds : rangeSessions;
+  const item = arr[actualIndex];
+  if(!item){ showToast("Item not found","error"); return; }
+
+  const label = type === "round"
+    ? `${item.course||"Unknown"} on ${item.date||"?"}`
+    : `${item.club||"Unknown"} session on ${item.date||"?"}`;
+
+  if(!confirm(`Delete ${type}: ${label}?\n\nThis cannot be undone.`)) return;
+
+  try {
+    const resp = await fetch("/api/delete", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({type, index: actualIndex})
+    });
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || resp.statusText);
+    showToast(`Deleted ✓`,"success");
+    fetchRounds();
+  } catch(e){
+    showToast("Delete failed: "+e.message,"error");
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ROUND DETAIL MODAL
+══════════════════════════════════════════════════════════════════════════ */
+function openRoundDetail(index){
+  const modal   = document.getElementById("roundDetailModal");
+  const content = document.getElementById("roundDetailContent");
+  if(!modal||!content) return;
+
+  const r = filteredRounds()[index];
+  if(!r){ showToast("Round not found","error"); return; }
+
+  const full = rounds.filter(x=>x.holes_played>=18);
+  const avg  = (key) => mean(full, key);
+
+  // Helper: compare value to overall average, return coloured delta span
+  const cmpSpan = (val, key, lowerBetter=false) => {
+    if(val==null) return "";
+    const a = avg(key);
+    if(a==null) return "";
+    const d = val - a;
+    if(Math.abs(d)<0.01) return "";
+    const better = lowerBetter ? d<0 : d>0;
+    const col    = better ? "var(--accent)" : "var(--danger)";
+    const sign   = d>0?"+":"";
+    return `<span style="color:${col};font-size:.7rem;margin-left:4px">${sign}${Math.round(d*10)/10}</span>`;
+  };
+
+  // Score colour per hole — returns actual hex for use in both inline CSS and Chart.js
+  const holeScoreCol = (svp) => {
+    if(svp==null) return "#64748b";  // muted
+    if(svp<=-2)  return "#a855f7";   // purple — eagle/albatross
+    if(svp===-1) return "#22c55e";   // green  — birdie
+    if(svp===0)  return "#64748b";   // muted  — par
+    if(svp===1)  return "#f59e0b";   // amber  — bogey
+    if(svp===2)  return "#ef4444";   // red    — double
+    return "#dc2626";                // dark red — triple+
+  };
+  const holeScoreLabel = (svp) => {
+    if(svp==null) return "—";
+    if(svp<=-2)  return svp===-2 ? "Eagle" : "Albatross";
+    if(svp===-1) return "Birdie";
+    if(svp===0)  return "Par";
+    if(svp===1)  return "Bogey";
+    if(svp===2)  return "Double";
+    return "Triple+";
+  };
+
+  const holes    = r.holes || [];
+  const hasHoles = holes.length > 0;
+
+  // ── Header ──────────────────────────────────────────────────────────────
+  const srcTag  = r.source_type==="real"
+    ? `<span style="background:rgba(34,197,94,.15);color:#86efac;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:700">⛳ Real Course</span>`
+    : `<span style="background:rgba(59,130,246,.15);color:#93c5fd;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:700">🖥 Simulator</span>`;
+
+  const scoreStyle = r.score_vs_par!=null
+    ? `color:${r.score_vs_par<=0?'var(--accent)':r.score_vs_par<=3?'var(--warn)':'var(--danger)'}`
+    : "";
+
+  const headerHtml = `
+    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:1.15rem;font-weight:800;color:var(--text);
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.course||"Unknown Course")}</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${r.date||""}
+          ${srcTag}
+          ${r.holes_played!=null?`<span style="color:var(--muted)">${r.holes_played} holes</span>`:""}
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        ${r.score_vs_par!=null?`<div style="font-size:2.2rem;font-weight:800;letter-spacing:-.03em;line-height:1;${scoreStyle}">${fmtScore(r.score_vs_par)}</div>`:""}
+        ${r.total_strokes!=null?`<div style="font-size:.75rem;color:var(--muted)">${r.total_strokes} strokes</div>`:""}
+      </div>
+      <button onclick="openCoach('round',${index})"
+        style="background:none;border:1px solid rgba(59,130,246,.35);border-radius:7px;
+        color:var(--blue);padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;
+        white-space:nowrap;align-self:flex-start">💬 Ask Coach</button>
+    </div>`;
+
+  // ── KPI row ──────────────────────────────────────────────────────────────
+  const kpiItem = (label, val, key, lowerBetter=false, suffix="") => {
+    if(val==null) return "";
+    const cmp = cmpSpan(val, key, lowerBetter);
+    return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;
+      padding:10px 14px;text-align:center;flex:1;min-width:90px">
+      <div style="font-size:1.2rem;font-weight:800;letter-spacing:-.02em;line-height:1.1">
+        ${typeof val==="number"&&key!=="score_vs_par"?Math.round(val*10)/10:""}${suffix}${val===r.score_vs_par?fmtScore(val):""}${cmp}
+      </div>
+      <div style="font-size:.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;
+        font-weight:700;margin-top:4px">${label}</div>
+    </div>`;
+  };
+  // Simpler kpi builder
+  const kpi = (label, display, cmpVal, cmpKey, lowerBetter=false) => `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;
+      padding:10px 14px;text-align:center;flex:1;min-width:90px">
+      <div style="font-size:1.2rem;font-weight:800;letter-spacing:-.02em;line-height:1.1">
+        ${display}${cmpVal!=null?cmpSpan(cmpVal,cmpKey,lowerBetter):""}
+      </div>
+      <div style="font-size:.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;
+        font-weight:700;margin-top:4px">${label}</div>
+    </div>`;
+
+  const kpisHtml = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+      ${r.gir_pct!=null?kpi("GIR %",r.gir_pct+"%",r.gir_pct,"gir_pct"):""}
+      ${r.fairways_hit_pct!=null?kpi("Fairways",r.fairways_hit_pct+"%",r.fairways_hit_pct,"fairways_hit_pct"):""}
+      ${r.scrambling_pct!=null?kpi("Scrambling",r.scrambling_pct+"%",r.scrambling_pct,"scrambling_pct"):""}
+      ${r.putts_per_hole!=null?kpi("Putts/Hole",r.putts_per_hole.toFixed(2),r.putts_per_hole,"putts_per_hole",true):""}
+      ${r.avg_drive_m!=null?kpi("Avg Drive",r.avg_drive_m+"m",r.avg_drive_m,"avg_drive_m"):""}
+    </div>`;
+
+  // ── Score chart ──────────────────────────────────────────────────────────
+  const chartHtml = hasHoles ? `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;
+      padding:14px 16px;margin-bottom:20px">
+      <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;
+        letter-spacing:.07em;font-weight:700;margin-bottom:12px">Score Per Hole</div>
+      <div style="position:relative;height:160px">
+        <canvas id="chartRoundHoles" style="max-height:160px"></canvas>
+      </div>
+    </div>` : "";
+
+  // ── Hole table ───────────────────────────────────────────────────────────
+  const tableHtml = hasHoles ? `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;
+      padding:14px 16px;margin-bottom:20px;overflow-x:auto">
+      <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;
+        letter-spacing:.07em;font-weight:700;margin-bottom:12px">Hole-by-Hole</div>
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem;min-width:400px">
+        <thead>
+          <tr style="color:var(--muted);font-size:.67rem;text-transform:uppercase;letter-spacing:.06em">
+            <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border)">Hole</th>
+            <th style="text-align:center;padding:4px 8px;border-bottom:1px solid var(--border)">Par</th>
+            <th style="text-align:center;padding:4px 8px;border-bottom:1px solid var(--border)">Score</th>
+            <th style="text-align:center;padding:4px 8px;border-bottom:1px solid var(--border)">+/−</th>
+            <th style="text-align:center;padding:4px 8px;border-bottom:1px solid var(--border)">GIR</th>
+            <th style="text-align:center;padding:4px 8px;border-bottom:1px solid var(--border)">Putts</th>
+            <th style="text-align:center;padding:4px 8px;border-bottom:1px solid var(--border)">FW</th>
+            ${holes.some(h=>h.drive_m!=null)?`<th style="text-align:center;padding:4px 8px;border-bottom:1px solid var(--border)">Drive</th>`:""}
+          </tr>
+        </thead>
+        <tbody>
+          ${holes.map(h=>{
+            const svp = (h.strokes!=null&&h.par!=null) ? h.strokes-h.par : null;
+            const scCol = holeScoreCol(svp);
+            const showFw = h.par > 3 && h.fairway_hit != null;
+            const hasDrive = holes.some(x=>x.drive_m!=null);
+            return `<tr style="border-bottom:1px solid rgba(255,255,255,.04)">
+              <td style="padding:5px 8px;font-weight:700;color:var(--text)">H${h.number||"?"}</td>
+              <td style="padding:5px 8px;text-align:center;color:var(--muted)">${h.par||"—"}</td>
+              <td style="padding:5px 8px;text-align:center;font-weight:700;color:${scCol}">${h.strokes||"—"}</td>
+              <td style="padding:5px 8px;text-align:center">
+                ${svp!=null?`<span style="font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:5px;
+                  background:${scCol}22;color:${scCol}">${svp===0?"E":svp>0?"+"+svp:svp}</span>`:"—"}
+              </td>
+              <td style="padding:5px 8px;text-align:center">
+                ${h.gir!=null?(h.gir?`<span style="color:var(--accent)">✓</span>`:`<span style="color:var(--danger)">✗</span>`):"—"}
+              </td>
+              <td style="padding:5px 8px;text-align:center;color:${h.putts!=null&&h.putts>=3?"var(--danger)":h.putts===1?"var(--accent)":"var(--text)"}">
+                ${h.putts!=null?h.putts:"—"}
+              </td>
+              <td style="padding:5px 8px;text-align:center">
+                ${showFw?(h.fairway_hit?`<span style="color:var(--accent)">✓</span>`:`<span style="color:var(--danger)">✗</span>`):"<span style='color:var(--muted)'>—</span>"}
+              </td>
+              ${hasDrive?`<td style="padding:5px 8px;text-align:center;color:var(--muted);font-size:.75rem">${h.drive_m!=null?h.drive_m+"m":"—"}</td>`:""}
+            </tr>`;
+          }).join("")}
+        </tbody>
+        ${holes.length>1?`
+        <tfoot>
+          <tr style="border-top:1px solid var(--border);color:var(--muted);font-size:.72rem;font-weight:700">
+            <td style="padding:5px 8px">Total</td>
+            <td style="padding:5px 8px;text-align:center">${holes.reduce((s,h)=>s+(h.par||0),0)||"—"}</td>
+            <td style="padding:5px 8px;text-align:center;font-weight:800;
+              color:${r.score_vs_par!=null&&r.score_vs_par<=0?"var(--accent)":r.score_vs_par!=null&&r.score_vs_par<=3?"var(--warn)":"var(--danger)"}">${r.total_strokes||"—"}</td>
+            <td style="padding:5px 8px;text-align:center;font-weight:800;
+              color:${r.score_vs_par!=null&&r.score_vs_par<=0?"var(--accent)":r.score_vs_par!=null&&r.score_vs_par<=3?"var(--warn)":"var(--danger)"}">${r.score_vs_par!=null?fmtScore(r.score_vs_par):"—"}</td>
+            <td style="padding:5px 8px;text-align:center">${r.gir_pct!=null?r.gir_pct+"%":"—"}</td>
+            <td style="padding:5px 8px;text-align:center">${r.putts_per_hole!=null?r.putts_per_hole.toFixed(1)+" /h":"—"}</td>
+            <td style="padding:5px 8px;text-align:center">${r.fairways_hit_pct!=null?r.fairways_hit_pct+"%":"—"}</td>
+            ${holes.some(h=>h.drive_m!=null)?`<td style="padding:5px 8px;text-align:center">${r.avg_drive_m!=null?r.avg_drive_m+"m":"—"}</td>`:""}
+          </tr>
+        </tfoot>`:""}
+      </table>
+    </div>` : `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;
+      padding:24px;text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:20px">
+      No hole-by-hole data for this round
+    </div>`;
+
+  // ── Shots breakdown (on-course club usage) ───────────────────────────────
+  const roundShots = (r.holes||[]).flatMap(h=>(h.shots||[]).map(s=>({
+    ...s, hole: h.number, par: h.par
+  })));
+  const shotsByClub = {};
+  roundShots.forEach(s=>{
+    if(!s.club) return;
+    const c = normalizeClub(s.club);
+    if(!shotsByClub[c]) shotsByClub[c]={count:0,results:{}};
+    shotsByClub[c].count++;
+    const res = s.result||"other";
+    shotsByClub[c].results[res]=(shotsByClub[c].results[res]||0)+1;
+  });
+  const clubKeys = Object.keys(shotsByClub).sort((a,b)=>shotsByClub[b].count-shotsByClub[a].count);
+  const shotsHtml = clubKeys.length>0 ? `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;
+      padding:14px 16px;margin-bottom:20px">
+      <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;
+        letter-spacing:.07em;font-weight:700;margin-bottom:12px">Club Usage This Round</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${clubKeys.map(c=>{
+          const d = shotsByClub[c];
+          const fw = (d.results.fairway||0)+(d.results.playable_rough||0);
+          const gn = (d.results.green||0)+(d.results.fringe||0);
+          const onTgt = fw+gn;
+          const pct = Math.round(onTgt/d.count*100);
+          return `<div style="background:var(--surface);border:1px solid var(--border);
+            border-radius:8px;padding:7px 12px;font-size:.78rem">
+            <span style="font-weight:700;color:var(--text)">${esc(c)}</span>
+            <span style="color:var(--muted);margin-left:5px">${d.count} shots</span>
+            ${d.count>0?`<span style="color:${pct>=60?"var(--accent)":pct>=40?"var(--warn)":"var(--danger)"};
+              margin-left:5px;font-weight:600">${pct}% on target</span>`:""}
+          </div>`;
+        }).join("")}
+      </div>
+    </div>` : "";
+
+  content.innerHTML = headerHtml + kpisHtml + chartHtml + tableHtml + shotsHtml;
+  modal.style.display="block";
+  document.body.style.overflow="hidden";
+
+  // ── Draw per-hole score chart ────────────────────────────────────────────
+  if(hasHoles){
+    destroyChart("chartRoundHoles");
+    const hLabels = holes.map(h=>"H"+(h.number||"?"));
+    const hData   = holes.map(h=>(h.strokes!=null&&h.par!=null)?h.strokes-h.par:null);
+    const hCols   = hData.map(v=>holeScoreCol(v));
+    new Chart("chartRoundHoles",{
+      type:"bar",
+      data:{labels:hLabels,datasets:[
+        {label:"Strokes vs Par",data:hData,backgroundColor:hCols.map(c=>c+"99"),
+          borderColor:hCols,borderWidth:1,borderRadius:3},
+        {label:"Par (0)",data:holes.map(()=>0),type:"line",
+          borderColor:"rgba(100,116,139,.4)",borderDash:[4,3],
+          pointRadius:0,borderWidth:1},
+      ]},
+      options:{
+        ...CHART_OPTS,
+        scales:{
+          x:{...AXIS_OPTS,ticks:{color:TICK_COLOR,font:{size:10}}},
+          y:{...AXIS_OPTS,title:{display:true,text:"Strokes vs Par",color:TICK_COLOR}},
+        },
+        plugins:{
+          ...CHART_OPTS.plugins,
+          tooltip:{callbacks:{label:ctx=>{
+            const v=ctx.raw;
+            if(v==null) return null;
+            const h=holes[ctx.dataIndex];
+            return `${h&&h.strokes?h.strokes+" strokes":""} (${v===0?"E":v>0?"+"+v:v}) · ${holeScoreLabel(v)}`;
+          }}}
+        }
+      }
+    });
+  }
+}
+
+function closeRoundDetail(){
+  document.getElementById("roundDetailModal").style.display="none";
+  document.body.style.overflow="";
+  destroyChart("chartRoundHoles");
 }
 </script>
 
@@ -3265,6 +3878,23 @@ function closeClubDetail(){
       transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.14)'"
       onmouseout="this.style.background='rgba(255,255,255,.06)'">✕</button>
     <div id="clubDetailContent"></div>
+  </div>
+</div>
+
+<!-- Round Detail Modal -->
+<div id="roundDetailModal" onclick="if(event.target===this)closeRoundDetail()"
+  style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.78);
+  overflow-y:auto;padding:20px 12px">
+  <div style="max-width:960px;margin:0 auto;background:var(--surface);border-radius:16px;
+    padding:24px 54px 24px 24px;position:relative;min-height:200px;
+    box-shadow:0 24px 80px rgba(0,0,0,.6)">
+    <button onclick="closeRoundDetail()"
+      style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,.06);
+      border:1px solid var(--border);border-radius:8px;color:var(--muted);
+      font-size:1.1rem;cursor:pointer;line-height:1;padding:5px 9px;
+      transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.14)'"
+      onmouseout="this.style.background='rgba(255,255,255,.06)'">✕</button>
+    <div id="roundDetailContent"></div>
   </div>
 </div>
 </body>
