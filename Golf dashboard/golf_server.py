@@ -220,7 +220,8 @@ Formatting rules:
 - Keep responses under 280 words unless the player explicitly asks for detail
 - Use short paragraphs (2-4 sentences max); bullet points for lists of 3+ items
 - Do NOT use markdown headers (## or ###) — this is a chat interface
-- Do not repeat the question back to the player"""
+- Do not repeat the question back to the player
+- Always end with a complete sentence — never stop mid-thought"""
 
 
 # ── Duplicate helpers ────────────────────────────────────────────────────────
@@ -546,7 +547,7 @@ class GolfHandler(BaseHTTPRequestHandler):
 
         body = json.dumps({
             "model":      CLAUDE_MODEL,
-            "max_tokens": 1024,
+            "max_tokens": 2048,
             "system":     COACH_SYSTEM_PROMPT,
             "messages":   messages,
         }).encode()
@@ -566,6 +567,9 @@ class GolfHandler(BaseHTTPRequestHandler):
             with urllib.request.urlopen(req, timeout=60) as resp:
                 result = json.loads(resp.read())
             reply = result["content"][0]["text"].strip()
+            if result.get("stop_reason") == "max_tokens":
+                reply += "\n\n*(response cut short — ask me to continue or be more specific)*"
+                print(f"  ⚠ Coach hit max_tokens — reply truncated")
             print(f"  ✓ Coach replied ({len(reply)} chars)")
             self._send({"success": True, "reply": reply})
         except urllib.error.HTTPError as e:

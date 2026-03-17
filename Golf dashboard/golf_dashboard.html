@@ -29,15 +29,79 @@
       transition:border-color .2s}
     .api-input:focus{border-color:var(--accent)}
 
-    /* ── Tab bar ──────────────────────────────────────────────────────── */
-    .tab-bar{display:flex;gap:2px;padding:0 24px;border-top:1px solid var(--border)}
-    .tab-btn{padding:10px 18px;border:none;background:none;color:var(--muted);cursor:pointer;
-      font-size:.85rem;font-weight:600;border-bottom:2px solid transparent;
-      transition:all .2s;white-space:nowrap}
-    .tab-btn:hover:not(.active){color:var(--text)}
-    .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
-    .tab-count{font-size:.68rem;padding:1px 6px;border-radius:10px;background:var(--surface3);
-      color:var(--muted);margin-left:5px;font-weight:700}
+    /* ── App shell & collapsible sidebar ──────────────────────────────── */
+    .app-shell{display:flex;min-height:100vh;align-items:flex-start}
+    .app-body{flex:1;min-width:0;display:flex;flex-direction:column}
+    .sidebar{
+      width:190px;min-width:190px;
+      background:var(--surface);border-right:1px solid var(--border);
+      position:sticky;top:0;height:100vh;overflow-y:auto;
+      display:flex;flex-direction:column;
+      transition:width .22s,min-width .22s;
+      z-index:60;flex-shrink:0}
+    .sidebar.collapsed{width:52px;min-width:52px}
+    /* Brand area */
+    .sb-brand{display:flex;align-items:center;gap:9px;padding:14px 10px 12px;
+      border-bottom:1px solid var(--border);overflow:hidden;flex-shrink:0}
+    .sb-logo-img{display:flex;align-items:center;justify-content:center;
+      min-width:32px;font-size:1.4rem;flex-shrink:0}
+    .sb-logo-text{overflow:hidden;white-space:nowrap}
+    .sb-brand-name{font-size:.95rem;font-weight:800;color:var(--accent)}
+    .sb-brand-sub{font-size:.67rem;color:var(--muted)}
+    .sidebar.collapsed .sb-brand-name,.sidebar.collapsed .sb-brand-sub{display:none}
+    /* Nav items */
+    .sb-nav{padding:6px 0;flex-shrink:0}
+    .sb-tab{display:flex;align-items:center;gap:10px;padding:10px 13px;width:100%;
+      border:none;background:none;color:var(--muted);cursor:pointer;
+      font-size:.83rem;font-weight:600;
+      border-left:3px solid transparent;
+      transition:all .15s;text-align:left;white-space:nowrap;overflow:hidden}
+    .sb-tab:hover:not(.active){color:var(--text);background:rgba(255,255,255,.03)}
+    .sb-tab.active{color:var(--accent);border-left-color:var(--accent);background:rgba(34,197,94,.06)}
+    .sb-icon{font-size:1.0rem;min-width:22px;text-align:center;flex-shrink:0}
+    .sb-label{overflow:hidden;text-overflow:ellipsis}
+    .sb-badge{font-size:.62rem;padding:1px 5px;border-radius:8px;background:var(--surface3);
+      color:var(--muted);margin-left:auto;flex-shrink:0;font-weight:700}
+    .sidebar.collapsed .sb-label,.sidebar.collapsed .sb-badge{display:none}
+    .sidebar.collapsed .sb-tab{justify-content:center;padding:10px 0}
+    .tab-count{font-size:.62rem;padding:1px 5px;border-radius:8px;background:var(--surface3);
+      color:var(--muted);font-weight:700}
+    /* Collapse toggle — top of sidebar */
+    .sb-toggle{display:flex;align-items:center;justify-content:center;
+      width:100%;padding:9px 0;border:none;background:none;color:var(--muted);
+      cursor:pointer;font-size:1rem;font-weight:700;transition:color .15s;
+      border-bottom:1px solid var(--border);flex-shrink:0;letter-spacing:.05em}
+    .sb-toggle:hover{color:var(--accent);background:rgba(34,197,94,.04)}
+    .sb-toggle-icon{transition:transform .22s;display:inline-block}
+    .sidebar.collapsed .sb-toggle-icon{transform:rotate(180deg)}
+    /* Bottom section */
+    .sb-bottom{padding:6px 0 8px;border-top:1px solid var(--border);flex-shrink:0;margin-top:auto}
+    .sb-coach-btn{display:flex;align-items:center;gap:10px;padding:9px 13px;width:100%;
+      border:none;background:none;color:var(--accent);cursor:pointer;
+      font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;
+      border-left:3px solid transparent;transition:all .15s}
+    .sb-coach-btn:hover{background:rgba(34,197,94,.08)}
+    .sidebar.collapsed .sb-coach-btn{justify-content:center;padding:9px 0}
+    /* View level switcher */
+    .view-switcher{padding:8px 10px;flex-shrink:0}
+    .vl-label{font-size:.63rem;font-weight:700;color:var(--muted);letter-spacing:.07em;
+      text-transform:uppercase;margin-bottom:6px;text-align:center}
+    .sidebar.collapsed .vl-label{display:none}
+    .vl-btns{display:flex;gap:4px;justify-content:center}
+    .sidebar.collapsed .vl-btns{flex-direction:column;align-items:center;gap:2px}
+    .vl-btn{padding:4px 8px;border:1px solid var(--border);border-radius:6px;
+      background:none;color:var(--muted);cursor:pointer;font-size:.72rem;
+      font-weight:700;transition:all .15s;line-height:1.4;white-space:nowrap;overflow:hidden}
+    .sidebar.collapsed .vl-btn{width:28px;font-size:.65rem;padding:3px 2px;text-align:center}
+    .vl-btn:hover{border-color:var(--accent);color:var(--text)}
+    .vl-btn.vl-active{background:var(--accent);color:#000;border-color:var(--accent)}
+    .vl-short{display:none}
+    .sidebar.collapsed .vl-full{display:none}
+    .sidebar.collapsed .vl-short{display:inline}
+    /* View level visibility rules — driven by data-level on <body> */
+    [data-level="beginner"] .adv-only,
+    [data-level="beginner"] .pro-only{display:none!important}
+    [data-level="advanced"]  .pro-only{display:none!important}
 
     /* ── Buttons ──────────────────────────────────────────────────────── */
     .btn{padding:7px 16px;border-radius:7px;border:none;cursor:pointer;font-size:13px;
@@ -350,15 +414,151 @@
     .bf-pos{color:#86efac}
     .bf-neg{color:#fca5a5}
     .bf-neu{color:var(--text)}
+
+    /* ── Settings section ─────────────────────────────────────────────── */
+    .settings-card{background:var(--surface2);border-radius:12px;
+      padding:20px 24px;margin-bottom:16px}
+    .settings-group-title{font-size:.72rem;font-weight:700;color:var(--muted);
+      letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
+    .settings-row{display:flex;align-items:center;justify-content:space-between;
+      flex-wrap:wrap;gap:10px;padding:12px 0;border-top:1px solid var(--border)}
+    .settings-row:first-of-type{border-top:none;padding-top:0}
+    .settings-label{display:flex;flex-direction:column;gap:3px}
+    .settings-label strong{font-size:.9rem;color:var(--text)}
+    .settings-sub{font-size:.76rem;color:var(--muted)}
+    .settings-toggle-group{display:flex;gap:6px;flex-shrink:0}
+    .stg-btn{padding:6px 16px;border-radius:20px;border:1px solid var(--border);
+      background:none;color:var(--muted);cursor:pointer;font-size:.8rem;
+      font-weight:600;transition:all .15s}
+    .stg-btn:hover{border-color:var(--accent);color:var(--text)}
+    .stg-btn.stg-active{background:var(--accent);color:#000;border-color:var(--accent)}
+
+    /* ── Club detail performance panel ───────────────────────────────── */
+    .perf-panel{background:var(--surface2);border-radius:12px;
+      padding:18px 20px;margin-bottom:20px}
+    .perf-panel-label{font-size:.68rem;font-weight:700;color:var(--muted);
+      letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px}
+    .perf-panel-body{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+    .perf-score-circle{width:84px;height:84px;border-radius:50%;border:3px solid;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      flex-shrink:0;background:var(--surface)}
+    .perf-score-num{font-size:2rem;font-weight:900;line-height:1}
+    .perf-score-denom{font-size:.65rem;color:var(--muted);font-weight:500}
+    .perf-bars{flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px}
+    .perf-bar-row{display:grid;grid-template-columns:118px 1fr 52px;align-items:center;gap:10px}
+    .perf-bar-label{font-size:.79rem;color:var(--muted);font-weight:600;white-space:nowrap}
+    .perf-bar-track{height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+    .perf-bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+    .perf-bar-val{font-size:.88rem;font-weight:800;text-align:right}
+
+    /* ── CSV Mapper overlay ───────────────────────────────────────────── */
+    #csvMapperOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+      z-index:110;overflow-y:auto;padding:20px}
+    #csvMapperOverlay.active{display:flex;align-items:flex-start;justify-content:center}
+    .csv-mapper-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+      width:100%;max-width:700px;margin:auto;padding:24px;display:flex;flex-direction:column;gap:16px}
+    .csv-mapper-title{font-size:1.1rem;font-weight:800;color:var(--text)}
+    .csv-row-map{display:grid;grid-template-columns:150px 1fr auto;align-items:center;
+      gap:8px;padding:3px 0}
+    .csv-row-label{font-size:.79rem;font-weight:600;color:var(--muted)}
+    .csv-preview-table{width:100%;border-collapse:collapse;font-size:.75rem;display:block;overflow-x:auto}
+    .csv-preview-table th{background:var(--bg);color:var(--muted);padding:5px 8px;
+      text-align:left;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+    .csv-preview-table td{padding:5px 8px;border-top:1px solid var(--border);
+      color:var(--text);white-space:nowrap}
   </style>
 </head>
-<body>
+<body data-level="advanced">
+
+<div class="app-shell">
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SIDEBAR
+════════════════════════════════════════════════════════════════════════ -->
+<nav id="sidebar" class="sidebar">
+
+  <!-- Collapse toggle — at very top like reference screenshots -->
+  <button class="sb-toggle" id="sbToggle" onclick="toggleSidebar()">
+    <span class="sb-toggle-icon">»</span>
+  </button>
+
+  <!-- Brand / logo -->
+  <div class="sb-brand">
+    <div class="sb-logo-img">
+      <img id="companyLogo" src="" alt=""
+           style="display:none;max-width:32px;max-height:32px;border-radius:6px;object-fit:contain">
+      <span id="companyLogoFallback">⛳</span>
+    </div>
+    <div class="sb-logo-text">
+      <div class="sb-brand-name" id="companyName">Golf Analytics</div>
+      <div class="sb-brand-sub" id="companyTagline">Golf Analytics</div>
+    </div>
+  </div>
+
+  <!-- Nav items -->
+  <div class="sb-nav">
+    <button class="sb-tab active" data-tab="all" onclick="setTab('all')">
+      <span class="sb-icon">🏠</span>
+      <span class="sb-label">All Rounds</span>
+      <span class="sb-badge" id="tc-all">0</span>
+    </button>
+    <button class="sb-tab" data-tab="simulator" onclick="setTab('simulator')">
+      <span class="sb-icon">🖥️</span>
+      <span class="sb-label">Simulator</span>
+      <span class="sb-badge" id="tc-sim">0</span>
+    </button>
+    <button class="sb-tab" data-tab="real" onclick="setTab('real')">
+      <span class="sb-icon">⛳</span>
+      <span class="sb-label">Real Course</span>
+      <span class="sb-badge" id="tc-real">0</span>
+    </button>
+    <button class="sb-tab" data-tab="practice" onclick="setTab('practice')">
+      <span class="sb-icon">🎯</span>
+      <span class="sb-label">My Bag</span>
+      <span class="sb-badge" id="tc-prac">0</span>
+    </button>
+    <button class="sb-tab" data-tab="settings" onclick="setTab('settings')">
+      <span class="sb-icon">⚙️</span>
+      <span class="sb-label">Settings</span>
+    </button>
+    <button class="sb-tab" data-tab="profile" onclick="setTab('profile')">
+      <span class="sb-icon">👤</span>
+      <span class="sb-label">Profile</span>
+    </button>
+  </div>
+
+  <!-- Spacer -->
+  <div style="flex:1"></div>
+
+  <!-- Bottom controls -->
+  <div class="sb-bottom">
+    <!-- View level switcher -->
+    <div class="view-switcher" title="Dashboard complexity level">
+      <div class="vl-label">View Level</div>
+      <div class="vl-btns">
+        <button class="vl-btn" data-level="beginner" onclick="applyViewLevel('beginner')" title="Starter — essential metrics only"><span class="vl-full">Starter</span><span class="vl-short">S</span></button>
+        <button class="vl-btn vl-active" data-level="advanced" onclick="applyViewLevel('advanced')" title="Standard — performance scores included"><span class="vl-full">Standard</span><span class="vl-short">A</span></button>
+        <button class="vl-btn" data-level="pro" onclick="applyViewLevel('pro')" title="Pro — all technical flight data"><span class="vl-full">Pro</span><span class="vl-short">P</span></button>
+      </div>
+    </div>
+    <!-- Coach -->
+    <button class="sb-coach-btn" onclick="openCoach('dashboard')">
+      <span class="sb-icon">🤖</span>
+      <span class="sb-label">AI Coach</span>
+    </button>
+  </div>
+
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     APP BODY
+════════════════════════════════════════════════════════════════════════ -->
+<div class="app-body">
 
 <!-- ── Header ───────────────────────────────────────────────────────────── -->
 <header>
   <div class="header-top">
-    <div class="logo">⛳ <span id="logoName">Golf</span> <span>Analytics</span></div>
-    <div class="header-right">
+    <div class="header-right" style="margin-left:0;width:100%">
       <span id="roundCount" style="font-size:.8rem;color:var(--muted)"></span>
       <label style="font-size:.75rem;color:var(--muted);white-space:nowrap">Target:
         <select id="targetSelect" onchange="setTarget(this.value)"
@@ -371,10 +571,7 @@
           <option value="hcp20">HCP 20</option>
         </select>
       </label>
-      <button class="btn btn-ghost" onclick="openCoach('dashboard')" style="color:var(--accent);border-color:rgba(34,197,94,.4)">💬 Ask Coach</button>
-      <input class="api-input" type="password" id="apiKey"
-             placeholder="Anthropic API key (sk-ant-…)" autocomplete="off">
-      <button class="btn btn-ghost" onclick="saveKey()">Save Key</button>
+      <button class="btn btn-ghost btn-sm" onclick="setTab('settings')" title="API key & settings" style="display:flex;align-items:center;gap:5px"><span>⚙️</span><span style="font-size:.78rem">Settings</span></button>
     </div>
   </div>
   <!-- Period filter bar — affects all tabs -->
@@ -382,12 +579,12 @@
     background:var(--bg);border-bottom:1px solid var(--border);flex-wrap:wrap">
     <span style="font-size:.75rem;color:var(--muted);font-weight:600">📅 Period:</span>
     <select id="selYear" onchange="setPeriodFilter()"
-      style="background:var(--card);color:var(--text);border:1px solid var(--border);
+      style="background:var(--surface2);color:var(--text);border:1px solid var(--border);
       border-radius:6px;padding:3px 8px;font-size:.78rem">
       <option value="">All years</option>
     </select>
     <select id="selMonth" onchange="setPeriodFilter()" disabled
-      style="background:var(--card);color:var(--text);border:1px solid var(--border);
+      style="background:var(--surface2);color:var(--text);border:1px solid var(--border);
       border-radius:6px;padding:3px 8px;font-size:.78rem;opacity:.5">
       <option value="">All months</option>
       <option value="01">January</option><option value="02">February</option>
@@ -402,13 +599,6 @@
       color:var(--muted);padding:3px 8px;font-size:.75rem;cursor:pointer">✕ Clear</button>
     <span id="periodFilterInfo" style="font-size:.73rem;color:var(--muted);margin-left:auto"></span>
   </div>
-  <div class="tab-bar">
-    <button class="tab-btn active" data-tab="all"       onclick="setTab('all')">All Rounds <span class="tab-count" id="tc-all">0</span></button>
-    <button class="tab-btn"        data-tab="simulator" onclick="setTab('simulator')">Simulator <span class="tab-count" id="tc-sim">0</span></button>
-    <button class="tab-btn"        data-tab="real"      onclick="setTab('real')">Real Course <span class="tab-count" id="tc-real">0</span></button>
-    <button class="tab-btn"        data-tab="practice"  onclick="setTab('practice')">My Bag <span class="tab-count" id="tc-prac">0</span></button>
-    <button class="tab-btn"        data-tab="profile"   onclick="setTab('profile')">👤 Profile</button>
-  </div>
 </header>
 
 <main>
@@ -418,9 +608,9 @@
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
       <div class="dz-icon" id="dzIcon">📸</div>
       <h3 id="dzTitle">Drop screenshots here</h3>
-      <p id="dzSub">PNG or JPG files — any number</p>
+      <p id="dzSub">PNG, JPG or CSV files</p>
       <p class="dz-hint" id="dzHint" style="color:var(--accent)"></p>
-      <input type="file" id="fileInput" multiple accept="image/png,image/jpeg,image/jpg"
+      <input type="file" id="fileInput" multiple accept="image/png,image/jpeg,image/jpg,.csv"
              onchange="handleFiles(this.files)">
     </div>
   </div>
@@ -461,7 +651,7 @@
         <div class="chart-title">🏌️ Fairway % per Round <span class="badge-pill" id="badge-fw">Target ≥ 60%</span></div>
         <canvas id="chartFw"></canvas>
       </div>
-      <div class="chart-card" id="cc-radar">
+      <div class="chart-card adv-only" id="cc-radar">
         <div class="chart-title">🕸️ KPI vs Benchmark <span class="badge-pill" id="badge-radar">100% = on target</span></div>
         <canvas id="chartRadar"></canvas>
       </div>
@@ -537,7 +727,7 @@
           <div class="chart-title">🎯 Score Distribution <span class="badge-pill">All holes across real rounds</span></div>
           <div id="scoreDistContent"><div class="no-data"><div class="nd-icon">📊</div><p>No hole data yet</p><p class="nd-sub">Upload a scorecard photo to populate</p></div></div>
         </div>
-        <div class="chart-card">
+        <div class="chart-card adv-only">
           <div class="chart-title">🔄 Front 9 vs Back 9 <span class="badge-pill">Score vs par per 9 holes</span></div>
           <div id="frontBackContent"><div class="no-data"><div class="nd-icon">🔄</div><p>No hole data yet</p><p class="nd-sub">Upload a scorecard to populate</p></div></div>
         </div>
@@ -627,7 +817,7 @@
         <div id="clubAccuracyWrap"><div class="no-data"><div class="nd-icon">🎯</div><p>Awaiting data</p></div></div>
       </div>
       <!-- Ball Flight Pattern — shown only when face/path/F→P data present -->
-      <div class="chart-card" id="cc-ballflight" style="display:none">
+      <div class="chart-card pro-only" id="cc-ballflight" style="display:none">
         <div class="chart-title">🌀 Ball Flight Pattern <span class="badge-pill">Face · Path · Face-to-Path</span></div>
         <div id="ballFlightWrap"></div>
       </div>
@@ -653,8 +843,8 @@
             <th>#</th><th>Date</th><th>Club</th><th>Shots</th>
             <th>Avg Carry</th><th>Avg Total</th><th>Max Carry</th>
             <th>Min Carry</th><th title="Carry spread (max − min) within the session">Spread</th><th title="Accuracy depends on the target size you set — smaller target = lower %">Target Hit ⓘ</th>
-            <th>Shape</th><th>Smash</th><th>Speed</th><th>Spin rpm</th>
-            <th>Axis°</th><th>Face°</th><th>Path°</th><th>F→P°</th><th>Attack°</th><th></th>
+            <th>Shape</th><th>Smash</th><th>Speed</th><th class="pro-only">Spin rpm</th>
+            <th class="pro-only">Axis°</th><th class="pro-only">Face°</th><th class="pro-only">Path°</th><th class="pro-only">F→P°</th><th class="pro-only">Attack°</th><th></th>
           </tr></thead>
           <tbody id="rangeBody"></tbody>
         </table>
@@ -690,6 +880,14 @@
             <select id="pfHand" class="api-input" style="width:100%;font-size:.85rem">
               <option value="right">Right-handed</option>
               <option value="left">Left-handed</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:.72rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Gender</label>
+            <select id="pfGender" class="api-input" style="width:100%;font-size:.85rem">
+              <option value="">Prefer not to say</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
             </select>
           </div>
         </div>
@@ -732,7 +930,78 @@
     </div>
   </div><!-- /profileSection -->
 
+  <!-- ── SETTINGS TAB ──────────────────────────────────────────────────────── -->
+  <div id="settingsSection" style="display:none;padding:20px 24px 40px">
+    <div style="max-width:680px;margin:0 auto">
+
+      <!-- AI Integration -->
+      <div class="settings-card">
+        <div class="settings-group-title">AI Integration</div>
+        <div class="settings-row">
+          <div class="settings-label">
+            <strong>Anthropic API Key</strong>
+            <span class="settings-sub">Required for screenshot analysis and AI Coach</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex:1;max-width:360px;margin-left:16px">
+            <input type="password" id="apiKey" class="api-input" style="flex:1;min-width:0"
+                   placeholder="sk-ant-…" autocomplete="off" oninput="saveApiKeySetting(this.value)">
+            <button class="btn btn-ghost btn-sm" onclick="toggleApiKeyVisibility()" title="Show/hide key">👁</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Units -->
+      <div class="settings-card">
+        <div class="settings-group-title">Units &amp; Measurements</div>
+        <div class="settings-row">
+          <div class="settings-label">
+            <strong>Distance</strong>
+            <span class="settings-sub">Carry, drive, and all distance values</span>
+          </div>
+          <div class="settings-toggle-group">
+            <button class="stg-btn stg-active" data-stg="dist" data-val="m"   onclick="applySetting('distUnit','m')">Metric (m)</button>
+            <button class="stg-btn"            data-stg="dist" data-val="yd"  onclick="applySetting('distUnit','yd')">Imperial (yd)</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label">
+            <strong>Club &amp; Ball Speed</strong>
+            <span class="settings-sub">Club head speed and ball speed</span>
+          </div>
+          <div class="settings-toggle-group">
+            <button class="stg-btn stg-active" data-stg="speed" data-val="mph" onclick="applySetting('speedUnit','mph')">mph</button>
+            <button class="stg-btn"            data-stg="speed" data-val="kmh" onclick="applySetting('speedUnit','kmh')">km/h</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label">
+            <strong>Temperature</strong>
+            <span class="settings-sub">Weather conditions (future feature)</span>
+          </div>
+          <div class="settings-toggle-group">
+            <button class="stg-btn stg-active" data-stg="temp" data-val="c" onclick="applySetting('tempUnit','c')">°C</button>
+            <button class="stg-btn"            data-stg="temp" data-val="f" onclick="applySetting('tempUnit','f')">°F</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coming soon -->
+      <div class="settings-card" style="opacity:.45;pointer-events:none">
+        <div class="settings-group-title">Subscription <span style="font-size:.7rem;color:var(--muted);text-transform:none;letter-spacing:0">(coming soon)</span></div>
+        <div class="settings-row">
+          <div class="settings-label">
+            <strong>Plan</strong>
+            <span class="settings-sub">Free · Pro · Team</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /settingsSection -->
+
 </main>
+</div><!-- /.app-body -->
+</div><!-- /.app-shell -->
 
 <!-- ── LOADING OVERLAY ───────────────────────────────────────────────────── -->
 <div class="overlay" id="loadingOverlay">
@@ -744,6 +1013,9 @@
     </div>
   </div>
 </div>
+
+<!-- ── CSV MAPPER OVERLAY ────────────────────────────────────────────────── -->
+<div id="csvMapperOverlay"></div>
 
 <!-- ── RESULTS OVERLAY ───────────────────────────────────────────────────── -->
 <div class="overlay" id="resultsOverlay">
@@ -826,6 +1098,58 @@
      JAVASCRIPT
 ══════════════════════════════════════════════════════════════════════════ -->
 <script>
+/* ══════════════════════════════════════════════════════════════════════════
+   ICON INVENTORY — replace any of these to rebrand the dashboard
+   ══════════════════════════════════════════════════════════════════════════
+   Navigation (sidebar tabs):
+     🏠  All Rounds tab
+     🖥️  Simulator tab
+     ⛳  Real Course tab
+     🎯  My Bag (practice/range) tab
+     👤  Profile tab
+
+   Sidebar chrome:
+     ⛳  Logo fallback (shown when no company logo URL is set)
+     🤖  AI Coach button
+     ◀   Collapse toggle (rotates 180° when collapsed)
+     B A P  View-level labels (Beginner · Advanced · Pro) — style with CSS
+
+   Performance indicators:
+     ✅  High confidence badge
+     📊  Medium confidence badge
+     ⚠️  Low confidence badge / warnings
+     📈  Positive trend / upward chart
+     📉  Negative trend / downward chart
+
+   Section headings & chart titles:
+     🏌️  Club performance / round upload
+     🕸️  Radar / KPI chart
+     🌀  Ball flight pattern chart
+     ⚡  Strike quality chart
+     🔄  Front 9 vs Back 9 / scrambling
+     🎯  Score distribution / accuracy
+     📏  Distance consistency chart
+     📸  Screenshot / image upload zone
+     📥  CSV import
+     🗑   Delete button (data rows)
+     📋  Round detail modal
+
+   Score-vs-par markers (hole-by-hole):
+     ⬆   Above par (bad)
+     ⬇   Below par (good)
+
+   AI Coach:
+     🤖  Coach panel icon
+
+   Profile:
+     👤  Profile tab / summary
+
+   Misc / no-data placeholders:
+     📊  Generic chart placeholder
+     🌐  Course (no-data)
+     ✓   Success toast  ✗  Error toast  ⓘ  Info tooltip
+   ══════════════════════════════════════════════════════════════════════════ */
+
 /* ── Constants ──────────────────────────────────────────────────────────── */
 const BENCH_PROFILES = {
   scratch: {label:"Scratch",score:0, hcp:0,  gir:72,fw:72,scr:65,putts:1.58,drive:270},
@@ -1008,14 +1332,17 @@ let filterYear    = "";
 let filterMonth   = "";
 let pendingData   = null;   // {type:"rounds"|"range", items:[]}
 let playerProfile = JSON.parse(localStorage.getItem("golf_profile") ||
-  '{"name":"","age":"","hcp":"","handedness":"right","goals":""}');
+  '{"name":"","age":"","hcp":"","handedness":"right","gender":"","goals":""}');
+let appSettings   = JSON.parse(localStorage.getItem("golf_settings") ||
+  '{"distUnit":"m","speedUnit":"mph","tempUnit":"c","apiKey":""}');
 let evaluations   = {};
 let currentEvalKey = null;
 
 /* ── Init ───────────────────────────────────────────────────────────────── */
 document.addEventListener("DOMContentLoaded", () => {
-  const k = localStorage.getItem("golf_api_key");
-  if (k) document.getElementById("apiKey").value = k;
+  // Migrate legacy API key from old localStorage key into appSettings
+  const legacyKey = localStorage.getItem("golf_api_key");
+  if(legacyKey && !appSettings.apiKey){ appSettings.apiKey=legacyKey; localStorage.setItem("golf_settings",JSON.stringify(appSettings)); }
   evaluations = JSON.parse(localStorage.getItem("golf_evals") || "{}");
 
   // Restore saved benchmark target
@@ -1033,12 +1360,103 @@ document.addEventListener("DOMContentLoaded", () => {
 
   fetchRounds();
   loadProfile();
+
+  // ── Sidebar: restore collapse state ─────────────────────────────────
+  if(localStorage.getItem("sb_collapsed") === "1")
+    document.getElementById("sidebar").classList.add("collapsed");
+
+  // ── View level: restore from profile ────────────────────────────────
+  const savedLevel = playerProfile.viewLevel || "advanced";
+  applyViewLevel(savedLevel);
+
+  // ── Branding: restore company name if set ───────────────────────────
+  const cName = localStorage.getItem("company_name");
+  const cUrl  = localStorage.getItem("company_logo_url");
+  if(cName) document.getElementById("companyName").textContent = cName;
+  if(cUrl){
+    const img = document.getElementById("companyLogo");
+    img.src = cUrl; img.style.display = "block";
+    document.getElementById("companyLogoFallback").style.display = "none";
+  }
+
+  // ── Settings UI: restore saved states ───────────────────────────────
+  initSettingsUI();
 });
 
+/* ── Sidebar toggle ──────────────────────────────────────────────────────── */
+function toggleSidebar(){
+  const sb = document.getElementById("sidebar");
+  const collapsed = sb.classList.toggle("collapsed");
+  localStorage.setItem("sb_collapsed", collapsed ? "1" : "0");
+}
+
+/* ── View level ──────────────────────────────────────────────────────────── */
+function applyViewLevel(level){
+  document.body.dataset.level = level;
+  playerProfile.viewLevel = level;
+  localStorage.setItem("golf_profile", JSON.stringify(playerProfile));
+  document.querySelectorAll(".vl-btn").forEach(b=>
+    b.classList.toggle("vl-active", b.dataset.level === level));
+}
+
+/* ── Settings ────────────────────────────────────────────────────────────── */
+function getApiKey(){ return appSettings.apiKey || ""; }
+
+function saveApiKeySetting(val){
+  appSettings.apiKey = val.trim();
+  localStorage.setItem("golf_settings", JSON.stringify(appSettings));
+}
+
+function toggleApiKeyVisibility(){
+  const el = document.getElementById("apiKey");
+  if(el) el.type = el.type === "password" ? "text" : "password";
+}
+
+function applySetting(key, val){
+  appSettings[key] = val;
+  localStorage.setItem("golf_settings", JSON.stringify(appSettings));
+  // Update toggle button active states
+  const group = key==="distUnit"?"dist":key==="speedUnit"?"speed":"temp";
+  document.querySelectorAll(`[data-stg="${group}"]`).forEach(b=>
+    b.classList.toggle("stg-active", b.dataset.val === val));
+  renderAll();
+}
+
+function initSettingsUI(){
+  // Restore toggle active states from saved appSettings
+  const m = {distUnit:"dist", speedUnit:"speed", tempUnit:"temp"};
+  for(const [k,grp] of Object.entries(m)){
+    document.querySelectorAll(`[data-stg="${grp}"]`).forEach(b=>
+      b.classList.toggle("stg-active", b.dataset.val === appSettings[k]));
+  }
+  // Restore API key input
+  const el = document.getElementById("apiKey");
+  if(el) el.value = appSettings.apiKey || "";
+}
+
+/* Unit helpers — used by renderRangeTable, club detail, charts, etc. */
+function fmtDist(m){
+  if(m==null) return "—";
+  if(appSettings.distUnit==="yd") return Math.round(m/0.9144)+"yd";
+  return m+"m";
+}
+function fmtSpeed(mph){
+  if(mph==null) return "—";
+  if(appSettings.speedUnit==="kmh") return Math.round(mph*1.60934)+"km/h";
+  return Math.round(mph)+"mph";
+}
+/* Convert a raw meter value to the current display unit (number only, for chart data) */
+function toChartDist(m){
+  if(m==null) return null;
+  return appSettings.distUnit==="yd" ? Math.round(m/0.9144) : m;
+}
+function fmtSpinRate(rpm){ return rpm==null?"—":Math.round(rpm)+" rpm"; }
+
+/* Legacy saveKey — now just delegates */
 function saveKey(){
-  const k=document.getElementById("apiKey").value.trim();
+  const k = document.getElementById("apiKey")?.value.trim();
   if(!k) return showToast("Enter an API key first","error");
-  localStorage.setItem("golf_api_key",k);
+  saveApiKeySetting(k);
   showToast("API key saved ✓","success");
 }
 
@@ -1047,8 +1465,9 @@ function loadProfile(){
   document.getElementById("pfName").value = playerProfile.name  || "";
   document.getElementById("pfAge").value  = playerProfile.age   || "";
   document.getElementById("pfHCP").value  = playerProfile.hcp   || "";
-  document.getElementById("pfHand").value = playerProfile.handedness || "right";
-  document.getElementById("pfGoals").value= playerProfile.goals || "";
+  document.getElementById("pfHand").value   = playerProfile.handedness || "right";
+  document.getElementById("pfGender").value = playerProfile.gender || "";
+  document.getElementById("pfGoals").value  = playerProfile.goals || "";
   renderProfileSummary();
 }
 
@@ -1058,7 +1477,9 @@ function saveProfile(){
     age:        document.getElementById("pfAge").value.trim(),
     hcp:        document.getElementById("pfHCP").value.trim(),
     handedness: document.getElementById("pfHand").value,
+    gender:     document.getElementById("pfGender").value,
     goals:      document.getElementById("pfGoals").value.trim(),
+    viewLevel:  playerProfile.viewLevel || "advanced",  // persist current level
   };
   localStorage.setItem("golf_profile", JSON.stringify(playerProfile));
   renderProfileSummary();
@@ -1071,9 +1492,11 @@ function saveProfile(){
 function renderProfileSummary(){
   const el = document.getElementById("profileSummaryDisplay");
   const p = playerProfile;
-  // Update header logo name
-  const logoEl = document.getElementById("logoName");
-  if(logoEl) logoEl.textContent = p.name ? p.name : "Golf";
+  // Update sidebar brand area: player name on top line, "Golf Analytics" as subtitle
+  const nameEl = document.getElementById("companyName");
+  if(nameEl) nameEl.textContent = p.name || "Golf Analytics";
+  const tagEl = document.getElementById("companyTagline");
+  if(tagEl) tagEl.textContent = "Golf Analytics";
   if(!el) return;
   const hasData = p.name||p.age||p.hcp||p.goals;
   if(!hasData){ el.innerHTML=`<span style="color:var(--muted)">No profile saved yet.</span>`; return; }
@@ -1110,27 +1533,29 @@ function updateBadgeLabels(){
 
 /* ── Tab system ─────────────────────────────────────────────────────────── */
 const DZ_CONFIG = {
-  simulator: {icon:"📸", title:"Drop Virtual Golf 3 round screenshots here",
-    sub:"Hole maps and round summary screens", hint:"→ Saved to Simulator history", color:"var(--accent)"},
-  real:      {icon:"📷", title:"Drop scorecard photo here (1 image)",
-    sub:"Mobile scoring app screenshot or paper card photo", hint:"→ Claude reads hole-by-hole scores automatically", color:"var(--blue)"},
-  practice:  {icon:"🏌️", title:"Drop range practice screenshots here",
-    sub:"VG3 range mode screenshots or real driving range data", hint:"→ Saved to Practice history", color:"var(--orange)"},
+  simulator: {icon:"📸", title:"Drop screenshots or CSV here",
+    sub:"VG3 round screenshots · or drop a CSV file", hint:"→ Saved to Simulator history", color:"var(--accent)"},
+  real:      {icon:"📷", title:"Drop scorecard photo or CSV here",
+    sub:"Scorecard photo · or drop a CSV file", hint:"→ Claude reads hole-by-hole scores automatically", color:"var(--blue)"},
+  practice:  {icon:"🏌️", title:"Drop range screenshots or CSV here",
+    sub:"VG3 range mode screenshots · or drop a CSV file", hint:"→ Saved to Practice history", color:"var(--orange)"},
 };
 
 function setTab(tab) {
   activeTab = tab;
-  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+  document.querySelectorAll(".sb-tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
 
   const isPractice = tab === "practice";
   const isProfile  = tab === "profile";
+  const isSettings = tab === "settings";
   const isAll      = tab === "all";
   const isReal     = tab === "real";
 
-  document.getElementById("roundsContent").style.display   = (isPractice||isProfile) ? "none" : "";
+  document.getElementById("roundsContent").style.display   = (isPractice||isProfile||isSettings) ? "none" : "";
   document.getElementById("practiceSection").style.display = isPractice ? "" : "none";
   document.getElementById("profileSection").style.display  = isProfile  ? "" : "none";
-  document.getElementById("dropWrap").style.display  = (isAll||isProfile) ? "none" : "";
+  document.getElementById("settingsSection").style.display = isSettings ? "" : "none";
+  document.getElementById("dropWrap").style.display  = (isAll||isProfile||isSettings) ? "none" : "";
   document.getElementById("allHint").style.display   = isAll ? "" : "none";
   // Real-only section
   document.getElementById("realSection").style.display       = isReal ? "" : "none";
@@ -1271,11 +1696,335 @@ function compressionFor(count){
   return              {maxPx:900, quality:0.82};
 }
 
+/* ── CSV Import ─────────────────────────────────────────────────────────── */
+const RANGE_ALIASES={
+  date:              ["date","datum","day","session date","date of session"],
+  club:              ["club","club name","iron","wood","wedge","driver"],
+  shots:             ["shots","count","balls","hits","n","num shots","# shots","number of shots"],
+  avg_carry_m:       ["carry","avg carry","avg carry m","avg carry (m)","carry (m)","carry(m)",
+                      "carry distance","average carry","mean carry",
+                      "carry (y)","carry(y)","carry (yd)","carry (yds)","avg carry yd","carry yd"],
+  avg_total_m:       ["total","total dist","total (m)","total distance","avg total","avg total m",
+                      "total (yd)","total yd","carry+roll","land"],
+  max_carry_m:       ["max carry","max carry m","longest","max","maximum carry","best carry",
+                      "max carry yd","max carry (yd)"],
+  min_carry_m:       ["min carry","min carry m","shortest","min","minimum carry","min carry yd"],
+  target_hit_pct:    ["target hit","target hit %","target hit%","accuracy","acc","accuracy %",
+                      "hit rate","hit %","hit%","hit pct"],
+  avg_smash_factor:  ["smash","smash factor","sf","smash f","impact factor"],
+  avg_club_speed_mph:["club speed","head speed","cs","cs mph","club head speed",
+                      "speed mph","club speed mph","swing speed"],
+  avg_spin_rate_rpm: ["spin","spin rate","spin rpm","backspin","rpm","back spin","spin rate rpm","spin (rpm)"],
+  avg_spin_axis_deg: ["spin axis","axis","axis deg","spin axis deg","tilt","spin axis°"],
+  avg_club_path:     ["club path","path","path deg","path°","swing path","direction"],
+  avg_face_to_path:  ["face to path","f2p","f→p","face-path","face to path deg","f2p deg"],
+  avg_attack_angle_deg:["attack angle","aoa","aoa deg","angle of attack","attack","attack°"],
+  dominant_shape:    ["shape","shot shape","ball flight","shot type","flight shape"],
+};
+const ROUND_ALIASES={
+  date:            ["date","played","round date","datum","day"],
+  course:          ["course","course name","venue","club","golf club","location"],
+  total_strokes:   ["score","strokes","total strokes","gross","gross score","total","total score","shots"],
+  par:             ["par","course par","hole par"],
+  gir_pct:         ["gir","gir%","gir %","greens in regulation","greens hit","greens"],
+  fairways_hit_pct:["fairways","fairway %","fir","fir%","fairway hit","fairways hit","fairway"],
+  putts_per_hole:  ["putts","putts/hole","putts per hole","avg putts","putting","putts average"],
+  total_putts:     ["total putts","putts total"],
+  scrambling_pct:  ["scrambling","scrambling %","scramble","up and down","sand saves"],
+  avg_drive_m:     ["avg drive","drive","driving distance","avg drive m","driving avg",
+                    "drive yd","avg drive yd"],
+  handicap:        ["handicap","hcp","h/cap","playing handicap","course handicap"],
+};
+
+function parseCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  const sample=lines.slice(0,3).join("\n");
+  const commas=(sample.match(/,/g)||[]).length;
+  const semis=(sample.match(/;/g)||[]).length;
+  const tabs=(sample.match(/\t/g)||[]).length;
+  const delim=tabs>commas&&tabs>semis?"\t":semis>commas?";":","
+  function splitLine(line){
+    const fields=[];let i=0;
+    while(i<line.length){
+      if(line[i]==='"'){
+        let val="",j=i+1;
+        while(j<line.length){
+          if(line[j]==='"'&&line[j+1]==='"'){val+='"';j+=2;}
+          else if(line[j]==='"'){j++;break;}
+          else{val+=line[j++];}
+        }
+        fields.push(val);i=j;
+        if(i<line.length&&line[i]===delim)i++;
+      }else{
+        const end=line.indexOf(delim,i);
+        fields.push(end===-1?line.slice(i):line.slice(i,end));
+        i=end===-1?line.length:end+1;
+      }
+    }
+    return fields;
+  }
+  const headers=splitLine(lines[0]).map(h=>h.trim());
+  const rows=lines.slice(1).filter(l=>l.trim()).map(l=>splitLine(l));
+  return{headers,rows};
+}
+
+function autoMapColumns(headers,aliases){
+  const norm=headers.map(h=>h.trim().toLowerCase());
+  const mapping={};
+  for(const[field,syns]of Object.entries(aliases)){
+    const idx=norm.findIndex(h=>syns.includes(h));
+    mapping[field]=idx>=0?idx:null;
+  }
+  return mapping;
+}
+
+function detectCSVType(headers){
+  const norm=new Set(headers.map(h=>h.trim().toLowerCase()));
+  const roundKw=["score","strokes","gross","course","venue","gir","fairways","par"];
+  const rangeKw=["carry","smash","spin","club path","aoa","attack angle","club speed"];
+  let rs=rangeKw.filter(k=>[...norm].some(h=>h.includes(k))).length;
+  let ro=roundKw.filter(k=>[...norm].some(h=>h.includes(k))).length;
+  return rs>=ro?"range_session":"round";
+}
+
+function parseDate(str){
+  if(!str||!str.trim())return null;
+  str=str.trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(str))return str;
+  if(/^\d{4}-\d{2}-\d{2}T/.test(str))return str.slice(0,10);
+  let m=str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  if(m){
+    const a=parseInt(m[1]),b=parseInt(m[2]),y=parseInt(m[3]);
+    const[day,mon]=a>12?[a,b]:[b,a];
+    return`${y}-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  }
+  m=str.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+  if(m)return`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  const months={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  m=str.match(/(\d{1,2})\s+([a-z]{3})\w*\s+(\d{4})/i);
+  if(m){const mn=months[m[2].toLowerCase().slice(0,3)];return mn?`${m[3]}-${String(mn).padStart(2,'0')}-${String(parseInt(m[1])).padStart(2,'0')}`:null;}
+  m=str.match(/([a-z]{3})\w*\s+(\d{1,2})\s*,?\s*(\d{4})/i);
+  if(m){const mn=months[m[1].toLowerCase().slice(0,3)];return mn?`${m[3]}-${String(mn).padStart(2,'0')}-${String(parseInt(m[2])).padStart(2,'0')}`:null;}
+  return null;
+}
+
+let _csvData=null,_csvType="range_session",_csvAliases=null,_csvUnit="m";
+
+function showCSVMapper(csvData,detectedType,autoMapping,unitHint){
+  _csvData=csvData;_csvType=detectedType;
+  _csvAliases=detectedType.startsWith("range")?RANGE_ALIASES:ROUND_ALIASES;
+  _csvUnit=unitHint||"m";
+  const{headers,rows}=csvData;
+  const isRange=detectedType.startsWith("range");
+  const rangeFields=[
+    {f:"date",label:"Date",req:true},
+    {f:"club",label:"Club",req:true},
+    {f:"shots",label:"Shots",req:false},
+    {f:"avg_carry_m",label:"Avg Carry",req:false},
+    {f:"avg_total_m",label:"Avg Total",req:false},
+    {f:"max_carry_m",label:"Max Carry",req:false},
+    {f:"min_carry_m",label:"Min Carry",req:false},
+    {f:"target_hit_pct",label:"Target Hit %",req:false},
+    {f:"avg_smash_factor",label:"Smash Factor",req:false},
+    {f:"avg_club_speed_mph",label:"Club Speed (mph)",req:false},
+    {f:"avg_spin_rate_rpm",label:"Spin Rate (rpm)",req:false},
+    {f:"avg_spin_axis_deg",label:"Spin Axis°",req:false},
+    {f:"avg_club_path",label:"Club Path°",req:false},
+    {f:"avg_face_to_path",label:"Face→Path°",req:false},
+    {f:"avg_attack_angle_deg",label:"Attack Angle°",req:false},
+    {f:"dominant_shape",label:"Shot Shape",req:false},
+  ];
+  const roundFields=[
+    {f:"date",label:"Date",req:true},
+    {f:"course",label:"Course",req:true},
+    {f:"total_strokes",label:"Total Strokes",req:false},
+    {f:"par",label:"Par",req:false},
+    {f:"gir_pct",label:"GIR %",req:false},
+    {f:"fairways_hit_pct",label:"Fairway %",req:false},
+    {f:"putts_per_hole",label:"Putts/Hole",req:false},
+    {f:"total_putts",label:"Total Putts",req:false},
+    {f:"scrambling_pct",label:"Scrambling %",req:false},
+    {f:"avg_drive_m",label:"Avg Drive",req:false},
+    {f:"handicap",label:"Handicap",req:false},
+  ];
+  const fields=isRange?rangeFields:roundFields;
+  const mappingHTML=fields.map(({f,label,req})=>{
+    const ai=autoMapping[f];
+    const matched=ai!=null?`<span style="font-size:.7rem;color:var(--accent);font-weight:600">✅</span>`:"";
+    return`<div class="csv-row-map">
+      <span class="csv-row-label">${label}${req?` <span style="color:var(--warn)">*</span>`:""}</span>
+      <select id="csv-col-${f}" class="api-input" style="width:100%;font-size:.78rem;padding:5px 8px">
+        <option value="">— none —</option>
+        ${headers.map((h,i)=>`<option value="${i}"${i===ai?" selected":""}>${esc(h)}</option>`).join("")}
+      </select>
+      ${matched}
+    </div>`;
+  }).join("");
+  const previewRows=rows.slice(0,3).map(r=>`<tr>${r.map(c=>`<td>${esc(c||"")}</td>`).join("")}</tr>`).join("");
+  const unitCtrl=isRange?`
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:.75rem;color:var(--muted);font-weight:600">Distance unit:</span>
+      <button id="csv-unit-m" class="btn btn-sm ${_csvUnit!=="yd"?"btn-primary":"btn-ghost"}" onclick="setCsvUnit('m')">m</button>
+      <button id="csv-unit-yd" class="btn btn-sm ${_csvUnit==="yd"?"btn-primary":"btn-ghost"}" onclick="setCsvUnit('yd')">yd</button>
+    </div>`:`
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:.75rem;color:var(--muted);font-weight:600">Round type:</span>
+      <select id="csv-round-type" class="api-input" style="font-size:.78rem;padding:5px 8px">
+        <option value="simulator">Simulator</option>
+        <option value="real" selected>Real Course</option>
+      </select>
+    </div>`;
+  const totalRows=rows.length;
+  document.getElementById("csvMapperOverlay").innerHTML=`
+    <div class="csv-mapper-box">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="csv-mapper-title">📥 CSV Import <span style="font-size:.8rem;font-weight:400;color:var(--muted)">${totalRows} data row${totalRows!==1?"s":""}</span></div>
+        <button class="btn btn-ghost btn-sm" onclick="closeCSVMapper()">✕</button>
+      </div>
+      ${unitCtrl}
+      <div>
+        <div style="font-size:.73rem;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px">Column Mapping <span style="font-size:.68rem;font-weight:400">— * required</span></div>
+        ${mappingHTML}
+      </div>
+      <div>
+        <div style="font-size:.73rem;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px">Preview (first ${Math.min(3,totalRows)} rows)</div>
+        <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+          <table class="csv-preview-table">
+            <thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead>
+            <tbody>${previewRows}</tbody>
+          </table>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="downloadCSVTemplate('range')">📥 Range Template</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadCSVTemplate('round')">📥 Round Template</button>
+        </div>
+        <button class="btn btn-primary" onclick="processCSVImport()">Import ${totalRows} row${totalRows!==1?"s":""} →</button>
+      </div>
+    </div>`;
+  document.getElementById("csvMapperOverlay").classList.add("active");
+}
+
+function setCsvUnit(u){
+  _csvUnit=u;
+  const m=document.getElementById("csv-unit-m"),y=document.getElementById("csv-unit-yd");
+  if(m)m.className=`btn btn-sm ${u==="m"?"btn-primary":"btn-ghost"}`;
+  if(y)y.className=`btn btn-sm ${u==="yd"?"btn-primary":"btn-ghost"}`;
+}
+function closeCSVMapper(){document.getElementById("csvMapperOverlay").classList.remove("active");}
+
+function downloadCSVTemplate(type){
+  const h=type==="range"
+    ?["Date","Club","Shots","Avg Carry","Avg Total","Max Carry","Min Carry","Target Hit %","Smash Factor","Club Speed mph","Spin Rate rpm","Spin Axis deg","Club Path deg","Face to Path deg","Attack Angle deg","Shape"]
+    :["Date","Course","Score","Par","GIR %","Fairways %","Putts/Hole","Total Putts","Scrambling %","Avg Drive","Handicap"];
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([h.join(",")+"\n"],{type:"text/csv"}));
+  a.download=type==="range"?"range_template.csv":"round_template.csv";
+  a.click();
+}
+
+function processCSVImport(){
+  const{headers,rows}=_csvData;
+  const isRange=_csvType.startsWith("range");
+  const fields=isRange
+    ?["date","club","shots","avg_carry_m","avg_total_m","max_carry_m","min_carry_m",
+      "target_hit_pct","avg_smash_factor","avg_club_speed_mph","avg_spin_rate_rpm",
+      "avg_spin_axis_deg","avg_club_path","avg_face_to_path","avg_attack_angle_deg","dominant_shape"]
+    :["date","course","total_strokes","par","gir_pct","fairways_hit_pct","putts_per_hole",
+      "total_putts","scrambling_pct","avg_drive_m","handicap"];
+  const colMap={};
+  for(const f of fields){
+    const sel=document.getElementById(`csv-col-${f}`);
+    colMap[f]=sel&&sel.value!==""?parseInt(sel.value):null;
+  }
+  const required=isRange?["date","club"]:["date","course"];
+  const missing=required.filter(f=>colMap[f]===null);
+  if(missing.length){showToast(`Map required field(s): ${missing.join(", ")}`, "error");return;}
+  const distMult=_csvUnit==="yd"?0.9144:1;
+  function getVal(row,f){
+    const idx=colMap[f];
+    if(idx===null||idx===undefined)return null;
+    const v=(row[idx]||"").trim();
+    return v===""||v==="—"?null:v;
+  }
+  function pn(v){if(v===null)return null;const n=parseFloat(v);return isNaN(n)?null:n;}
+  function pd(v){const n=pn(v);return n===null?null:Math.round(n*distMult*10)/10;}
+  if(isRange){
+    const sessions=rows.map(row=>{
+      const s={};
+      s.date=parseDate(getVal(row,"date"));
+      s.club=(getVal(row,"club")||"").trim();
+      if(!s.club)return null;
+      s.shots=pn(getVal(row,"shots"));
+      s.avg_carry_m=pd(getVal(row,"avg_carry_m"));
+      s.avg_total_m=pd(getVal(row,"avg_total_m"));
+      s.max_carry_m=pd(getVal(row,"max_carry_m"));
+      s.min_carry_m=pd(getVal(row,"min_carry_m"));
+      s.target_hit_pct=pn(getVal(row,"target_hit_pct"));
+      s.avg_smash_factor=pn(getVal(row,"avg_smash_factor"));
+      s.avg_club_speed_mph=pn(getVal(row,"avg_club_speed_mph"));
+      s.avg_spin_rate_rpm=pn(getVal(row,"avg_spin_rate_rpm"));
+      s.avg_spin_axis_deg=pn(getVal(row,"avg_spin_axis_deg"));
+      s.avg_club_path=pn(getVal(row,"avg_club_path"));
+      s.avg_face_to_path=pn(getVal(row,"avg_face_to_path"));
+      s.avg_attack_angle_deg=pn(getVal(row,"avg_attack_angle_deg"));
+      const shRaw=getVal(row,"dominant_shape");
+      s.dominant_shape=shRaw?shRaw.toLowerCase().trim():(s.avg_spin_axis_deg!=null?classifyShape(s.avg_spin_axis_deg):null);
+      return s;
+    }).filter(s=>s&&s.club);
+    if(!sessions.length){showToast("No valid sessions found","error");return;}
+    closeCSVMapper();
+    pendingData={type:"range",items:sessions};
+    showRangeResults(sessions);
+  }else{
+    const rType=document.getElementById("csv-round-type")?.value||"real";
+    const rounds=rows.map(row=>{
+      const r={};
+      r.date=parseDate(getVal(row,"date"));
+      r.course=(getVal(row,"course")||"").trim();
+      if(!r.course)return null;
+      r.total_strokes=pn(getVal(row,"total_strokes"));
+      r.par=pn(getVal(row,"par"));
+      r.gir_pct=pn(getVal(row,"gir_pct"));
+      r.fairways_hit_pct=pn(getVal(row,"fairways_hit_pct"));
+      r.putts_per_hole=pn(getVal(row,"putts_per_hole"));
+      r.total_putts=pn(getVal(row,"total_putts"));
+      r.scrambling_pct=pn(getVal(row,"scrambling_pct"));
+      r.avg_drive_m=pd(getVal(row,"avg_drive_m"));
+      r.handicap=pn(getVal(row,"handicap"));
+      r.source_type=rType;r.holes=[];
+      return r;
+    }).filter(r=>r&&r.course);
+    if(!rounds.length){showToast("No valid rounds found","error");return;}
+    closeCSVMapper();
+    pendingData={type:"rounds",items:rounds};
+    showRoundResults(rounds);
+  }
+}
+
+async function handleCSVFiles(files){
+  try{
+    const text=await files[0].text();
+    const{headers,rows}=parseCSV(text);
+    if(!rows.length){showToast("CSV appears to be empty","error");return;}
+    const type=detectCSVType(headers);
+    const unitHint=headers.some(h=>/\byd\b|\byards?\b/i.test(h))?"yd":"m";
+    const aliases=type.startsWith("range")?RANGE_ALIASES:ROUND_ALIASES;
+    const autoMapping=autoMapColumns(headers,aliases);
+    showCSVMapper({headers,rows},type,autoMapping,unitHint);
+  }catch(e){showToast("Failed to read CSV: "+e.message,"error");}
+}
+
 /* ── File handling ──────────────────────────────────────────────────────── */
 async function handleFiles(files){
   if(!files?.length) return;
-  const apiKey=document.getElementById("apiKey").value.trim();
-  if(!apiKey) return showToast("Enter your Anthropic API key first","error");
+  // CSV files don't need the API key — handle separately
+  const csvFiles=[...files].filter(f=>f.name.toLowerCase().endsWith('.csv'));
+  if(csvFiles.length){ await handleCSVFiles(csvFiles); return; }
+
+  const apiKey=getApiKey();
+  if(!apiKey) return showToast("Set your Anthropic API key in ⚙️ Settings first","error");
 
   const modeMap = {simulator:"round",real:"real_round",practice:"range"};
   const mode    = modeMap[activeTab] || "round";
@@ -1364,7 +2113,7 @@ function showRoundResults(rds){
         <div class="preview-row"><span>FW %</span><span>${r.fairways_hit_pct!=null?r.fairways_hit_pct+"%":"—"}</span></div>
         <div class="preview-row"><span>Scrambling</span><span>${r.scrambling_pct!=null?r.scrambling_pct+"%":"—"}</span></div>
         <div class="preview-row"><span>Putts/Hole</span><span>${r.putts_per_hole!=null?r.putts_per_hole.toFixed(2):"—"}</span></div>
-        <div class="preview-row"><span>Avg Drive</span><span>${r.avg_drive_m?r.avg_drive_m+"m":"—"}</span></div>
+        <div class="preview-row"><span>Avg Drive</span><span>${r.avg_drive_m?fmtDist(r.avg_drive_m):"—"}</span></div>
         <div class="preview-row"><span>Hole data</span><span>${(r.holes||[]).length>0?r.holes.length+" holes":"summary only"}</span></div>
       </div>
     </div>`).join("");
@@ -1386,11 +2135,11 @@ function showRangeResults(sessions){
            </div>`
         : ""}
       <div class="preview-grid">
-        <div class="preview-row"><span>Avg Carry</span><span>${s.avg_carry_m!=null?s.avg_carry_m+"m":"—"}</span></div>
-        <div class="preview-row"><span>Avg Total</span><span>${s.avg_total_m!=null?s.avg_total_m+"m":"—"}</span></div>
-        <div class="preview-row"><span>Max Carry</span><span>${(s.max_carry_m||s.longest_m)!=null?(s.max_carry_m||s.longest_m)+"m":"—"}</span></div>
-        <div class="preview-row"><span>Min Carry</span><span>${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</span></div>
-        <div class="preview-row"><span>Spread (max−min)</span><span>${(s.max_carry_m!=null&&s.min_carry_m!=null)?(s.max_carry_m-s.min_carry_m)+"m":"—"}</span></div>
+        <div class="preview-row"><span>Avg Carry</span><span>${s.avg_carry_m!=null?fmtDist(s.avg_carry_m):"—"}</span></div>
+        <div class="preview-row"><span>Avg Total</span><span>${s.avg_total_m!=null?fmtDist(s.avg_total_m):"—"}</span></div>
+        <div class="preview-row"><span>Max Carry</span><span>${(s.max_carry_m||s.longest_m)!=null?fmtDist(s.max_carry_m||s.longest_m):"—"}</span></div>
+        <div class="preview-row"><span>Min Carry</span><span>${s.min_carry_m!=null?fmtDist(s.min_carry_m):"—"}</span></div>
+        <div class="preview-row"><span>Spread (max−min)</span><span>${(s.max_carry_m!=null&&s.min_carry_m!=null)?fmtDist(s.max_carry_m-s.min_carry_m):"—"}</span></div>
         <div class="preview-row"><span>Target Hit</span><span>${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</span></div>
       </div>
     </div>`).join("");
@@ -1649,7 +2398,7 @@ function renderKPIs(full){
   const setHigh=(id,v,bench,sfx)=>{
     const card=document.getElementById("kpi-"+id),vEl=document.getElementById("v-"+id),dEl=document.getElementById("d-"+id);
     if(v==null){vEl.textContent="—";return}
-    vEl.textContent=id==="drive"?Math.round(v)+"m":Math.round(v)+"%";
+    vEl.textContent=id==="drive"?fmtDist(Math.round(v)):Math.round(v)+"%";
     const d=v-bench,cls=d>=0?"good":d>-8?"warn":"bad";
     dEl.textContent=(d>=0?"+":"")+d.toFixed(1)+sfx;dEl.className="kpi-delta "+cls;card.className="kpi-card "+cls;
   };
@@ -1669,7 +2418,8 @@ function renderKPIs(full){
   setHigh("fw",  mean(full,"fairways_hit_pct"), BENCH.fw,  `% vs ${BENCH.fw}%`);
   setHigh("scr", mean(full,"scrambling_pct"),   BENCH.scr, `% vs ${BENCH.scr}%`);
   setLow("putts",mean(full,"putts_per_hole"),   BENCH.putts,` vs ${BENCH.putts.toFixed(2)}`);
-  setHigh("drive",mean(full,"avg_drive_m"),     BENCH.drive,`m vs ${BENCH.drive}m`);
+  setHigh("drive",mean(full,"avg_drive_m"),     BENCH.drive,
+    appSettings.distUnit==="yd"?`yd vs ${Math.round(BENCH.drive/0.9144)}yd`:`m vs ${BENCH.drive}m`);
 
   // ── Estimated Handicap — two independent cards (Real + Sim) ──────────────
   // Always computed from the full global rounds array, not the filtered subset.
@@ -2179,7 +2929,7 @@ function renderTable(all){
         <td><span class="pill ${sp}">${sc!=null?fmtScore(sc):"—"}</span></td>
         <td>${r.total_strokes??"—"}</td><td style="color:var(--muted)">${r.holes_played??"—"}</td>
         <td class="${fc}">${fmtPct(r.fairways_hit_pct)}</td>
-        <td>${r.avg_drive_m?r.avg_drive_m+"m":"—"}</td>
+        <td>${r.avg_drive_m?fmtDist(r.avg_drive_m):"—"}</td>
         <td class="${gc}">${fmtPct(r.gir_pct)}</td>
         <td class="${sc2}">${fmtPct(r.scrambling_pct)}</td>
         <td class="${pc}">${r.putts_per_hole!=null?r.putts_per_hole.toFixed(2):"—"}</td>
@@ -2478,7 +3228,7 @@ function renderClubCards(){
       const d=carry-prev.avg_carry_m;
       if(Math.abs(d)>=2){
         const cls=d>0?"trend-up":"trend-down";
-        shortTrendHtml=`<span class="club-trend ${cls}" style="font-size:.72rem">${d>0?"▲":"▼"}${Math.abs(d)}m vs prev</span>`;
+        shortTrendHtml=`<span class="club-trend ${cls}" style="font-size:.72rem">${d>0?"▲":"▼"}${fmtDist(Math.abs(d))} vs prev</span>`;
       }
     }
 
@@ -2486,7 +3236,7 @@ function renderClubCards(){
     const longTrend=detectLongTermTrend(club);
     const longTrendHtml=longTrend
       ?`<span class="club-trend ${longTrend.direction==='gaining'?'trend-up':'trend-down'}"
-          style="font-size:.68rem;opacity:.85">${longTrend.direction==='gaining'?'📈':'📉'} ${longTrend.metres}m overall (${longTrend.n} sessions)</span>`
+          style="font-size:.68rem;opacity:.85">${longTrend.direction==='gaining'?'📈':'📉'} ${fmtDist(longTrend.metres)} overall (${longTrend.n} sessions)</span>`
       :"";
 
     // ── Stock shape + confidence ───────────────────────────────────────────
@@ -2529,9 +3279,9 @@ function renderClubCards(){
         <!-- Carry hero -->
         ${carry!=null?`
         <div style="margin-top:6px">
-          <div class="club-carry" style="margin:0;line-height:1">${carry}</div>
-          <div class="club-carry-unit" style="margin:0">avg carry (m)
-            ${minC!=null&&maxC!=null?`<span style="opacity:.55"> · ${minC}–${maxC}m</span>`:(maxC!=null?`<span style="opacity:.55"> · max ${maxC}m</span>`:"")}
+          <div class="club-carry" style="margin:0;line-height:1">${fmtDist(carry)}</div>
+          <div class="club-carry-unit" style="margin:0">avg carry
+            ${minC!=null&&maxC!=null?`<span style="opacity:.55"> · ${fmtDist(minC)}–${fmtDist(maxC)}</span>`:(maxC!=null?`<span style="opacity:.55"> · max ${fmtDist(maxC)}</span>`:"")}
           </div>
         </div>`
         :`<div style="color:var(--muted);font-size:.8rem;margin-top:6px">No carry data</div>`}
@@ -2554,7 +3304,7 @@ function renderClubCards(){
         <!-- Launch-monitor stats -->
         ${hasStats?`<div class="bf-row" style="margin-top:4px">
           ${smash !=null?`<span class="bf-stat">Smash <strong class="${smash>=1.45?'bf-pos':smash>=1.35?'bf-neu':'bf-neg'}">${smash.toFixed(2)}</strong></span>`:""}
-          ${cspd  !=null?`<span class="bf-stat">Spd <strong class="bf-neu">${Math.round(cspd)}</strong></span>`:""}
+          ${cspd  !=null?`<span class="bf-stat">Spd <strong class="bf-neu">${fmtSpeed(cspd)}</strong></span>`:""}
           ${ftp   !=null?`<span class="bf-stat">F→P ${bfFmt(ftp)}</span>`:""}
           ${spinAx!=null?`<span class="bf-stat">Axis ${bfFmt(spinAx)}</span>`:""}
         </div>`:`<div style="min-height:20px"></div>`}
@@ -2576,7 +3326,7 @@ function renderClubCards(){
 
         <!-- Performance score bar -->
         ${perf!=null?`
-        <div style="${courseData?"":"padding-top:8px;border-top:1px solid var(--border)"}">
+        <div class="adv-only" style="${courseData?"":"padding-top:8px;border-top:1px solid var(--border)"}">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
             <span style="font-size:.7rem;color:var(--muted);font-weight:600;letter-spacing:.03em">PERFORMANCE</span>
             <span style="font-size:.86rem;font-weight:800;color:${perfColor}">${perf.overall}<span style="font-size:.65rem;font-weight:400;color:var(--muted)">/100</span></span>
@@ -2619,7 +3369,7 @@ function renderClubTrend(){
     const sessions=byClub[club].filter(s=>s.avg_carry_m!=null);
     return{
       label:club,
-      data:sessions.map((s,i)=>({x:i+1,y:s.avg_carry_m})),
+      data:sessions.map((s,i)=>({x:i+1,y:toChartDist(s.avg_carry_m)})),
       borderColor:CLUB_COLORS[ci%CLUB_COLORS.length],
       backgroundColor:"transparent",
       pointRadius:5,pointHoverRadius:7,tension:.3,borderWidth:2,
@@ -2632,7 +3382,7 @@ function renderClubTrend(){
     ...CHART_OPTS,
     scales:{
       x:{...AXIS_OPTS,type:"linear",title:{display:true,text:"Session #",color:TICK_COLOR}},
-      y:{...AXIS_OPTS,title:{display:true,text:"Avg Carry (m)",color:TICK_COLOR}},
+      y:{...AXIS_OPTS,title:{display:true,text:appSettings.distUnit==="yd"?"Avg Carry (yd)":"Avg Carry (m)",color:TICK_COLOR}},
     },
   }});
 }
@@ -2656,9 +3406,9 @@ function renderClubConsistency(){
     const l=byClub[c].at(-1);
     const mn=l.min_carry_m??l.avg_carry_m;
     const mx=l.max_carry_m??l.longest_m??l.avg_carry_m;
-    return mn!=null&&mx!=null?[mn,mx]:null;
+    return mn!=null&&mx!=null?[toChartDist(mn),toChartDist(mx)]:null;
   });
-  const avgData=withRange.map(c=>byClub[c].at(-1).avg_carry_m);
+  const avgData=withRange.map(c=>toChartDist(byClub[c].at(-1).avg_carry_m));
   new Chart("chartClubConsist",{
     type:"bar",
     data:{
@@ -2674,7 +3424,7 @@ function renderClubConsistency(){
       indexAxis:"y",responsive:true,maintainAspectRatio:false,
       plugins:{legend:{labels:{color:"#94a3b8",font:{size:11}}}},
       scales:{
-        x:{title:{display:true,text:"Carry (m)",color:TICK_COLOR},grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
+        x:{title:{display:true,text:appSettings.distUnit==="yd"?"Carry (yd)":"Carry (m)",color:TICK_COLOR},grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
         y:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
       }
     }
@@ -2737,21 +3487,21 @@ function renderRangeTable(){
       <td style="color:var(--muted)">${s.date||"—"}</td>
       <td><span class="pill pill-practice">${esc(s.club)}</span></td>
       <td>${s.shots!=null?s.shots:"—"}</td>
-      <td><strong>${s.avg_carry_m!=null?s.avg_carry_m+"m":"—"}</strong></td>
-      <td>${s.avg_total_m!=null?s.avg_total_m+"m":"—"}</td>
-      <td>${maxC!=null?maxC+"m":"—"}</td>
-      <td>${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</td>
-      <td>${(maxC!=null&&s.min_carry_m!=null)?(maxC-s.min_carry_m)+"m":"—"}</td>
+      <td><strong>${fmtDist(s.avg_carry_m)}</strong></td>
+      <td>${fmtDist(s.avg_total_m)}</td>
+      <td>${fmtDist(maxC)}</td>
+      <td>${fmtDist(s.min_carry_m)}</td>
+      <td>${(maxC!=null&&s.min_carry_m!=null)?fmtDist(Math.round((maxC-s.min_carry_m)*10)/10):"—"}</td>
       <td class="${accCls}">${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</td>
       <td>${s.dominant_shape?`<span class="shape-badge shape-${s.dominant_shape}" style="margin-top:0">${s.dominant_shape.toUpperCase()}</span>`:"—"}</td>
       <td class="${smashCls}">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
-      <td>${s.avg_club_speed_mph!=null?Math.round(s.avg_club_speed_mph)+"mph":"—"}</td>
-      <td>${s.avg_spin_rate_rpm!=null?Math.round(s.avg_spin_rate_rpm):"—"}</td>
-      <td>${degFmt(s.avg_spin_axis_deg)}</td>
-      <td>${degFmt(getFaceAngle(s))}</td>
-      <td>${degFmt(s.avg_club_path)}</td>
-      <td>${degFmt(s.avg_face_to_path)}</td>
-      <td>${degFmt(s.avg_attack_angle_deg)}</td>
+      <td>${fmtSpeed(s.avg_club_speed_mph)}</td>
+      <td class="pro-only">${s.avg_spin_rate_rpm!=null?Math.round(s.avg_spin_rate_rpm):"—"}</td>
+      <td class="pro-only">${degFmt(s.avg_spin_axis_deg)}</td>
+      <td class="pro-only">${degFmt(getFaceAngle(s))}</td>
+      <td class="pro-only">${degFmt(s.avg_club_path)}</td>
+      <td class="pro-only">${degFmt(s.avg_face_to_path)}</td>
+      <td class="pro-only">${degFmt(s.avg_attack_angle_deg)}</td>
       <td>
         <button class="btn btn-ghost btn-sm" onclick="deleteItem('range',${ai})"
           style="color:var(--danger);border-color:rgba(239,68,68,.3)" title="Delete session">🗑</button>
@@ -2819,7 +3569,7 @@ function renderStrikeQuality(){
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
       <div><div style="font-size:.75rem;color:var(--muted);margin-bottom:4px;text-align:center">Smash Factor</div>
            <canvas id="chartSmash" style="height:${h}px"></canvas></div>
-      <div><div style="font-size:.75rem;color:var(--muted);margin-bottom:4px;text-align:center">Club Speed (mph)</div>
+      <div><div style="font-size:.75rem;color:var(--muted);margin-bottom:4px;text-align:center">Club Speed (${appSettings.speedUnit==="kmh"?"km/h":"mph"})</div>
            <canvas id="chartClubSpeed" style="height:${h}px"></canvas></div>
       <div><div style="font-size:.75rem;color:var(--muted);margin-bottom:4px;text-align:center">Spin Rate (rpm)</div>
            <canvas id="chartSpinRate" style="height:${h}px"></canvas></div>
@@ -2841,7 +3591,7 @@ function renderStrikeQuality(){
     clubs.map(c=>byClub[c].at(-1).avg_smash_factor??null),
     v=>v==null?"transparent":v>=1.45?"rgba(34,197,94,.6)":v>=1.35?"rgba(245,158,11,.6)":"rgba(239,68,68,.55)");
   mkBar("chartClubSpeed",
-    clubs.map(c=>byClub[c].at(-1).avg_club_speed_mph??null),
+    clubs.map(c=>{ const v=byClub[c].at(-1).avg_club_speed_mph; return v==null?null:appSettings.speedUnit==="kmh"?Math.round(v*1.60934):Math.round(v); }),
     ()=>"rgba(59,130,246,.55)");
   mkBar("chartSpinRate",
     clubs.map(c=>byClub[c].at(-1).avg_spin_rate_rpm??null),
@@ -2917,9 +3667,9 @@ function renderSimClubUsage(){
       data:{
         labels:carryClubs,
         datasets:[
-          {label:"Course avg", data:carryClubs.map(c=>avgArr(stats[c].carries)),
+          {label:"Course avg", data:carryClubs.map(c=>toChartDist(avgArr(stats[c].carries))),
            backgroundColor:"rgba(59,130,246,.55)",borderRadius:3},
-          {label:"Range avg",  data:carryClubs.map(c=>byClub[c].at(-1).avg_carry_m),
+          {label:"Range avg",  data:carryClubs.map(c=>toChartDist(byClub[c].at(-1).avg_carry_m)),
            backgroundColor:"rgba(100,116,139,.45)",borderRadius:3},
         ]
       },
@@ -2927,7 +3677,7 @@ function renderSimClubUsage(){
         indexAxis:"y", responsive:true, maintainAspectRatio:false,
         plugins:{legend:{labels:{color:TICK_COLOR,font:{size:11},boxWidth:12}}},
         scales:{
-          x:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR},title:{display:true,text:"Carry (m)",color:TICK_COLOR}},
+          x:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR},title:{display:true,text:appSettings.distUnit==="yd"?"Carry (yd)":"Carry (m)",color:TICK_COLOR}},
           y:{grid:{color:GRID_COLOR},ticks:{color:TICK_COLOR}},
         }
       }
@@ -2951,7 +3701,7 @@ function renderSimClubUsage(){
       const rangeCarry  = byClub[c]?.at(-1)?.avg_carry_m;
       const gap = carry&&rangeCarry ? carry-rangeCarry : null;
       const gapHtml = gap!=null
-        ? `<span class="${Math.abs(gap)<=5?'col-good':gap>0?'col-good':'col-bad'}">${gap>0?"+":""}${gap}m</span>`
+        ? `<span class="${Math.abs(gap)<=5?'col-good':gap>0?'col-good':'col-bad'}">${gap>=0?"+":"−"}${fmtDist(Math.abs(gap))}</span>`
         : "—";
       return`<tr>
         <td><span class="pill pill-practice" style="font-size:.7rem">${esc(c)}</span></td>
@@ -2960,7 +3710,7 @@ function renderSimClubUsage(){
         <td style="color:#fca5a5">${roughPct>0?roughPct+"%":"—"}</td>
         <td style="color:#fde68a">${playRoughPct>0?playRoughPct+"%":"—"}</td>
         ${penalty?`<td style="color:#f87171">${Math.round(penalty/s.count*100)}%</td>`:`<td style="color:var(--muted)">—</td>`}
-        <td style="color:var(--muted)">${carry!=null?carry+"m":"—"}</td>
+        <td style="color:var(--muted)">${carry!=null?fmtDist(carry):"—"}</td>
         <td>${gapHtml}</td>
       </tr>`;
     }).join("");
@@ -3051,9 +3801,10 @@ function buildDashboardContext(){
   const fmt = v => v!=null?(v>0?"+":"")+v.toFixed(1):"n/a";
 
   const profileLines = [
-    playerProfile.name  ? `Name: ${playerProfile.name}` : null,
-    playerProfile.age   ? `Age: ${playerProfile.age}` : null,
-    playerProfile.hcp   ? `Self-reported HCP: ${playerProfile.hcp}` : null,
+    playerProfile.name   ? `Name: ${playerProfile.name}` : null,
+    playerProfile.age    ? `Age: ${playerProfile.age}` : null,
+    playerProfile.gender ? `Gender: ${playerProfile.gender.charAt(0).toUpperCase()+playerProfile.gender.slice(1)}` : null,
+    playerProfile.hcp    ? `Self-reported HCP: ${playerProfile.hcp}` : null,
     `Handedness: ${playerProfile.handedness === "left" ? "Left-handed" : "Right-handed"}`,
     playerProfile.goals ? `Goals: ${playerProfile.goals}` : null,
   ].filter(Boolean).join("\n");
@@ -3257,8 +4008,8 @@ async function sendCoachMessage(){
   const text=input.value.trim();
   if(!text) return;
 
-  const apiKey=document.getElementById("apiKey").value.trim();
-  if(!apiKey){ showToast("Enter your Anthropic API key first","error"); return; }
+  const apiKey=getApiKey();
+  if(!apiKey){ showToast("Set your Anthropic API key in ⚙️ Settings first","error"); return; }
 
   input.value="";
   coachHistory.push({role:"user",content:text});
@@ -3384,18 +4135,18 @@ function openClubDetail(clubName){
     const accCls   = s.target_hit_pct==null?"var(--muted)":s.target_hit_pct>=65?"#86efac":s.target_hit_pct>=45?"#fde68a":"#fca5a5";
     return`<tr style="border-bottom:1px solid rgba(255,255,255,.04)">
       <td style="color:var(--muted);padding:6px 8px;white-space:nowrap">${s.date||"—"}</td>
-      <td style="padding:6px 8px;font-weight:700">${s.avg_carry_m!=null?s.avg_carry_m+"m":"—"}</td>
-      <td style="padding:6px 8px;color:var(--muted)">${s.min_carry_m!=null?s.min_carry_m+"m":"—"}</td>
-      <td style="padding:6px 8px;color:var(--muted)">${maxC!=null?maxC+"m":"—"}</td>
-      <td style="padding:6px 8px;color:var(--muted)">${(maxC!=null&&s.min_carry_m!=null)?(maxC-s.min_carry_m)+"m":"—"}</td>
+      <td style="padding:6px 8px;font-weight:700">${fmtDist(s.avg_carry_m)}</td>
+      <td style="padding:6px 8px;color:var(--muted)">${fmtDist(s.min_carry_m)}</td>
+      <td style="padding:6px 8px;color:var(--muted)">${fmtDist(maxC)}</td>
+      <td style="padding:6px 8px;color:var(--muted)">${(maxC!=null&&s.min_carry_m!=null)?fmtDist(maxC-s.min_carry_m):"—"}</td>
       <td style="padding:6px 8px;color:${accCls}">${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</td>
       <td style="padding:6px 8px">${shapeS?`<span class="shape-badge shape-${shapeS}" style="margin:0;font-size:.6rem;padding:1px 5px">${shapeS.toUpperCase()}</span>`:"—"}</td>
-      <td style="padding:6px 8px;color:${smashCls||'var(--muted)'}">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
-      <td style="padding:6px 8px;color:var(--muted)">${s.avg_club_speed_mph!=null?Math.round(s.avg_club_speed_mph)+"mph":"—"}</td>
-      <td style="padding:6px 8px">${degFmt(s.avg_face_to_path)}</td>
-      <td style="padding:6px 8px">${degFmt(s.avg_spin_axis_deg)}</td>
-      <td style="padding:6px 8px">${degFmt(s.avg_club_path)}</td>
-      <td style="padding:6px 8px">${degFmt(s.avg_attack_angle_deg)}</td>
+      <td class="pro-only" style="padding:6px 8px;color:${smashCls||'var(--muted)'}">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
+      <td class="pro-only" style="padding:6px 8px;color:var(--muted)">${fmtSpeed(s.avg_club_speed_mph)}</td>
+      <td class="pro-only" style="padding:6px 8px">${degFmt(s.avg_face_to_path)}</td>
+      <td class="pro-only" style="padding:6px 8px">${degFmt(s.avg_spin_axis_deg)}</td>
+      <td class="pro-only" style="padding:6px 8px">${degFmt(s.avg_club_path)}</td>
+      <td class="pro-only" style="padding:6px 8px">${degFmt(s.avg_attack_angle_deg)}</td>
     </tr>`;
   }).join("");
 
@@ -3410,22 +4161,39 @@ function openClubDetail(clubName){
           ${longTrend?`<span class="club-trend ${longTrend.direction==='gaining'?'trend-up':'trend-down'}" style="font-size:.72rem;font-weight:600">${longTrend.direction==='gaining'?'📈':'📉'} ${longTrend.metres}m ${longTrend.direction} over ${longTrend.n} sessions</span>`:""}
         </div>
       </div>
-      ${perf!=null?`<div style="text-align:right">
-        <div style="font-size:.65rem;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Performance</div>
-        <div style="font-size:2.2rem;font-weight:800;color:${perfColor};line-height:1">${perf.overall}<span style="font-size:.9rem;color:var(--muted);font-weight:400">/100</span></div>
-        <div style="font-size:.65rem;color:var(--muted);margin-top:2px">${
-          [perf.accuracy!=null?`Acc ${perf.accuracy}`:null,
-           perf.consistency!=null?`Con ${perf.consistency}`:null,
-           perf.distanceControl!=null?`Dist ${perf.distanceControl}`:null,
-           perf.strikeQuality>0?`Strike ${perf.strikeQuality}`:null]
-          .filter(Boolean).join(' · ')}</div>
-      </div>`:""}
     </div>
+
+    <!-- Performance panel (adv-only) — full-width visual gauge + component bars -->
+    ${perf!=null?`
+    <div class="adv-only perf-panel">
+      <div class="perf-panel-label">Performance Score</div>
+      <div class="perf-panel-body">
+        <div class="perf-score-circle" style="border-color:${perfColor}">
+          <span class="perf-score-num" style="color:${perfColor}">${perf.overall}</span>
+          <span class="perf-score-denom">/100</span>
+        </div>
+        <div class="perf-bars">
+          ${[
+            ["Accuracy",       perf.accuracy,         "How precise strikes are toward the target"],
+            ["Consistency",    perf.consistency,      "Session-to-session repeatability"],
+            ["Distance",       perf.distanceControl,  "Carry distance vs your benchmark"],
+            ["Strike Quality", perf.strikeQuality>0?perf.strikeQuality:null, "Smash factor & ball speed quality"],
+          ].filter(([,v])=>v!=null).map(([label,val,desc])=>{
+            const col=val>=70?"#86efac":val>=50?"#fde68a":"#fca5a5";
+            return`<div class="perf-bar-row">
+              <div class="perf-bar-label" title="${desc}">${label}</div>
+              <div class="perf-bar-track"><div class="perf-bar-fill" style="width:${val}%;background:${col}"></div></div>
+              <div class="perf-bar-val" style="color:${col}">${val}<span style="color:var(--muted);font-size:.68rem">/100</span></div>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+    </div>`:""}
 
     <!-- KPI tiles -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
-      ${kpiTile("Avg Carry",avgOverall,"m","var(--text)")}
-      ${kpiTile("Spread",avgSpread!=null?avgSpread:"","m","var(--muted)")}
+      ${kpiTile("Avg Carry",avgOverall!=null?fmtDist(avgOverall):"","","var(--text)")}
+      ${kpiTile("Spread",avgSpread!=null?fmtDist(avgSpread):"","","var(--muted)")}
       ${kpiTile("Target Hit",avgAcc!=null?avgAcc+"%":null,"",avgAcc==null?"var(--muted)":avgAcc>=65?"#86efac":avgAcc>=45?"#fde68a":"#fca5a5")}
       ${avgSmash!=null?kpiTile("Smash",avgSmash.toFixed(2),"",avgSmash>=1.45?"#86efac":avgSmash>=1.35?"#fde68a":"#fca5a5"):""}
       ${chcp!=null?kpiTile("HCP Equiv",chcp.hcp.toFixed(1),"","var(--text)"):""}
@@ -3461,7 +4229,7 @@ function openClubDetail(clubName){
         <div style="font-size:.74rem;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Carry Distance per Session</div>
         <canvas id="chartDetailTrend" style="width:100%;height:180px"></canvas>
       </div>
-      ${shapeDist?`<div>
+      ${shapeDist?`<div class="adv-only">
         <div style="font-size:.74rem;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Shot Shape Distribution</div>
         <canvas id="chartDetailShape" style="width:100%;height:180px"></canvas>
       </div>`:""}
@@ -3479,12 +4247,12 @@ function openClubDetail(clubName){
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)" title="Carry spread (max − min)">Spread</th>
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)" title="Depends on target size">Hit% ⓘ</th>
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Shape</th>
-        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Smash</th>
-        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Speed</th>
-        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">F→P°</th>
-        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Axis°</th>
-        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Path°</th>
-        <th style="padding:8px 8px;border-bottom:1px solid var(--border)">AoA°</th>
+        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Smash</th>
+        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Speed</th>
+        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">F→P°</th>
+        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Axis°</th>
+        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Path°</th>
+        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">AoA°</th>
       </tr></thead>
       <tbody style="color:var(--text)">${tableRows}</tbody>
     </table>
@@ -3493,9 +4261,9 @@ function openClubDetail(clubName){
   // Carry trend chart — min/max band + avg line
   destroyChart("chartDetailTrend");
   const carryLabels = sessions.map((s,i)=>s.date||`#${i+1}`);
-  const carryAvg    = sessions.map(s=>s.avg_carry_m??null);
-  const carryMin    = sessions.map(s=>s.min_carry_m??null);
-  const carryMax    = sessions.map(s=>s.max_carry_m||s.longest_m||null);
+  const carryAvg    = sessions.map(s=>toChartDist(s.avg_carry_m??null));
+  const carryMin    = sessions.map(s=>toChartDist(s.min_carry_m??null));
+  const carryMax    = sessions.map(s=>toChartDist(s.max_carry_m||s.longest_m||null));
   const hasRange    = carryMin.some(v=>v!=null)&&carryMax.some(v=>v!=null);
   const carryDS     = [{
     label:"Avg Carry",data:carryAvg,borderColor:"#3b82f6",
@@ -3514,7 +4282,7 @@ function openClubDetail(clubName){
       plugins:{legend:{display:hasRange,labels:{color:DET_TICK,font:{size:10},boxWidth:10}}},
       scales:{
         x:{grid:{color:GRID_COLOR},ticks:{color:DET_TICK,maxRotation:45,font:{size:10}}},
-        y:{title:{display:true,text:"Carry (m)",color:DET_TICK},grid:{color:GRID_COLOR},ticks:{color:DET_TICK}},
+        y:{title:{display:true,text:appSettings.distUnit==="yd"?"Carry (yd)":"Carry (m)",color:DET_TICK},grid:{color:GRID_COLOR},ticks:{color:DET_TICK}},
       }}
   });
 
@@ -3699,7 +4467,7 @@ function openRoundDetail(index){
       ${r.fairways_hit_pct!=null?kpi("Fairways",r.fairways_hit_pct+"%",r.fairways_hit_pct,"fairways_hit_pct"):""}
       ${r.scrambling_pct!=null?kpi("Scrambling",r.scrambling_pct+"%",r.scrambling_pct,"scrambling_pct"):""}
       ${r.putts_per_hole!=null?kpi("Putts/Hole",r.putts_per_hole.toFixed(2),r.putts_per_hole,"putts_per_hole",true):""}
-      ${r.avg_drive_m!=null?kpi("Avg Drive",r.avg_drive_m+"m",r.avg_drive_m,"avg_drive_m"):""}
+      ${r.avg_drive_m!=null?kpi("Avg Drive",fmtDist(r.avg_drive_m),r.avg_drive_m,"avg_drive_m"):""}
     </div>`;
 
   // ── Score chart ──────────────────────────────────────────────────────────
@@ -3755,7 +4523,7 @@ function openRoundDetail(index){
               <td style="padding:5px 8px;text-align:center">
                 ${showFw?(h.fairway_hit?`<span style="color:var(--accent)">✓</span>`:`<span style="color:var(--danger)">✗</span>`):"<span style='color:var(--muted)'>—</span>"}
               </td>
-              ${hasDrive?`<td style="padding:5px 8px;text-align:center;color:var(--muted);font-size:.75rem">${h.drive_m!=null?h.drive_m+"m":"—"}</td>`:""}
+              ${hasDrive?`<td style="padding:5px 8px;text-align:center;color:var(--muted);font-size:.75rem">${h.drive_m!=null?fmtDist(h.drive_m):"—"}</td>`:""}
             </tr>`;
           }).join("")}
         </tbody>
@@ -3771,7 +4539,7 @@ function openRoundDetail(index){
             <td style="padding:5px 8px;text-align:center">${r.gir_pct!=null?r.gir_pct+"%":"—"}</td>
             <td style="padding:5px 8px;text-align:center">${r.putts_per_hole!=null?r.putts_per_hole.toFixed(1)+" /h":"—"}</td>
             <td style="padding:5px 8px;text-align:center">${r.fairways_hit_pct!=null?r.fairways_hit_pct+"%":"—"}</td>
-            ${holes.some(h=>h.drive_m!=null)?`<td style="padding:5px 8px;text-align:center">${r.avg_drive_m!=null?r.avg_drive_m+"m":"—"}</td>`:""}
+            ${holes.some(h=>h.drive_m!=null)?`<td style="padding:5px 8px;text-align:center">${r.avg_drive_m!=null?fmtDist(r.avg_drive_m):"—"}</td>`:""}
           </tr>
         </tfoot>`:""}
       </table>
@@ -3897,5 +4665,6 @@ function closeRoundDetail(){
     <div id="roundDetailContent"></div>
   </div>
 </div>
+
 </body>
 </html>
