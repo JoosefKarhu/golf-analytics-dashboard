@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Golf Analytics — Sign In</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --surface2: #21262d;
+    --border:   #30363d;
+    --text:     #e6edf3;
+    --muted:    #8b949e;
+    --green:    #2ea043;
+    --green-h:  #3fb950;
+    --accent:   #1f6feb;
+    --accent-h: #388bfd;
+    --red:      #da3633;
+    --radius:   12px;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Card shell ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 440px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+  .brand-icon { font-size: 1.8rem; line-height: 1; }
+  .brand-name { font-size: 1.1rem; font-weight: 700; letter-spacing: -.3px; }
+  .brand-sub  { font-size: .78rem; color: var(--muted); }
+  h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { font-size: .85rem; color: var(--muted); margin-bottom: 24px; }
+
+  /* ── Form elements ── */
+  .field { margin-bottom: 16px; }
+  label  { display: block; font-size: .8rem; font-weight: 600; margin-bottom: 6px; color: var(--muted); }
+  input[type="text"], input[type="email"], input[type="password"], input[type="number"], select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: .9rem;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  .pw-wrap { position: relative; }
+  .pw-wrap input { padding-right: 40px; }
+  .pw-eye {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; color: var(--muted);
+    font-size: 1rem; padding: 0; line-height: 1;
+  }
+  .pw-eye:hover { color: var(--text); }
+  .hint { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+
+  /* ── Buttons ── */
+  .btn {
+    width: 100%; padding: 11px; border-radius: 8px; font-size: .9rem;
+    font-weight: 600; cursor: pointer; border: none; transition: background .15s, opacity .15s;
+  }
+  .btn-primary { background: var(--green); color: #fff; margin-top: 8px; }
+  .btn-primary:hover:not(:disabled) { background: var(--green-h); }
+  .btn-primary:disabled { opacity: .5; cursor: default; }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    margin-top: 6px;
+  }
+  .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+  /* ── Divider / switch ── */
+  .switch { text-align: center; margin-top: 18px; font-size: .82rem; color: var(--muted); }
+  .switch a { color: var(--accent-h); text-decoration: none; font-weight: 600; }
+  .switch a:hover { text-decoration: underline; }
+
+  /* ── Error / success banners ── */
+  .banner {
+    border-radius: 8px; padding: 10px 14px; font-size: .82rem;
+    margin-bottom: 14px; display: none;
+  }
+  .banner.error   { background: rgba(218,54,51,.15); border: 1px solid rgba(218,54,51,.4); color: #ff7b72; }
+  .banner.success { background: rgba(46,160,67,.15); border: 1px solid rgba(46,160,67,.4); color: #7ee787; }
+  .banner.show { display: block; }
+
+  /* ── Units toggle ── */
+  .toggle-group { display: flex; gap: 8px; }
+  .tgl-btn {
+    flex: 1; padding: 9px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--muted); font-size: .82rem; cursor: pointer; font-weight: 600;
+    transition: all .15s;
+  }
+  .tgl-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── Step indicator ── */
+  .step-dots { display: flex; gap: 7px; margin-bottom: 24px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background .3s; }
+  .dot.active { background: var(--accent); }
+  .dot.done   { background: var(--green); }
+
+  /* ── Profile label row ── */
+  .pf-row { display: flex; gap: 12px; }
+  .pf-row .field { flex: 1; }
+  .optional-tag {
+    font-size: .7rem; background: var(--surface2); border-radius: 4px;
+    padding: 1px 6px; color: var(--muted); margin-left: 6px; font-weight: 400;
+  }
+
+  /* ── TUTORIAL LAYOUT ── */
+  body.tutorial-mode {
+    align-items: stretch;
+    padding: 0;
+  }
+  .tutorial-shell {
+    display: flex; width: 100%; height: 100vh; overflow: hidden;
+  }
+  /* Sidebar */
+  .tut-sidebar {
+    width: 240px; min-width: 200px; background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 28px 20px;
+  }
+  .tut-brand { display: flex; align-items: center; gap: 8px; margin-bottom: 32px; }
+  .tut-brand-icon { font-size: 1.4rem; }
+  .tut-brand-name { font-size: .95rem; font-weight: 700; }
+  .tut-title { font-size: .7rem; font-weight: 700; text-transform: uppercase;
+               letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
+  .tut-steps { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .tut-step-pill {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; cursor: default; transition: all .2s;
+  }
+  .tut-step-pill.active { background: rgba(31,111,235,.15); border-color: var(--accent); }
+  .tut-step-pill.done   { border-color: var(--green); opacity: .7; }
+  .tut-step-num {
+    width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem; font-weight: 700; flex-shrink: 0; color: var(--muted);
+  }
+  .tut-step-pill.active .tut-step-num { border-color: var(--accent); color: var(--accent); }
+  .tut-step-pill.done   .tut-step-num { border-color: var(--green); color: var(--green); }
+  .tut-step-label { font-size: .82rem; font-weight: 600; color: var(--muted); }
+  .tut-step-pill.active .tut-step-label { color: var(--text); }
+  .tut-footer { margin-top: auto; font-size: .75rem; color: var(--muted); }
+  .tut-skip { color: var(--muted); text-decoration: none; font-size: .78rem; }
+  .tut-skip:hover { color: var(--text); }
+
+  /* Chat area */
+  .tut-main {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .tut-header {
+    padding: 18px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .tut-header-title { font-size: 1.05rem; font-weight: 700; }
+  .tut-header-sub { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+  .tut-chat {
+    flex: 1; overflow-y: auto; padding: 20px 24px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .chat-msg {
+    max-width: 78%; padding: 12px 16px; border-radius: 12px;
+    font-size: .875rem; line-height: 1.55; white-space: pre-wrap;
+  }
+  .chat-msg.assistant {
+    background: var(--surface2); border: 1px solid var(--border);
+    align-self: flex-start; border-bottom-left-radius: 4px;
+  }
+  .chat-msg.user {
+    background: var(--accent); color: #fff;
+    align-self: flex-end; border-bottom-right-radius: 4px;
+  }
+  .chat-msg.typing {
+    background: var(--surface2); border: 1px solid var(--border);
+    align-self: flex-start; color: var(--muted); font-style: italic;
+  }
+  .tut-input-bar {
+    padding: 14px 24px; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: flex-end;
+  }
+  .tut-input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); padding: 10px 14px;
+    font-size: .875rem; outline: none; resize: none; max-height: 120px;
+    font-family: inherit; transition: border-color .15s;
+  }
+  .tut-input:focus { border-color: var(--accent); }
+  .tut-send-btn {
+    background: var(--accent); border: none; border-radius: 10px;
+    color: #fff; padding: 10px 16px; font-size: .875rem; font-weight: 600;
+    cursor: pointer; transition: background .15s; white-space: nowrap;
+  }
+  .tut-send-btn:hover:not(:disabled) { background: var(--accent-h); }
+  .tut-send-btn:disabled { opacity: .4; cursor: default; }
+  .tut-next-btn {
+    background: var(--green); border: none; border-radius: 10px;
+    color: #fff; padding: 10px 18px; font-size: .875rem; font-weight: 600;
+    cursor: pointer; transition: background .15s; white-space: nowrap; display: none;
+  }
+  .tut-next-btn:hover { background: var(--green-h); }
+  .tut-finish-btn {
+    background: var(--green); border: none; border-radius: 10px;
+    color: #fff; padding: 10px 18px; font-size: .875rem; font-weight: 600;
+    cursor: pointer; transition: background .15s; display: none; width: 100%;
+    margin: 8px 0 0; font-size: .95rem;
+  }
+  .tut-finish-btn:hover { background: var(--green-h); }
+
+  /* Spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin .7s linear infinite;
+    margin-right: 6px; vertical-align: middle;
+  }
+
+  @media (max-width: 600px) {
+    .card { padding: 28px 20px; }
+    .tut-sidebar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     CARD STATES: login / register / profile
+══════════════════════════════════════════════════════════════ -->
+<div id="cardWrap">
+
+<!-- ── State: Login ── -->
+<div id="stateLogin" class="card" style="display:none">
+  <div class="brand">
+    <div class="brand-icon">⛳</div>
+    <div><div class="brand-name">Golf Analytics</div><div class="brand-sub">Your personal caddie</div></div>
+  </div>
+  <h2>Welcome back</h2>
+  <p class="subtitle">Sign in to your account to continue</p>
+  <div class="banner error" id="loginErr"></div>
+  <div class="field">
+    <label>Email address</label>
+    <input type="email" id="loginEmail" autocomplete="email" placeholder="you@example.com">
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <div class="pw-wrap">
+      <input type="password" id="loginPw" autocomplete="current-password" placeholder="••••••••">
+      <button class="pw-eye" type="button" onclick="togglePw('loginPw',this)">👁</button>
+    </div>
+  </div>
+  <button class="btn btn-primary" id="loginBtn" onclick="doLogin()">Sign In</button>
+  <div class="switch">Don't have an account? <a href="/register">Create one</a></div>
+</div>
+
+<!-- ── State: Register ── -->
+<div id="stateRegister" class="card" style="display:none">
+  <div class="brand">
+    <div class="brand-icon">⛳</div>
+    <div><div class="brand-name">Golf Analytics</div><div class="brand-sub">Your personal caddie</div></div>
+  </div>
+  <h2>Create your account</h2>
+  <p class="subtitle">Get started with your golf analytics journey</p>
+  <div class="banner error" id="regErr"></div>
+  <div class="field">
+    <label>Display name</label>
+    <input type="text" id="regName" autocomplete="given-name" placeholder="Your first name">
+  </div>
+  <div class="field">
+    <label>Email address</label>
+    <input type="email" id="regEmail" autocomplete="email" placeholder="you@example.com">
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <div class="pw-wrap">
+      <input type="password" id="regPw" autocomplete="new-password" placeholder="Min. 8 characters">
+      <button class="pw-eye" type="button" onclick="togglePw('regPw',this)">👁</button>
+    </div>
+    <div class="hint">At least 8 characters</div>
+  </div>
+  <div class="field">
+    <label>Confirm password</label>
+    <div class="pw-wrap">
+      <input type="password" id="regPw2" autocomplete="new-password" placeholder="Repeat password">
+      <button class="pw-eye" type="button" onclick="togglePw('regPw2',this)">👁</button>
+    </div>
+  </div>
+  <button class="btn btn-primary" id="regBtn" onclick="doRegister()">Create Account</button>
+  <div class="switch">Already have an account? <a href="/login">Sign in</a></div>
+</div>
+
+<!-- ── State: Profile setup ── -->
+<div id="stateProfile" class="card" style="display:none">
+  <div class="step-dots" id="profileDots">
+    <div class="dot done"></div>
+    <div class="dot active"></div>
+    <div class="dot"></div>
+  </div>
+  <h2>Set up your profile</h2>
+  <p class="subtitle">Help the AI Coach personalise your experience</p>
+  <div class="banner error" id="pfErr"></div>
+  <div class="field">
+    <label>Your name</label>
+    <input type="text" id="pfName" autocomplete="given-name" placeholder="First name">
+  </div>
+  <div class="pf-row">
+    <div class="field">
+      <label>Home course <span class="optional-tag">optional</span></label>
+      <input type="text" id="pfCourse" placeholder="e.g. Augusta National">
+    </div>
+    <div class="field">
+      <label>Handicap <span class="optional-tag">optional</span></label>
+      <input type="number" id="pfHcp" placeholder="e.g. 12" step="0.1" min="-10" max="54">
+      <div class="hint">We'll estimate from your rounds if blank</div>
+    </div>
+  </div>
+  <div class="pf-row">
+    <div class="field">
+      <label>Handedness</label>
+      <select id="pfHand">
+        <option value="right">Right-handed</option>
+        <option value="left">Left-handed</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Gender <span class="optional-tag">optional</span></label>
+      <select id="pfGender">
+        <option value="">Prefer not to say</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+  </div>
+  <div class="field">
+    <label>Distance unit</label>
+    <div class="toggle-group">
+      <button class="tgl-btn active" id="unitM"  onclick="selectUnit('m')">Metric (m)</button>
+      <button class="tgl-btn"        id="unitYd" onclick="selectUnit('yd')">Imperial (yd)</button>
+    </div>
+  </div>
+  <button class="btn btn-primary" id="pfBtn" onclick="doProfile()">Save &amp; Continue →</button>
+</div>
+
+</div><!-- #cardWrap -->
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     TUTORIAL STATE (full-page layout, hidden until needed)
+══════════════════════════════════════════════════════════════ -->
+<div id="stateTutorial" style="display:none;width:100%;height:100vh">
+<div class="tutorial-shell">
+
+  <!-- Sidebar -->
+  <nav class="tut-sidebar">
+    <div class="tut-brand">
+      <div class="tut-brand-icon">⛳</div>
+      <div class="tut-brand-name">Golf Analytics</div>
+    </div>
+    <div class="tut-title">Tutorial</div>
+    <div class="tut-steps" id="tutStepList">
+      <div class="tut-step-pill active" data-step="1">
+        <div class="tut-step-num">1</div>
+        <div class="tut-step-label">Adding Rounds</div>
+      </div>
+      <div class="tut-step-pill" data-step="2">
+        <div class="tut-step-num">2</div>
+        <div class="tut-step-label">Range Sessions</div>
+      </div>
+      <div class="tut-step-pill" data-step="3">
+        <div class="tut-step-num">3</div>
+        <div class="tut-step-label">Dashboard KPIs</div>
+      </div>
+      <div class="tut-step-pill" data-step="4">
+        <div class="tut-step-num">4</div>
+        <div class="tut-step-label">AI Coach</div>
+      </div>
+    </div>
+    <div class="tut-footer">
+      <a class="tut-skip" href="#" onclick="skipTutorial();return false">Skip tutorial →</a>
+    </div>
+  </nav>
+
+  <!-- Chat main area -->
+  <div class="tut-main">
+    <div class="tut-header">
+      <div>
+        <div class="tut-header-title" id="tutStepTitle">Step 1 of 4 — Adding Rounds</div>
+        <div class="tut-header-sub">Your AI Coach will guide you through the dashboard</div>
+      </div>
+    </div>
+
+    <div class="tut-chat" id="tutChat"></div>
+
+    <div class="tut-input-bar">
+      <textarea class="tut-input" id="tutInput" rows="1" placeholder="Ask a follow-up question…"
+        onkeydown="tutKeydown(event)" oninput="autoResize(this)"></textarea>
+      <button class="tut-next-btn" id="tutNextBtn" onclick="tutNext()">Next Topic ›</button>
+      <button class="tut-send-btn" id="tutSendBtn" onclick="tutSend()">Send</button>
+    </div>
+    <div style="padding:0 24px">
+      <button class="tut-finish-btn" id="tutFinishBtn" onclick="finishTutorial()">
+        Take me to the Dashboard →
+      </button>
+    </div>
+  </div>
+
+</div>
+</div><!-- #stateTutorial -->
+
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   STATE ROUTING
+════════════════════════════════════════════════════════════════ */
+let selectedUnit = "m";
+let tutStep = 1; // 1–4 tutorial steps (maps to DB tutorial_step 1–5, 5=done)
+let tutHistory = []; // per-step chat history
+let tutBusy = false;
+
+const STEP_TITLES = {
+  1: "Step 1 of 4 — Adding Rounds",
+  2: "Step 2 of 4 — Range Sessions",
+  3: "Step 3 of 4 — Dashboard KPIs",
+  4: "Step 4 of 4 — Using the AI Coach",
+};
+
+// Seed opening messages shown instantly before the AI responds
+const STEP_SEEDS = {
+  1: "Hi! I'm your AI Golf Coach. Let's start with how to get your rounds into the dashboard. I'll walk you through everything — it only takes a few steps!",
+  2: "Great! Now let's cover range sessions. These are your practice sessions on the driving range, and they're just as important as your on-course rounds.",
+  3: "Now let's explore what the dashboard shows you. The KPIs and charts are designed to highlight exactly where you can improve your game.",
+  4: "Finally, let's talk about me — your AI Coach. I'm here whenever you want to dig into your data or get personalised advice.",
+};
+
+async function routeOnLoad() {
+  const path = window.location.pathname;
+
+  // Check current auth state
+  let me = null;
+  try {
+    const r = await fetch("/auth/me");
+    if (r.ok) me = await r.json();
+  } catch(e) {}
+
+  if (me) {
+    // Logged in
+    if (me.onboarding_complete) {
+      window.location.href = "/";
+      return;
+    }
+    if (me.tutorial_step >= 1) {
+      // Already past profile — go to dashboard where overlay tour runs
+      window.location.href = "/";
+      return;
+    }
+    // Need profile
+    showState("profile", me.display_name);
+    return;
+  }
+
+  // Not logged in
+  if (path === "/register") {
+    showState("register");
+  } else {
+    showState("login");
+  }
+}
+
+function showState(name, prefillName) {
+  document.getElementById("cardWrap").style.display = "";
+  document.getElementById("stateTutorial").style.display = "none";
+  document.body.classList.remove("tutorial-mode");
+  ["stateLogin","stateRegister","stateProfile"].forEach(id =>
+    document.getElementById(id).style.display = "none"
+  );
+  if (name === "login")    document.getElementById("stateLogin").style.display = "";
+  if (name === "register") document.getElementById("stateRegister").style.display = "";
+  if (name === "profile") {
+    document.getElementById("stateProfile").style.display = "";
+    if (prefillName) document.getElementById("pfName").value = prefillName;
+  }
+}
+
+function showTutorial(dbStep) {
+  document.getElementById("cardWrap").style.display = "none";
+  document.getElementById("stateTutorial").style.display = "";
+  document.body.classList.add("tutorial-mode");
+
+  // dbStep 0 or 1 → start at tutorial step 1
+  tutStep = Math.max(1, Math.min(dbStep, 4));
+  renderStepSidebar();
+  startTutStep(tutStep);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTH: LOGIN
+════════════════════════════════════════════════════════════════ */
+async function doLogin() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const pw    = document.getElementById("loginPw").value;
+  const errEl = document.getElementById("loginErr");
+  const btn   = document.getElementById("loginBtn");
+  errEl.className = "banner error";
+
+  if (!email || !pw) { showErr(errEl, "Please enter your email and password."); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Signing in…';
+
+  try {
+    const r = await fetch("/auth/login", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({email, password: pw}),
+    });
+    const d = await r.json();
+    if (!r.ok) { showErr(errEl, d.error || "Login failed."); return; }
+
+    const u = d.user;
+    if (!u.onboarding_complete) {
+      showState("profile", u.display_name);
+    } else {
+      window.location.href = "/";  // Dashboard handles tutorial overlay
+    }
+  } catch(e) {
+    showErr(errEl, "Network error — please try again.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Sign In";
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTH: REGISTER
+════════════════════════════════════════════════════════════════ */
+async function doRegister() {
+  const name  = document.getElementById("regName").value.trim();
+  const email = document.getElementById("regEmail").value.trim();
+  const pw    = document.getElementById("regPw").value;
+  const pw2   = document.getElementById("regPw2").value;
+  const errEl = document.getElementById("regErr");
+  const btn   = document.getElementById("regBtn");
+  errEl.className = "banner error";
+
+  if (!name)  { showErr(errEl, "Please enter your display name."); return; }
+  if (!email || !email.includes("@")) { showErr(errEl, "Please enter a valid email."); return; }
+  if (pw.length < 8) { showErr(errEl, "Password must be at least 8 characters."); return; }
+  if (pw !== pw2)    { showErr(errEl, "Passwords don't match."); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Creating account…';
+
+  try {
+    const r = await fetch("/auth/register", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({email, password: pw, display_name: name}),
+    });
+    const d = await r.json();
+    if (!r.ok) { showErr(errEl, d.error || "Registration failed."); return; }
+    showState("profile", d.user?.display_name || name);
+  } catch(e) {
+    showErr(errEl, "Network error — please try again.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Create Account";
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PROFILE SETUP
+════════════════════════════════════════════════════════════════ */
+function selectUnit(u) {
+  selectedUnit = u;
+  document.getElementById("unitM").classList.toggle("active", u === "m");
+  document.getElementById("unitYd").classList.toggle("active", u === "yd");
+}
+
+async function doProfile() {
+  const name   = document.getElementById("pfName").value.trim();
+  const course = document.getElementById("pfCourse").value.trim();
+  const hcp    = document.getElementById("pfHcp").value;
+  const errEl  = document.getElementById("pfErr");
+  const btn    = document.getElementById("pfBtn");
+  errEl.className = "banner error";
+
+  if (!name) { showErr(errEl, "Please enter your name."); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Saving…';
+
+  try {
+    const r = await fetch("/auth/onboarding", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        display_name: name,
+        home_course: course,
+        handicap_index: hcp ? parseFloat(hcp) : null,
+        units: selectedUnit,
+        handedness: document.getElementById("pfHand").value,
+        gender: document.getElementById("pfGender").value,
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok) { showErr(errEl, d.error || "Save failed."); return; }
+    window.location.href = "/";  // Dashboard overlay tour starts automatically
+  } catch(e) {
+    showErr(errEl, "Network error — please try again.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save & Continue →";
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TUTORIAL
+════════════════════════════════════════════════════════════════ */
+function renderStepSidebar() {
+  document.querySelectorAll(".tut-step-pill").forEach(pill => {
+    const s = parseInt(pill.dataset.step);
+    pill.classList.toggle("active", s === tutStep);
+    pill.classList.toggle("done", s < tutStep);
+  });
+  document.getElementById("tutStepTitle").textContent = STEP_TITLES[tutStep] || "";
+}
+
+async function startTutStep(step) {
+  tutHistory = [];
+  tutBusy = false;
+  document.getElementById("tutNextBtn").style.display = "none";
+  document.getElementById("tutFinishBtn").style.display = "none";
+  document.getElementById("tutInput").disabled = false;
+  document.getElementById("tutSendBtn").disabled = false;
+
+  const chat = document.getElementById("tutChat");
+  if (step > 1) {
+    chat.innerHTML = ""; // clear on new step
+  }
+
+  // Show seed message immediately
+  const seed = STEP_SEEDS[step] || "";
+  if (seed) appendTutMsg("assistant", seed);
+
+  // Then ask coach to elaborate
+  tutHistory.push({role: "user", content: "start"});
+  await tutCallCoach();
+}
+
+async function tutCallCoach() {
+  tutBusy = true;
+  document.getElementById("tutSendBtn").disabled = true;
+  document.getElementById("tutNextBtn").style.display = "none";
+  const typing = appendTutMsg("typing", "Coach is typing…");
+
+  try {
+    const r = await fetch("/api/coach", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        messages: tutHistory,
+        mode: "tutorial",
+        step: tutStep,
+        context: {type:"tutorial", text:""},
+      }),
+    });
+    const d = await r.json();
+    typing.remove();
+
+    if (!r.ok || d.error) {
+      appendTutMsg("assistant", "Sorry, I had trouble connecting. Feel free to ask me anything below!");
+    } else {
+      let reply = d.reply || "";
+      const stepComplete = reply.includes("[STEP_COMPLETE]");
+      reply = reply.replace("[STEP_COMPLETE]", "").trim();
+      tutHistory.push({role: "assistant", content: reply});
+      appendTutMsg("assistant", reply);
+
+      if (stepComplete) {
+        await persistTutStep(tutStep);
+        if (tutStep < 4) {
+          document.getElementById("tutNextBtn").style.display = "";
+        } else {
+          document.getElementById("tutFinishBtn").style.display = "";
+        }
+      }
+    }
+  } catch(e) {
+    typing.remove();
+    appendTutMsg("assistant", "Network error. Feel free to continue or skip to the dashboard.");
+  } finally {
+    tutBusy = false;
+    document.getElementById("tutSendBtn").disabled = false;
+  }
+}
+
+async function tutSend() {
+  if (tutBusy) return;
+  const input = document.getElementById("tutInput");
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  autoResize(input);
+  tutHistory.push({role: "user", content: text});
+  appendTutMsg("user", text);
+  await tutCallCoach();
+}
+
+function tutKeydown(e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    tutSend();
+  }
+}
+
+function tutNext() {
+  if (tutStep >= 4) return;
+  tutStep++;
+  renderStepSidebar();
+  const chat = document.getElementById("tutChat");
+  chat.innerHTML = "";
+  startTutStep(tutStep);
+}
+
+async function persistTutStep(step) {
+  try {
+    await fetch("/auth/tutorial_step", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({step: step + 1}), // store next step so refresh resumes correctly
+    });
+  } catch(e) {}
+}
+
+async function skipTutorial() {
+  try {
+    await fetch("/auth/tutorial_step", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({step: 5}),
+    });
+  } catch(e) {}
+  window.location.href = "/";
+}
+
+async function finishTutorial() {
+  try {
+    await fetch("/auth/tutorial_step", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({step: 5}),
+    });
+  } catch(e) {}
+  window.location.href = "/";
+}
+
+function appendTutMsg(role, text) {
+  const chat = document.getElementById("tutChat");
+  const div = document.createElement("div");
+  div.className = "chat-msg " + role;
+  div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════════════════════════ */
+function showErr(el, msg) {
+  el.textContent = msg;
+  el.className = "banner error show";
+}
+
+function togglePw(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.type = el.type === "password" ? "text" : "password";
+  btn.textContent = el.type === "password" ? "👁" : "🙈";
+}
+
+function autoResize(el) {
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+}
+
+// Enter key support for login/register
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const login = document.getElementById("stateLogin");
+  const reg   = document.getElementById("stateRegister");
+  if (login && login.style.display !== "none") doLogin();
+  else if (reg && reg.style.display !== "none") doRegister();
+});
+
+/* Boot */
+routeOnLoad();
+</script>
+</body>
+</html>

@@ -3,14 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Joonas — Golf Analytics Dashboard</title>
+  <title>CadenceOS</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg:#0d1821; --surface:#162030; --surface2:#1e2e42; --surface3:#263a52;
-      --accent:#22c55e; --accent2:#16a34a; --warn:#f59e0b; --danger:#ef4444;
-      --blue:#3b82f6; --purple:#a855f7; --orange:#f97316;
-      --text:#f1f5f9; --muted:#64748b; --border:#1e3a5f; --radius:10px;
+      /* ── CadenceOS Premium Dark System ────────────────────────────────── */
+      /* Backgrounds — layered deep navy/graphite, never flat black */
+      --bg:      #09101a;    /* near-black with cool navy undertone */
+      --surface: #101c2a;    /* dark graphite surface */
+      --surface2:#182638;    /* elevated charcoal-blue */
+      --surface3:#1f3048;    /* highest elevation */
+      /* Text — soft, never pure white */
+      --text:    #d8e4f0;    /* soft off-white */
+      --muted:   #4f6a80;    /* muted gray-blue (secondary) */
+      --muted2:  #8aafc8;    /* cool light gray (readable secondary) */
+      /* Primary accent — muted premium blue (calm, intelligent, precise) */
+      --accent:  #4a80b0;    /* muted premium blue */
+      --accent2: #386895;    /* deeper blue for hover */
+      /* Positive performance — muted grounded green */
+      --green:   #3a8a5c;    /* muted success / positive trend */
+      --green2:  #2d6e49;    /* deeper green */
+      /* States */
+      --warn:    #c47d0e;    /* muted amber */
+      --danger:  #a83232;    /* deep restrained red */
+      --red:     #a83232;
+      /* Structure */
+      --border:  #1a2e42;    /* subtle, never harsh */
+      --radius:  10px;
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth}
@@ -29,36 +48,127 @@
       transition:border-color .2s}
     .api-input:focus{border-color:var(--accent)}
 
+    /* ── Golf God header button (base layout) ────────────────────────────── */
+    .coach-header-btn{display:flex;align-items:center;gap:9px;padding:8px 18px;
+      font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap;
+      border:none;transition:border-color .15s,background .15s,transform .1s}
+    /* Trial badge on coach button */
+    .coach-trial-badge{font-size:.6rem;background:rgba(196,125,14,.25);
+      border-radius:4px;color:#c47d0e;padding:1px 5px;margin-left:3px;
+      font-weight:700;letter-spacing:.03em}
+
+    /* ── Profile avatar ───────────────────────────────────────────────────── */
+    .profile-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;
+      background:var(--surface3);border:2px solid var(--border);
+      display:flex;align-items:center;justify-content:center;cursor:pointer;
+      flex-shrink:0;transition:border-color .15s;position:relative}
+    .profile-avatar:hover{border-color:var(--accent)}
+    .profile-avatar img{width:100%;height:100%;object-fit:cover;display:none}
+    .profile-avatar .pa-initial{font-size:.85rem;font-weight:700;color:var(--accent);
+      line-height:1;pointer-events:none}
+
+    /* ── Account dropdown ─────────────────────────────────────────────────── */
+    .acct-dropdown-wrap{position:relative;flex-shrink:0}
+    .acct-dropdown{
+      position:absolute;top:calc(100% + 8px);right:0;
+      width:248px;
+      background:#1a2433;border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.5);
+      z-index:999;overflow:hidden;
+      opacity:0;transform:translateY(-6px) scale(.97);
+      pointer-events:none;
+      transition:opacity .15s,transform .15s}
+    .acct-dropdown.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+    .acct-header{display:flex;align-items:center;gap:11px;padding:14px 14px 12px;
+      border-bottom:1px solid rgba(255,255,255,.06)}
+    .acct-avatar-lg{width:40px;height:40px;border-radius:50%;overflow:hidden;
+      background:var(--surface3);border:2px solid var(--border);
+      display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .acct-avatar-lg img{width:100%;height:100%;object-fit:cover;display:none}
+    .acct-avatar-lg .pa-initial{font-size:1rem;font-weight:700;color:var(--accent)}
+    .acct-name{font-size:.85rem;font-weight:700;color:var(--text);line-height:1.2}
+    .acct-plan{display:inline-flex;align-items:center;gap:4px;
+      font-size:.62rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+      padding:2px 7px;border-radius:5px;margin-top:3px}
+    .acct-plan.free{background:rgba(100,116,139,.2);color:var(--muted)}
+    .acct-plan.pro{background:rgba(58,138,92,.2);color:var(--accent)}
+    .acct-section{padding:6px 0}
+    .acct-section+.acct-section{border-top:1px solid rgba(255,255,255,.06)}
+    .acct-item{display:flex;align-items:center;gap:10px;
+      padding:8px 14px;cursor:pointer;font-size:.82rem;color:var(--muted);
+      transition:background .12s,color .12s;text-decoration:none;width:100%;
+      border:none;background:none;text-align:left}
+    .acct-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+    .acct-item.danger{color:rgba(239,68,68,.8)}
+    .acct-item.danger:hover{background:rgba(239,68,68,.06);color:var(--danger)}
+    .acct-item-icon{font-size:.95rem;width:20px;text-align:center;flex-shrink:0}
+    .acct-item-label{flex:1}
+
+    /* ── Tournament tab ───────────────────────────────────────────────────── */
+    .tourn-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+    .tourn-form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;max-width:560px;margin-bottom:20px}
+    .tourn-form-card h3{font-size:.85rem;font-weight:700;color:var(--text);margin-bottom:14px}
+    .tourn-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .tourn-form-grid .full{grid-column:1/-1}
+    .tourn-label{font-size:.7rem;color:var(--muted);font-weight:600;display:block;margin-bottom:3px}
+    .tourn-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+      padding:7px 10px;border-radius:7px;width:100%;font-size:.82rem;outline:none;
+      transition:border-color .15s}
+    .tourn-input:focus{border-color:var(--accent)}
+    .tourn-table{width:100%;border-collapse:collapse;font-size:.8rem}
+    .tourn-table th{padding:8px 10px;text-align:left;font-size:.68rem;font-weight:600;
+      letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+      border-bottom:1px solid var(--border)}
+    .tourn-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04)}
+    .tourn-table tr:hover td{background:rgba(255,255,255,.02)}
+    .tourn-format-badge{display:inline-block;font-size:.65rem;padding:2px 7px;border-radius:6px;
+      font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    .tourn-format-stroke{background:rgba(59,130,246,.15);color:var(--blue)}
+    .tourn-format-stableford{background:rgba(168,85,247,.15);color:var(--purple)}
+    .tourn-format-match{background:rgba(249,115,22,.15);color:var(--orange)}
+    .tourn-format-skins{background:rgba(58,138,92,.2);color:var(--accent)}
+
     /* ── App shell & collapsible sidebar ──────────────────────────────── */
     .app-shell{display:flex;min-height:100vh;align-items:flex-start}
     .app-body{flex:1;min-width:0;display:flex;flex-direction:column}
     .sidebar{
-      width:190px;min-width:190px;
+      width:220px;min-width:220px;
       background:var(--surface);border-right:1px solid var(--border);
       position:sticky;top:0;height:100vh;overflow-y:auto;
       display:flex;flex-direction:column;
       transition:width .22s,min-width .22s;
       z-index:60;flex-shrink:0}
-    .sidebar.collapsed{width:52px;min-width:52px}
-    /* Brand area */
-    .sb-brand{display:flex;align-items:center;gap:9px;padding:14px 10px 12px;
-      border-bottom:1px solid var(--border);overflow:hidden;flex-shrink:0}
-    .sb-logo-img{display:flex;align-items:center;justify-content:center;
-      min-width:32px;font-size:1.4rem;flex-shrink:0}
-    .sb-logo-text{overflow:hidden;white-space:nowrap}
-    .sb-brand-name{font-size:.95rem;font-weight:800;color:var(--accent)}
-    .sb-brand-sub{font-size:.67rem;color:var(--muted)}
-    .sidebar.collapsed .sb-brand-name,.sidebar.collapsed .sb-brand-sub{display:none}
-    /* Nav items */
+    .sidebar.collapsed{width:64px;min-width:64px}
+    /* Brand area — big logo fills width, username + tagline below */
+    .sb-brand{display:flex;flex-direction:column;align-items:center;
+      padding:20px 12px 16px;border-bottom:1px solid var(--border);
+      overflow:hidden;flex-shrink:0;gap:10px}
+    .sb-logo-img{display:flex;align-items:center;justify-content:center;font-size:3.5rem;
+      width:100%}
+    .sb-logo-img img{width:calc(100% - 8px);max-width:180px;height:auto;
+      max-height:90px;object-fit:contain;display:block}
+    .sb-logo-text{display:flex;flex-direction:column;align-items:center;
+      overflow:hidden;white-space:nowrap;gap:2px}
+    .sb-brand-name{font-size:.9rem;font-weight:800;color:var(--accent);
+      text-align:center;letter-spacing:.01em}
+    .sb-brand-sub{font-size:.66rem;color:var(--muted);text-align:center}
+    .sidebar.collapsed .sb-logo-img img{width:40px;max-height:40px}
+    .sidebar.collapsed .sb-logo-img{font-size:1.8rem}
+    .sidebar.collapsed .sb-logo-text{display:none}
+    /* Nav items — tall rows for big icons */
     .sb-nav{padding:6px 0;flex-shrink:0}
-    .sb-tab{display:flex;align-items:center;gap:10px;padding:10px 13px;width:100%;
+    .sb-tab{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;
       border:none;background:none;color:var(--muted);cursor:pointer;
       font-size:.83rem;font-weight:600;
       border-left:3px solid transparent;
       transition:all .15s;text-align:left;white-space:nowrap;overflow:hidden}
     .sb-tab:hover:not(.active){color:var(--text);background:rgba(255,255,255,.03)}
-    .sb-tab.active{color:var(--accent);border-left-color:var(--accent);background:rgba(34,197,94,.06)}
-    .sb-icon{font-size:1.0rem;min-width:22px;text-align:center;flex-shrink:0}
+    .sb-tab.active{color:var(--accent);border-left-color:var(--accent);background:rgba(74,128,176,.06)}
+    .sb-icon{font-size:2.2rem;min-width:52px;text-align:center;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center}
+    .sb-icon img{width:52px;height:52px;object-fit:contain;display:block}
+    .sidebar.collapsed .sb-icon{min-width:36px}
+    .sidebar.collapsed .sb-icon img{width:36px;height:36px}
     .sb-label{overflow:hidden;text-overflow:ellipsis}
     .sb-badge{font-size:.62rem;padding:1px 5px;border-radius:8px;background:var(--surface3);
       color:var(--muted);margin-left:auto;flex-shrink:0;font-weight:700}
@@ -71,7 +181,7 @@
       width:100%;padding:9px 0;border:none;background:none;color:var(--muted);
       cursor:pointer;font-size:1rem;font-weight:700;transition:color .15s;
       border-bottom:1px solid var(--border);flex-shrink:0;letter-spacing:.05em}
-    .sb-toggle:hover{color:var(--accent);background:rgba(34,197,94,.04)}
+    .sb-toggle:hover{color:var(--accent);background:rgba(74,128,176,.04)}
     .sb-toggle-icon{transition:transform .22s;display:inline-block}
     .sidebar.collapsed .sb-toggle-icon{transform:rotate(180deg)}
     /* Bottom section */
@@ -80,7 +190,7 @@
       border:none;background:none;color:var(--accent);cursor:pointer;
       font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;
       border-left:3px solid transparent;transition:all .15s}
-    .sb-coach-btn:hover{background:rgba(34,197,94,.08)}
+    .sb-coach-btn:hover{background:rgba(74,128,176,.08)}
     .sidebar.collapsed .sb-coach-btn{justify-content:center;padding:9px 0}
     /* View level switcher */
     .view-switcher{padding:8px 10px;flex-shrink:0}
@@ -118,7 +228,7 @@
     .drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:30px 24px;
       text-align:center;cursor:pointer;transition:all .25s;background:var(--surface);
       margin-bottom:20px}
-    .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(34,197,94,.04)}
+    .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(74,128,176,.04)}
     .drop-zone.drag-over{transform:scale(1.004)}
     .drop-zone input[type=file]{display:none}
     .dz-icon{font-size:2.2rem;margin-bottom:8px}
@@ -163,6 +273,38 @@
     .section-head{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;
       font-weight:700;margin-bottom:12px}
 
+    /* ── Golf God's Guidance unified section ──────────────────────────── */
+    .gg-guidance-section{
+      margin-bottom:24px;
+      background:var(--surface);
+      border:1px solid rgba(196,125,14,.2);
+      border-radius:14px;
+      overflow:hidden}
+    .gg-guidance-header{
+      display:flex;align-items:center;gap:18px;
+      padding:20px 22px 18px;
+      border-bottom:1px solid rgba(196,125,14,.12);
+      background:linear-gradient(135deg,rgba(13,20,32,.9),rgba(22,32,48,.9))}
+    .gg-guidance-avatar{
+      width:72px;height:72px;border-radius:50%;overflow:hidden;
+      border:2px solid rgba(196,125,14,.55);flex-shrink:0;
+      box-shadow:0 0 24px rgba(196,125,14,.2)}
+    .gg-guidance-avatar img{width:100%;height:100%;object-fit:cover}
+    .gg-guidance-name{
+      font-size:1.25rem;font-weight:900;letter-spacing:-.01em;
+      background:linear-gradient(135deg,#e8a820,#c47d0e);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .gg-guidance-sub{
+      font-size:.72rem;color:var(--muted);margin-top:3px;
+      -webkit-text-fill-color:var(--muted)}
+    .gg-guidance-body{padding:20px 22px}
+    .gg-sub-label{
+      font-size:.65rem;font-weight:700;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted2,#8aafc8);
+      margin-bottom:10px;display:flex;align-items:center;gap:6px}
+    .gg-sub-divider{margin:18px 0 14px;border:none;
+      border-top:1px solid rgba(255,255,255,.05)}
+
     /* ── Score Damage ─────────────────────────────────────────────────── */
     .damage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
     .damage-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
@@ -185,12 +327,12 @@
     .apb-label{font-size:.75rem;font-weight:600;color:#cbd5e1;white-space:nowrap}
     .apb-track{background:rgba(255,255,255,.06);border-radius:6px;height:8px;position:relative;overflow:hidden}
     .apb-fill{height:100%;border-radius:6px;transition:width .5s ease}
-    .apb-target{position:absolute;top:0;bottom:0;left:58%;width:1.5px;background:rgba(34,197,94,.7)}
+    .apb-target{position:absolute;top:0;bottom:0;left:58%;width:1.5px;background:rgba(58,138,92,.7)}
     .apb-pct{font-size:.8rem;font-weight:700;text-align:right}
     .apb-n{font-size:.7rem;color:var(--muted);text-align:right}
     .apb-legend{display:flex;gap:4px;align-items:center;margin-top:10px;font-size:.67rem;color:var(--muted)}
     .apb-leg-dot{display:inline-block;width:8px;height:8px;border-radius:50%}
-    .bucket-good{background:rgba(34,197,94,.7)}.bucket-warn{background:rgba(245,158,11,.7)}.bucket-bad{background:rgba(239,68,68,.7)}
+    .bucket-good{background:rgba(58,138,92,.7)}.bucket-warn{background:rgba(245,158,11,.7)}.bucket-bad{background:rgba(239,68,68,.7)}
 
     /* ── Real Course analytics ───────────────────────────────────────────── */
     .par-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
@@ -231,7 +373,7 @@
     .fb-item{padding:12px 14px;border-radius:8px;border-left:3px solid;font-size:.84rem}
     .fb-item.priority{border-color:var(--danger);background:rgba(239,68,68,.07)}
     .fb-item.secondary{border-color:var(--warn);background:rgba(245,158,11,.07)}
-    .fb-item.positive{border-color:var(--accent);background:rgba(34,197,94,.07)}
+    .fb-item.positive{border-color:var(--accent);background:rgba(58,138,92,.07)}
     .fb-item strong{display:block;margin-bottom:3px;font-size:.81rem}
     .fb-item p{color:var(--muted);line-height:1.5}
     .practice-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -257,7 +399,7 @@
     tbody tr:last-child td{border-bottom:none}
     tbody tr:hover td{background:rgba(255,255,255,.02)}
     .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:700}
-    .pill-good{background:rgba(34,197,94,.15);color:var(--accent)}
+    .pill-good{background:rgba(58,138,92,.2);color:var(--accent)}
     .pill-warn{background:rgba(245,158,11,.15);color:var(--warn)}
     .pill-bad{background:rgba(239,68,68,.15);color:var(--danger)}
     .pill-neutral{background:rgba(100,116,139,.15);color:var(--muted)}
@@ -330,8 +472,18 @@
       border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto}
     @keyframes spin{to{transform:rotate(360deg)}}
     .loading-body{text-align:center;padding:10px 0}
-    .loading-body h2{margin:14px 0 6px;font-size:1.05rem}
-    .loading-body p{color:var(--muted);font-size:.85rem}
+    .loading-body h2{margin:14px 0 10px;font-size:1.05rem}
+    /* Analysis progress bar */
+    .analysis-progress-wrap{margin:6px 0 4px;width:100%;height:5px;
+      background:var(--surface3);border-radius:3px;overflow:hidden}
+    .analysis-progress-bar{height:100%;width:0%;border-radius:3px;
+      background:linear-gradient(90deg,var(--accent),var(--blue));
+      transition:width .4s ease;position:relative;overflow:hidden}
+    .analysis-progress-bar::after{content:'';position:absolute;inset:0;
+      background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.3) 50%,transparent 100%);
+      animation:shimmer 1.2s infinite}
+    @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+    .analysis-progress-label{font-size:.72rem;color:var(--muted);margin-top:5px}
 
     /* Toast */
     #toast{position:fixed;bottom:22px;left:50%;
@@ -349,7 +501,7 @@
     }
     @media(max-width:600px){main{padding:12px}.kpi-grid{grid-template-columns:repeat(3,1fr)}}
 
-    /* ── AI Coach Drawer ──────────────────────────────────────────────────── */
+    /* ── Golf God Drawer ──────────────────────────────────────────────────── */
     .coach-drawer{position:fixed;top:0;right:-420px;width:380px;height:100vh;
       background:var(--surface);border-left:1px solid var(--border);z-index:300;
       display:flex;flex-direction:column;
@@ -358,8 +510,31 @@
     .coach-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:299}
     .coach-backdrop.active{display:block}
     .coach-drawer-header{display:flex;align-items:center;justify-content:space-between;
-      padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
-    .coach-drawer-title{display:flex;align-items:center;gap:8px;font-size:.9rem;font-weight:700}
+      padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;
+      background:linear-gradient(135deg,rgba(13,24,33,.95),rgba(22,32,48,.95))}
+    .coach-drawer-title{display:flex;align-items:center;gap:10px;font-size:.9rem;font-weight:700}
+    .golf-god-avatar{width:88px;height:88px;border-radius:50%;overflow:hidden;
+      border:2.5px solid rgba(196,125,14,.6);flex-shrink:0;background:#0d1821;
+      box-shadow:0 0 22px rgba(196,125,14,.25)}
+    .golf-god-avatar img{width:100%;height:100%;object-fit:cover}
+    .golf-god-name{font-size:.9rem;font-weight:800;letter-spacing:.01em;
+      background:linear-gradient(135deg,#fbbf24,#f59e0b);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .golf-god-sub{font-size:.65rem;color:var(--muted);font-weight:400;-webkit-text-fill-color:var(--muted)}
+    /* Golf God header button — premium dark/gold, not green */
+    .coach-header-btn{
+      background:linear-gradient(135deg,#141e2e,#1b2c3e)!important;
+      border:1px solid rgba(196,125,14,.45)!important;
+      color:var(--text)!important;border-radius:9px;
+      box-shadow:0 2px 12px rgba(196,125,14,.1)!important}
+    .coach-header-btn:hover{
+      border-color:rgba(196,125,14,.75)!important;
+      background:linear-gradient(135deg,#1a2736,#22354c)!important;
+      transform:translateY(-1px)}
+    .coach-header-btn .golf-god-btn-avatar{width:32px;height:32px;border-radius:50%;
+      overflow:hidden;flex-shrink:0;background:#0d1821;
+      border:1.5px solid rgba(196,125,14,.55)}
+    .coach-header-btn .golf-god-btn-avatar img{width:100%;height:100%;object-fit:cover}
     .coach-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;
       flex-direction:column;gap:12px;scroll-behavior:smooth}
     .coach-welcome{background:var(--surface2);border-radius:10px;padding:14px;
@@ -394,7 +569,7 @@
     .shape-badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:.7rem;
       font-weight:700;letter-spacing:.05em;margin-top:6px}
     .shape-fade    {background:rgba(59,130,246,.2);color:#93c5fd}
-    .shape-draw    {background:rgba(34,197,94,.2);color:#86efac}
+    .shape-draw    {background:rgba(58,138,92,.2);color:#7ab89a}
     .shape-straight{background:rgba(100,116,139,.2);color:#94a3b8}
     .shape-slice   {background:rgba(239,68,68,.2);color:#fca5a5}
     .shape-hook    {background:rgba(249,115,22,.2);color:#fdba74}
@@ -404,14 +579,14 @@
       margin-top:4px;display:inline-block}
     .conf-low   {background:rgba(239,68,68,.15);color:#fca5a5}
     .conf-medium{background:rgba(245,158,11,.15);color:#fde68a}
-    .conf-high  {background:rgba(34,197,94,.15); color:#86efac}
+    .conf-high  {background:rgba(58,138,92,.2); color:#7ab89a}
 
     /* ── Club card stats mini-row ──────────────────────────────────────── */
     .bf-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:6px;
       border-top:1px solid var(--border);font-size:.72rem}
     .bf-stat{color:var(--muted)}
     .bf-stat strong{font-size:.78rem}
-    .bf-pos{color:#86efac}
+    .bf-pos{color:#7ab89a}
     .bf-neg{color:#fca5a5}
     .bf-neu{color:var(--text)}
 
@@ -482,48 +657,55 @@
     <span class="sb-toggle-icon">»</span>
   </button>
 
-  <!-- Brand / logo -->
+  <!-- Brand / logo — big logo centred, username + tagline below -->
   <div class="sb-brand">
     <div class="sb-logo-img">
-      <img id="companyLogo" src="" alt=""
-           style="display:none;max-width:32px;max-height:32px;border-radius:6px;object-fit:contain">
-      <span id="companyLogoFallback">⛳</span>
+      <img id="companyLogo" src="/static/cadenceos-logo.png" alt="CadenceOS"
+           onerror="this.style.display='none';document.getElementById('companyLogoFallback').style.display=''">
+      <span id="companyLogoFallback" style="display:none;font-size:2.4rem">⛳</span>
     </div>
     <div class="sb-logo-text">
-      <div class="sb-brand-name" id="companyName">Golf Analytics</div>
-      <div class="sb-brand-sub" id="companyTagline">Golf Analytics</div>
+      <div class="sb-brand-name" id="companyName"></div>
+      <div class="sb-brand-sub" id="companyTagline">Analytics</div>
     </div>
   </div>
 
   <!-- Nav items -->
   <div class="sb-nav">
-    <button class="sb-tab active" data-tab="all" onclick="setTab('all')">
-      <span class="sb-icon">🏠</span>
+    <button class="sb-tab active" id="tab-all" data-tab="all" onclick="setTab('all')">
+      <span class="sb-icon">
+        <img src="/static/icon-allrounds.png" alt="" onerror="this.outerHTML='🏠'">
+      </span>
       <span class="sb-label">All Rounds</span>
       <span class="sb-badge" id="tc-all">0</span>
     </button>
-    <button class="sb-tab" data-tab="simulator" onclick="setTab('simulator')">
-      <span class="sb-icon">🖥️</span>
+    <button class="sb-tab" id="tab-simulator" data-tab="simulator" onclick="setTab('simulator')">
+      <span class="sb-icon">
+        <img src="/static/icon-simulator.png" alt="" onerror="this.outerHTML='🖥️'">
+      </span>
       <span class="sb-label">Simulator</span>
       <span class="sb-badge" id="tc-sim">0</span>
     </button>
-    <button class="sb-tab" data-tab="real" onclick="setTab('real')">
-      <span class="sb-icon">⛳</span>
+    <button class="sb-tab" id="tab-real" data-tab="real" onclick="setTab('real')">
+      <span class="sb-icon">
+        <img src="/static/icon-realcourse.png" alt="" onerror="this.outerHTML='⛳'">
+      </span>
       <span class="sb-label">Real Course</span>
       <span class="sb-badge" id="tc-real">0</span>
     </button>
-    <button class="sb-tab" data-tab="practice" onclick="setTab('practice')">
-      <span class="sb-icon">🎯</span>
+    <button class="sb-tab" id="tab-practice" data-tab="practice" onclick="setTab('practice')">
+      <span class="sb-icon">
+        <img src="/static/icon-mybag.png" alt="" onerror="this.outerHTML='🎯'">
+      </span>
       <span class="sb-label">My Bag</span>
       <span class="sb-badge" id="tc-prac">0</span>
     </button>
-    <button class="sb-tab" data-tab="settings" onclick="setTab('settings')">
-      <span class="sb-icon">⚙️</span>
-      <span class="sb-label">Settings</span>
-    </button>
-    <button class="sb-tab" data-tab="profile" onclick="setTab('profile')">
-      <span class="sb-icon">👤</span>
-      <span class="sb-label">Profile</span>
+    <button class="sb-tab" id="tab-tournament" data-tab="tournament" onclick="setTab('tournament')">
+      <span class="sb-icon">
+        <img src="/static/icon-tournament.png" alt="" onerror="this.outerHTML='🏆'">
+      </span>
+      <span class="sb-label">Tournaments</span>
+      <span class="sb-badge" id="tc-tourn">0</span>
     </button>
   </div>
 
@@ -541,11 +723,6 @@
         <button class="vl-btn" data-level="pro" onclick="applyViewLevel('pro')" title="Pro — all technical flight data"><span class="vl-full">Pro</span><span class="vl-short">P</span></button>
       </div>
     </div>
-    <!-- Coach -->
-    <button class="sb-coach-btn" onclick="openCoach('dashboard')">
-      <span class="sb-icon">🤖</span>
-      <span class="sb-label">AI Coach</span>
-    </button>
   </div>
 
 </nav>
@@ -571,7 +748,67 @@
           <option value="hcp20">HCP 20</option>
         </select>
       </label>
-      <button class="btn btn-ghost btn-sm" onclick="setTab('settings')" title="API key & settings" style="display:flex;align-items:center;gap:5px"><span>⚙️</span><span style="font-size:.78rem">Settings</span></button>
+      <span style="flex:1"></span>
+      <!-- Golf God button — prominent, top-right -->
+      <button id="coachHeaderBtn" class="coach-header-btn" onclick="openCoach('dashboard')" title="Consult the Golf God">
+        <span class="golf-god-btn-avatar">
+          <img src="/static/golf-god.png" alt="Golf God" onerror="this.parentNode.innerHTML='⚡'">
+        </span>
+        <span id="coachHeaderLabel">Golf God</span>
+        <span id="coachTrialBadge" class="coach-trial-badge" style="display:none">TRIAL</span>
+      </button>
+      <!-- Profile avatar + account dropdown -->
+      <div class="acct-dropdown-wrap" id="acctDropdownWrap">
+        <div class="profile-avatar" id="profileAvatarBtn" onclick="toggleAcctDropdown()" title="Account">
+          <img id="profileAvatarImg" alt="Profile photo">
+          <span class="pa-initial" id="profileAvatarInitial">?</span>
+        </div>
+        <div class="acct-dropdown" id="acctDropdown">
+          <!-- User header -->
+          <div class="acct-header">
+            <div class="acct-avatar-lg" id="acctDropAvatar">
+              <img id="acctDropAvatarImg" alt="">
+              <span class="pa-initial" id="acctDropAvatarInitial">?</span>
+            </div>
+            <div>
+              <div class="acct-name" id="acctDropName">–</div>
+              <div id="acctDropPlan" class="acct-plan free">Free</div>
+            </div>
+          </div>
+          <!-- Account actions -->
+          <div class="acct-section">
+            <button class="acct-item" onclick="acctDropGo('profile')">
+              <span class="acct-item-icon">👤</span>
+              <span class="acct-item-label">Profile &amp; Settings</span>
+            </button>
+            <button class="acct-item" onclick="acctDropGo('appearance')">
+              <span class="acct-item-icon">🎨</span>
+              <span class="acct-item-label">Appearance</span>
+            </button>
+          </div>
+          <!-- Upgrade (free users only) -->
+          <div class="acct-section" id="acctDropUpgradeSection" style="display:none">
+            <button class="acct-item" style="color:var(--accent)" onclick="acctDropUpgrade()">
+              <span class="acct-item-icon">⚡</span>
+              <span class="acct-item-label">Upgrade to Pro</span>
+            </button>
+          </div>
+          <!-- Admin (admin only) -->
+          <div class="acct-section" id="acctDropAdminSection" style="display:none">
+            <button class="acct-item" onclick="acctDropAdmin()">
+              <span class="acct-item-icon">🛡</span>
+              <span class="acct-item-label">Admin Panel</span>
+            </button>
+          </div>
+          <!-- Log out -->
+          <div class="acct-section">
+            <button class="acct-item danger" onclick="logout()">
+              <span class="acct-item-icon">↩</span>
+              <span class="acct-item-label">Log out</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <!-- Period filter bar — affects all tabs -->
@@ -625,7 +862,7 @@
   <div id="roundsContent">
 
     <!-- KPI cards -->
-    <div class="kpi-grid">
+    <div class="kpi-grid" id="kpiRow">
       <div class="kpi-card" id="kpi-rounds"><div class="kpi-value" id="v-rounds">—</div><div class="kpi-label">Rounds (18H)</div><div class="kpi-delta" id="d-rounds"></div></div>
       <div class="kpi-card" id="kpi-score"><div class="kpi-value" id="v-score">—</div><div class="kpi-label">Avg Score</div><div class="kpi-delta" id="d-score"></div></div>
       <div class="kpi-card" id="kpi-gir"><div class="kpi-value" id="v-gir">—</div><div class="kpi-label">GIR %</div><div class="kpi-delta" id="d-gir"></div></div>
@@ -702,7 +939,7 @@
     <div id="realSection" style="display:none">
 
       <div class="real-info">
-        📷 <strong>Real Course mode</strong> — Upload a scorecard photo above and Claude reads the hole-by-hole scores automatically. Shot stats (GIR, FW, Drive) populate when using VG3 real-course mode.
+        📷 <strong>Real Course mode</strong> — Upload a scorecard photo above and AI reads the hole-by-hole scores automatically. Shot stats (GIR, FW, Drive) populate when using VG3 real-course mode.
       </div>
 
       <!-- Par Type Performance -->
@@ -758,16 +995,24 @@
       </div>
     </div>
 
-    <!-- Coaching -->
-    <div class="section-wrap" id="coachingSection">
-      <div class="section-head">🏆 Coaching Insights — Dynamic priority ranking</div>
-      <div class="feedback-grid" id="feedbackGrid"><p style="color:var(--muted);font-size:.85rem">Loading…</p></div>
-    </div>
-
-    <!-- Practice Focus -->
-    <div class="section-wrap" id="practiceFocusSection">
-      <div class="section-head">🎯 Next Practice Focus</div>
-      <div class="practice-grid" id="practiceFocusGrid"><p style="color:var(--muted);font-size:.85rem">Loading…</p></div>
+    <!-- Golf God's Guidance — unified Insights + Practice section -->
+    <div class="gg-guidance-section" id="coachingSection">
+      <div class="gg-guidance-header">
+        <div class="gg-guidance-avatar">
+          <img src="/static/golf-god.png" alt="Golf God" onerror="this.parentNode.innerHTML='⚡'">
+        </div>
+        <div>
+          <div class="gg-guidance-name">Golf God's Guidance</div>
+          <div class="gg-guidance-sub">Personalised insights &amp; practice prescription — updated with every round</div>
+        </div>
+      </div>
+      <div class="gg-guidance-body">
+        <div class="gg-sub-label">📊 Insights — Dynamic Priority Ranking</div>
+        <div class="feedback-grid" id="feedbackGrid"><p style="color:var(--muted);font-size:.85rem">Loading…</p></div>
+        <hr class="gg-sub-divider">
+        <div class="gg-sub-label" id="practiceFocusSection">🏋️ Practice Prescription</div>
+        <div class="practice-grid" id="practiceFocusGrid"><p style="color:var(--muted);font-size:.85rem">Loading…</p></div>
+      </div>
     </div>
 
     <!-- Practice → Course Transfer (All tab only) -->
@@ -862,6 +1107,27 @@
       <div class="chart-card" style="height:fit-content">
         <div class="chart-title">👤 Player Info</div>
 
+        <!-- Profile photo -->
+        <div style="display:flex;align-items:center;gap:14px;margin:12px 0 16px">
+          <div id="profilePhotoBig" style="width:72px;height:72px;border-radius:50%;overflow:hidden;
+            background:var(--surface3);border:2px solid var(--border);
+            display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer"
+            onclick="document.getElementById('profilePhotoInput').click()" title="Click to change photo">
+            <img id="profilePhotoBigImg" style="width:100%;height:100%;object-fit:cover;display:none" alt="">
+            <span id="profilePhotoBigInitial" style="font-size:1.8rem;font-weight:700;color:var(--accent)">?</span>
+          </div>
+          <div>
+            <div style="font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:4px">Profile Photo</div>
+            <div style="font-size:.7rem;color:var(--muted);margin-bottom:8px">Click the circle or button to upload</div>
+            <button onclick="document.getElementById('profilePhotoInput').click()"
+              class="btn btn-ghost btn-sm" style="font-size:.72rem;padding:4px 10px">📷 Upload Photo</button>
+            <button id="removePhotoBtn" onclick="removeProfilePhoto()" style="display:none"
+              class="btn btn-ghost btn-sm" style="font-size:.72rem;padding:4px 10px;color:var(--danger);border-color:rgba(239,68,68,.3)">✕ Remove</button>
+          </div>
+          <input type="file" id="profilePhotoInput" accept="image/png,image/jpeg,image/webp"
+            style="display:none" onchange="handleProfilePhoto(this.files[0])">
+        </div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
           <div>
             <label style="font-size:.72rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Name</label>
@@ -903,20 +1169,28 @@
           💾 Save Profile
         </button>
 
-        <div id="profileSaved" style="display:none;text-align:center;margin-top:8px;font-size:.75rem;color:#86efac">
+        <div id="profileSaved" style="display:none;text-align:center;margin-top:8px;font-size:.75rem;color:#7ab89a">
           ✓ Saved — shapes &amp; coaching will now reflect your handedness
         </div>
       </div>
 
-      <!-- Right: AI coach profile analysis -->
+      <!-- Right: Golf God profile analysis -->
       <div class="chart-card">
-        <div class="chart-title">🤖 Personalised Coach Analysis</div>
-        <p style="font-size:.8rem;color:var(--muted);margin:8px 0 14px">
-          Save your profile then ask the coach for a holistic assessment that takes your age, HCP, goals and all tracked data into account.
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <img src="/static/golf-god.png" alt="Golf God"
+               style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(196,125,14,.5);flex-shrink:0"
+               onerror="this.style.display='none'">
+          <div>
+            <div class="chart-title" style="margin-bottom:2px">Golf God Assessment</div>
+            <div style="font-size:.72rem;color:var(--muted)">Personalised oracle analysis</div>
+          </div>
+        </div>
+        <p style="font-size:.8rem;color:var(--muted);margin:0 0 14px">
+          Save your profile and the Golf God will give a full holistic assessment — your age, HCP, goals and all tracked data in one read.
         </p>
         <button onclick="openCoach('profile',null)" class="btn btn-ghost"
-          style="width:100%;font-size:.82rem;padding:8px;color:var(--blue);border-color:rgba(59,130,246,.4)">
-          💬 Ask Coach for Full Analysis
+          style="width:100%;font-size:.82rem;padding:8px;color:#c47d0e;border-color:rgba(196,125,14,.4)">
+          ⚡ Consult the Golf God
         </button>
 
         <div style="margin-top:20px">
@@ -933,22 +1207,6 @@
   <!-- ── SETTINGS TAB ──────────────────────────────────────────────────────── -->
   <div id="settingsSection" style="display:none;padding:20px 24px 40px">
     <div style="max-width:680px;margin:0 auto">
-
-      <!-- AI Integration -->
-      <div class="settings-card">
-        <div class="settings-group-title">AI Integration</div>
-        <div class="settings-row">
-          <div class="settings-label">
-            <strong>Anthropic API Key</strong>
-            <span class="settings-sub">Required for screenshot analysis and AI Coach</span>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;flex:1;max-width:360px;margin-left:16px">
-            <input type="password" id="apiKey" class="api-input" style="flex:1;min-width:0"
-                   placeholder="sk-ant-…" autocomplete="off" oninput="saveApiKeySetting(this.value)">
-            <button class="btn btn-ghost btn-sm" onclick="toggleApiKeyVisibility()" title="Show/hide key">👁</button>
-          </div>
-        </div>
-      </div>
 
       <!-- Units -->
       <div class="settings-card">
@@ -999,6 +1257,126 @@
     </div>
   </div><!-- /settingsSection -->
 
+  <!-- ── TOURNAMENT TAB ───────────────────────────────────────────────────── -->
+  <div id="tournamentSection" style="display:none;padding:20px 24px 40px">
+
+    <!-- KPIs -->
+    <div class="tourn-kpi-grid">
+      <div class="kpi-card"><div class="kpi-value" id="t-events">—</div><div class="kpi-label">Events Played</div></div>
+      <div class="kpi-card"><div class="kpi-value" id="t-best">—</div><div class="kpi-label">Best Finish</div></div>
+      <div class="kpi-card"><div class="kpi-value" id="t-avg-pos">—</div><div class="kpi-label">Avg Position</div></div>
+      <div class="kpi-card"><div class="kpi-value" id="t-avg-score">—</div><div class="kpi-label">Avg Net Score</div></div>
+      <div class="kpi-card"><div class="kpi-value" id="t-best-stbl">—</div><div class="kpi-label">Best Stableford</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:flex-start;max-width:1100px">
+
+      <!-- Add tournament form -->
+      <div class="tourn-form-card">
+        <h3>➕ Add Tournament Result</h3>
+        <div class="tourn-form-grid">
+          <div class="full">
+            <label class="tourn-label">Event name</label>
+            <input id="tn-name" class="tourn-input" placeholder="Club Championship 2026">
+          </div>
+          <div>
+            <label class="tourn-label">Date</label>
+            <input id="tn-date" type="date" class="tourn-input">
+          </div>
+          <div>
+            <label class="tourn-label">Course</label>
+            <input id="tn-course" class="tourn-input" placeholder="Home course">
+          </div>
+          <div>
+            <label class="tourn-label">Format</label>
+            <select id="tn-format" class="tourn-input" onchange="tournFormatChange()">
+              <option value="stroke">Stroke Play</option>
+              <option value="stableford">Stableford</option>
+              <option value="match">Match Play</option>
+              <option value="skins">Skins</option>
+            </select>
+          </div>
+          <div>
+            <label class="tourn-label">Holes</label>
+            <select id="tn-holes" class="tourn-input">
+              <option value="18" selected>18</option>
+              <option value="9">9</option>
+            </select>
+          </div>
+          <div id="tn-gross-wrap">
+            <label class="tourn-label">Gross score</label>
+            <input id="tn-gross" type="number" class="tourn-input" placeholder="e.g. 82">
+          </div>
+          <div id="tn-net-wrap">
+            <label class="tourn-label">Net score</label>
+            <input id="tn-net" type="number" class="tourn-input" placeholder="e.g. 72">
+          </div>
+          <div id="tn-stbl-wrap" style="display:none">
+            <label class="tourn-label">Stableford pts</label>
+            <input id="tn-stbl" type="number" class="tourn-input" placeholder="e.g. 36">
+          </div>
+          <div>
+            <label class="tourn-label">Position</label>
+            <input id="tn-pos" type="number" class="tourn-input" placeholder="e.g. 3">
+          </div>
+          <div>
+            <label class="tourn-label">Field size</label>
+            <input id="tn-field" type="number" class="tourn-input" placeholder="e.g. 48">
+          </div>
+          <div>
+            <label class="tourn-label">Handicap used</label>
+            <input id="tn-hcp" type="number" step="0.1" class="tourn-input" placeholder="e.g. 10.4">
+          </div>
+          <div class="full">
+            <label class="tourn-label">Notes</label>
+            <textarea id="tn-notes" class="tourn-input" rows="2" placeholder="Weather conditions, key moments…" style="resize:vertical"></textarea>
+          </div>
+        </div>
+        <button onclick="saveTournament()" class="btn btn-primary" style="margin-top:14px;width:100%;font-size:.82rem">
+          💾 Save Result
+        </button>
+        <div id="tournSavedMsg" style="display:none;text-align:center;margin-top:8px;font-size:.75rem;color:#7ab89a">✓ Saved</div>
+      </div>
+
+      <!-- Right: score trend chart + format breakdown -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="chart-card">
+          <div class="chart-title">📈 Score Trend (net vs par)</div>
+          <canvas id="chartTournScore" height="130"></canvas>
+          <div id="chartTournNoData" style="text-align:center;padding:30px;color:var(--muted);font-size:.8rem">
+            No tournament data yet — add your first result above
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">🥊 Format Breakdown</div>
+          <div id="tournFormatBreakdown" style="display:flex;flex-wrap:wrap;gap:10px;padding:8px 0">
+            <span style="color:var(--muted);font-size:.8rem">No data yet</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- History table -->
+    <div class="section-wrap" style="margin-top:20px;max-width:1100px">
+      <div class="section-head">📋 Tournament History</div>
+      <div style="overflow-x:auto">
+        <table class="tourn-table" id="tournTable">
+          <thead>
+            <tr>
+              <th>Date</th><th>Event</th><th>Course</th><th>Format</th>
+              <th>Gross</th><th>Net</th><th>Pts</th><th>Position</th><th>HCP</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="tournTableBody">
+            <tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">No tournaments logged yet</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /tournamentSection -->
+
 </main>
 </div><!-- /.app-body -->
 </div><!-- /.app-shell -->
@@ -1009,7 +1387,10 @@
     <div class="loading-body">
       <div class="spinner"></div>
       <h2 id="loadingTitle">Analysing Screenshots</h2>
-      <p id="loadingMsg">Sending images to Claude…</p>
+      <div class="analysis-progress-wrap">
+        <div class="analysis-progress-bar" id="analysisPBar"></div>
+      </div>
+      <div class="analysis-progress-label" id="loadingMsg">Preparing images…</div>
     </div>
   </div>
 </div>
@@ -1060,19 +1441,25 @@
   </div>
 </div>
 
-<!-- ── AI Coach Drawer ────────────────────────────────────────────────────── -->
+<!-- ── Golf God Drawer ────────────────────────────────────────────────────── -->
 <div id="coachDrawer" class="coach-drawer">
   <div class="coach-drawer-header">
     <div class="coach-drawer-title">
-      🏌️ <span>AI Golf Coach</span>
+      <div class="golf-god-avatar">
+        <img src="/static/golf-god.png" alt="Golf God" onerror="this.parentNode.innerHTML='⚡'">
+      </div>
+      <div>
+        <div class="golf-god-name">Golf God</div>
+        <div class="golf-god-sub">All-knowing golf oracle</div>
+      </div>
       <span id="coachContextLabel" class="badge-pill" style="margin-left:6px;font-size:.62rem"></span>
     </div>
     <button class="btn btn-ghost btn-sm" onclick="closeCoach()" aria-label="Close">✕</button>
   </div>
   <div class="coach-messages" id="coachMessages">
     <div class="coach-welcome">
-      <p>Ask me anything about your golf game.</p>
-      <p style="margin-top:4px;font-size:.78rem;color:var(--muted)">I have full access to your stats, rounds, and practice data.</p>
+      <p>I am the Golf God. Ask me anything about your game and I shall reveal the truth in your data.</p>
+      <p style="margin-top:4px;font-size:.78rem;color:var(--muted)">I have full access to your rounds, stats, and practice history.</p>
     </div>
   </div>
   <div class="coach-typing" id="coachTyping" style="display:none">
@@ -1081,7 +1468,7 @@
     <span class="coach-typing-dot"></span>
   </div>
   <div class="coach-input-area">
-    <textarea id="coachInput" class="coach-input" placeholder="Ask your coach…"
+    <textarea id="coachInput" class="coach-input" placeholder="Ask the Golf God anything…"
       rows="2" onkeydown="handleCoachKey(event)"></textarea>
     <button class="btn btn-primary btn-sm" id="coachSendBtn" onclick="sendCoachMessage()">Send</button>
   </div>
@@ -1186,7 +1573,7 @@ function normalizeClub(name){
 
 // Derive face angle to target from the mathematical identity:
 //   Face Angle = Club Path + Face-to-Path
-// This is more reliable than the extracted avg_face_angle which Claude may
+// This is more reliable than the extracted avg_face_angle which the AI may
 // confuse with Launch Angle (10–40°) when reading screenshot column headers.
 // Falls back to stored avg_face_angle only if it's within ±10° (plausible range).
 function getFaceAngle(s){
@@ -1327,6 +1714,7 @@ const CLUB_COLORS = ["#22c55e","#3b82f6","#f59e0b","#a855f7","#ef4444",
 /* ── State ──────────────────────────────────────────────────────────────── */
 let rounds        = [];
 let rangeSessions = [];
+let tournaments   = [];
 let activeTab     = "all";
 let filterYear    = "";
 let filterMonth   = "";
@@ -1334,16 +1722,22 @@ let pendingData   = null;   // {type:"rounds"|"range", items:[]}
 let playerProfile = JSON.parse(localStorage.getItem("golf_profile") ||
   '{"name":"","age":"","hcp":"","handedness":"right","gender":"","goals":""}');
 let appSettings   = JSON.parse(localStorage.getItem("golf_settings") ||
-  '{"distUnit":"m","speedUnit":"mph","tempUnit":"c","apiKey":""}');
+  '{"distUnit":"m","speedUnit":"mph","tempUnit":"c"}');
+let currentUser   = null;
 let evaluations   = {};
 let currentEvalKey = null;
 
 /* ── Init ───────────────────────────────────────────────────────────────── */
-document.addEventListener("DOMContentLoaded", () => {
-  // Migrate legacy API key from old localStorage key into appSettings
-  const legacyKey = localStorage.getItem("golf_api_key");
-  if(legacyKey && !appSettings.apiKey){ appSettings.apiKey=legacyKey; localStorage.setItem("golf_settings",JSON.stringify(appSettings)); }
-  evaluations = JSON.parse(localStorage.getItem("golf_evals") || "{}");
+document.addEventListener("DOMContentLoaded", async () => {
+  // ── Auth bootstrap ────────────────────────────────────────────────────
+  try {
+    const meResp = await fetch("/auth/me");
+    if (!meResp.ok) { window.location.href = "/login"; return; }
+    currentUser = await meResp.json();
+    if (!currentUser) { window.location.href = "/login"; return; }
+  } catch(e) { window.location.href = "/login"; return; }
+
+  evaluations = JSON.parse(localStorage.getItem("golf_evals_" + currentUser.id) || "{}");
 
   // Restore saved benchmark target
   const savedTarget = localStorage.getItem("golf_target") || "hcp5";
@@ -1358,8 +1752,11 @@ document.addEventListener("DOMContentLoaded", () => {
   dz.addEventListener("dragleave", ()=>dz.classList.remove("drag-over"));
   dz.addEventListener("drop", e=>{e.preventDefault();dz.classList.remove("drag-over");handleFiles(e.dataTransfer.files);});
 
-  fetchRounds();
+  await fetchRounds();
   loadProfile();
+
+  // ── Tutorial tour ─────────────────────────────────────────────────────
+  setTimeout(() => maybeStartTutorial(), 400); // brief delay so UI is rendered
 
   // ── Sidebar: restore collapse state ─────────────────────────────────
   if(localStorage.getItem("sb_collapsed") === "1")
@@ -1369,14 +1766,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedLevel = playerProfile.viewLevel || "advanced";
   applyViewLevel(savedLevel);
 
-  // ── Branding: restore company name if set ───────────────────────────
-  const cName = localStorage.getItem("company_name");
-  const cUrl  = localStorage.getItem("company_logo_url");
-  if(cName) document.getElementById("companyName").textContent = cName;
-  if(cUrl){
-    const img = document.getElementById("companyLogo");
-    img.src = cUrl; img.style.display = "block";
-    document.getElementById("companyLogoFallback").style.display = "none";
+  // ── Branding ─────────────────────────────────────────────────────────
+  // CadenceOS brand name stays fixed; logo loads via src="/static/cadenceos-logo.png"
+  // (the onerror handler falls back to the ⛳ emoji automatically)
+
+  // ── Profile avatar (header small + dropdown large) ────────────────────
+  const initial = (currentUser.display_name || "?")[0].toUpperCase();
+  updateProfileAvatar(currentUser.profile_image || null, initial);
+  // Profile section initials (if profile tab exists)
+  const bigInit = document.getElementById("profilePhotoBigInitial");
+  if(bigInit) bigInit.textContent = initial;
+
+  // ── Populate account dropdown ─────────────────────────────────────────
+  initAcctDropdown();
+
+  // ── Trial badge on AI Coach button (free trial only, not Pro/admin) ───
+  if (currentUser.plan !== "pro" && !currentUser.is_admin && currentUser.coach_trial_active) {
+    const badge = document.getElementById("coachTrialBadge");
+    if(badge) badge.style.display = "";
   }
 
   // ── Settings UI: restore saved states ───────────────────────────────
@@ -1390,6 +1797,123 @@ function toggleSidebar(){
   localStorage.setItem("sb_collapsed", collapsed ? "1" : "0");
 }
 
+/* ── Analysis progress bar ──────────────────────────────────────────────── */
+let _progressTimer = null;
+function startAnalysisProgress(imgCount) {
+  const bar  = document.getElementById("analysisPBar");
+  const lbl  = document.getElementById("loadingMsg");
+  if (!bar) return;
+  bar.style.width = "0%";
+  // Stages mapped to typical API latency (roughly 4-5s per image)
+  const steps = [
+    { pct: 12, msg: "Preparing images…" },
+    { pct: 28, msg: "Sending to analysis engine…" },
+    { pct: 48, msg: `Reading ${imgCount > 1 ? imgCount + " screenshots" : "screenshot"}…` },
+    { pct: 66, msg: "Extracting shot data…" },
+    { pct: 80, msg: "Building round summary…" },
+    { pct: 91, msg: "Almost done…" },
+  ];
+  let i = 0;
+  const totalMs = Math.max(5000, imgCount * 4200);
+  const interval = totalMs / steps.length;
+  if (lbl) lbl.textContent = steps[0].msg;
+  bar.style.width = steps[0].pct + "%";
+  _progressTimer = setInterval(() => {
+    i++;
+    if (i >= steps.length) { clearInterval(_progressTimer); return; }
+    bar.style.width = steps[i].pct + "%";
+    if (lbl) lbl.textContent = steps[i].msg;
+  }, interval);
+}
+function finishAnalysisProgress() {
+  clearInterval(_progressTimer);
+  const bar = document.getElementById("analysisPBar");
+  const lbl = document.getElementById("loadingMsg");
+  if (bar) bar.style.width = "100%";
+  if (lbl) lbl.textContent = "Complete ✓";
+}
+
+/* ── Account dropdown ────────────────────────────────────────────────────── */
+function initAcctDropdown() {
+  if (!currentUser) return;
+  const initial = (currentUser.display_name || "?")[0].toUpperCase();
+
+  // Large avatar in dropdown header
+  const dropImg = document.getElementById("acctDropAvatarImg");
+  const dropInit = document.getElementById("acctDropAvatarInitial");
+  if (currentUser.profile_image) {
+    dropImg.src = currentUser.profile_image;
+    dropImg.style.display = "block";
+    if (dropInit) dropInit.style.display = "none";
+  } else {
+    if (dropInit) dropInit.textContent = initial;
+  }
+
+  // Name
+  const nameEl = document.getElementById("acctDropName");
+  if (nameEl) nameEl.textContent = currentUser.display_name || currentUser.email || "–";
+
+  // Plan badge
+  const planEl = document.getElementById("acctDropPlan");
+  if (planEl) {
+    const isPro = currentUser.plan === "pro" || currentUser.is_admin;
+    if (isPro) {
+      planEl.textContent = "Pro";
+      planEl.className = "acct-plan pro";
+    } else if (currentUser.coach_trial_active) {
+      planEl.textContent = "Free · Trial Active";
+      planEl.className = "acct-plan free";
+    } else {
+      planEl.textContent = "Free";
+      planEl.className = "acct-plan free";
+    }
+  }
+
+  // Upgrade section — free non-trial users (or trial users wanting to upgrade)
+  const upgradeSection = document.getElementById("acctDropUpgradeSection");
+  if (upgradeSection && currentUser.plan !== "pro" && !currentUser.is_admin) {
+    upgradeSection.style.display = "";
+  }
+
+  // Admin section
+  const adminSection = document.getElementById("acctDropAdminSection");
+  if (adminSection && currentUser.is_admin) {
+    adminSection.style.display = "";
+  }
+
+  // Close on outside click
+  document.addEventListener("click", (e) => {
+    const wrap = document.getElementById("acctDropdownWrap");
+    if (wrap && !wrap.contains(e.target)) closeAcctDropdown();
+  }, true);
+}
+
+function toggleAcctDropdown() {
+  const dd = document.getElementById("acctDropdown");
+  if (!dd) return;
+  dd.classList.toggle("open");
+}
+
+function closeAcctDropdown() {
+  const dd = document.getElementById("acctDropdown");
+  if (dd) dd.classList.remove("open");
+}
+
+function acctDropGo(tab) {
+  closeAcctDropdown();
+  setTab(tab === "appearance" ? "settings" : tab);
+}
+
+function acctDropUpgrade() {
+  closeAcctDropdown();
+  showUpgradeModal();
+}
+
+function acctDropAdmin() {
+  closeAcctDropdown();
+  window.location.href = "/admin";
+}
+
 /* ── View level ──────────────────────────────────────────────────────────── */
 function applyViewLevel(level){
   document.body.dataset.level = level;
@@ -1399,19 +1923,38 @@ function applyViewLevel(level){
     b.classList.toggle("vl-active", b.dataset.level === level));
 }
 
+/* ── Auth ────────────────────────────────────────────────────────────────── */
+async function logout(){
+  await fetch("/auth/logout", {method:"POST"});
+  window.location.href = "/login";
+}
+
+/* ── Upgrade modal ───────────────────────────────────────────────────────── */
+function showUpgradeModal(msg) {
+  document.getElementById("upgradeModalMsg").textContent =
+    msg || "Upgrade to Pro for unlimited access to all features.";
+  const el = document.getElementById("upgradeModal");
+  el.style.display = "flex";
+}
+function closeUpgradeModal() {
+  document.getElementById("upgradeModal").style.display = "none";
+}
+async function startCheckout(interval) {
+  try {
+    const r = await fetch("/subscription/checkout", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({interval}),
+    });
+    const d = await r.json();
+    if (d.url) window.location.href = d.url;
+    else showToast(d.error || "Payment not available yet — contact support", "error");
+  } catch(e) {
+    showToast("Network error — please try again", "error");
+  }
+}
+
 /* ── Settings ────────────────────────────────────────────────────────────── */
-function getApiKey(){ return appSettings.apiKey || ""; }
-
-function saveApiKeySetting(val){
-  appSettings.apiKey = val.trim();
-  localStorage.setItem("golf_settings", JSON.stringify(appSettings));
-}
-
-function toggleApiKeyVisibility(){
-  const el = document.getElementById("apiKey");
-  if(el) el.type = el.type === "password" ? "text" : "password";
-}
-
 function applySetting(key, val){
   appSettings[key] = val;
   localStorage.setItem("golf_settings", JSON.stringify(appSettings));
@@ -1429,9 +1972,6 @@ function initSettingsUI(){
     document.querySelectorAll(`[data-stg="${grp}"]`).forEach(b=>
       b.classList.toggle("stg-active", b.dataset.val === appSettings[k]));
   }
-  // Restore API key input
-  const el = document.getElementById("apiKey");
-  if(el) el.value = appSettings.apiKey || "";
 }
 
 /* Unit helpers — used by renderRangeTable, club detail, charts, etc. */
@@ -1451,14 +1991,6 @@ function toChartDist(m){
   return appSettings.distUnit==="yd" ? Math.round(m/0.9144) : m;
 }
 function fmtSpinRate(rpm){ return rpm==null?"—":Math.round(rpm)+" rpm"; }
-
-/* Legacy saveKey — now just delegates */
-function saveKey(){
-  const k = document.getElementById("apiKey")?.value.trim();
-  if(!k) return showToast("Enter an API key first","error");
-  saveApiKeySetting(k);
-  showToast("API key saved ✓","success");
-}
 
 /* ── Player Profile ─────────────────────────────────────────────────────── */
 function loadProfile(){
@@ -1492,11 +2024,9 @@ function saveProfile(){
 function renderProfileSummary(){
   const el = document.getElementById("profileSummaryDisplay");
   const p = playerProfile;
-  // Update sidebar brand area: player name on top line, "Golf Analytics" as subtitle
-  const nameEl = document.getElementById("companyName");
-  if(nameEl) nameEl.textContent = p.name || "Golf Analytics";
+  // Update sidebar tagline with player name; brand name (CadenceOS) stays fixed
   const tagEl = document.getElementById("companyTagline");
-  if(tagEl) tagEl.textContent = "Golf Analytics";
+  if(tagEl) tagEl.textContent = p.name || "Golf Analytics";
   if(!el) return;
   const hasData = p.name||p.age||p.hcp||p.goals;
   if(!hasData){ el.innerHTML=`<span style="color:var(--muted)">No profile saved yet.</span>`; return; }
@@ -1536,7 +2066,7 @@ const DZ_CONFIG = {
   simulator: {icon:"📸", title:"Drop screenshots or CSV here",
     sub:"VG3 round screenshots · or drop a CSV file", hint:"→ Saved to Simulator history", color:"var(--accent)"},
   real:      {icon:"📷", title:"Drop scorecard photo or CSV here",
-    sub:"Scorecard photo · or drop a CSV file", hint:"→ Claude reads hole-by-hole scores automatically", color:"var(--blue)"},
+    sub:"Scorecard photo · or drop a CSV file", hint:"→ AI reads hole-by-hole scores automatically", color:"var(--blue)"},
   practice:  {icon:"🏌️", title:"Drop range screenshots or CSV here",
     sub:"VG3 range mode screenshots · or drop a CSV file", hint:"→ Saved to Practice history", color:"var(--orange)"},
 };
@@ -1545,16 +2075,19 @@ function setTab(tab) {
   activeTab = tab;
   document.querySelectorAll(".sb-tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
 
-  const isPractice = tab === "practice";
-  const isProfile  = tab === "profile";
-  const isSettings = tab === "settings";
-  const isAll      = tab === "all";
-  const isReal     = tab === "real";
+  const isPractice   = tab === "practice";
+  const isProfile    = tab === "profile";
+  const isSettings   = tab === "settings";
+  const isAll        = tab === "all";
+  const isReal       = tab === "real";
+  const isTournament = tab === "tournament";
 
-  document.getElementById("roundsContent").style.display   = (isPractice||isProfile||isSettings) ? "none" : "";
-  document.getElementById("practiceSection").style.display = isPractice ? "" : "none";
-  document.getElementById("profileSection").style.display  = isProfile  ? "" : "none";
-  document.getElementById("settingsSection").style.display = isSettings ? "" : "none";
+  document.getElementById("roundsContent").style.display    = (isPractice||isProfile||isSettings||isTournament) ? "none" : "";
+  document.getElementById("practiceSection").style.display  = isPractice   ? "" : "none";
+  document.getElementById("profileSection").style.display   = isProfile    ? "" : "none";
+  document.getElementById("settingsSection").style.display  = isSettings   ? "" : "none";
+  document.getElementById("tournamentSection").style.display= isTournament ? "" : "none";
+  if (isTournament) { fetchTournaments(); return; }
   document.getElementById("dropWrap").style.display  = (isAll||isProfile||isSettings) ? "none" : "";
   document.getElementById("allHint").style.display   = isAll ? "" : "none";
   // Real-only section
@@ -1616,6 +2149,8 @@ function updateTabCounts(){
   document.getElementById("tc-sim").textContent  = sim.length;
   document.getElementById("tc-real").textContent = real.length;
   document.getElementById("tc-prac").textContent = filteredRangeSessions().length;
+  const tcT = document.getElementById("tc-tourn");
+  if(tcT) tcT.textContent = tournaments.length;
 }
 
 function filteredRounds(){
@@ -1668,7 +2203,7 @@ async function fetchRounds(){
     const r=await fetch("/api/rounds");
     if(!r.ok) throw new Error("Server not responding — is golf_server.py running?");
     const data=await r.json();
-    // Normalise rounds: infer holes_played from holes array if not set by Claude
+    // Normalise rounds: infer holes_played from holes array if not set by AI
     const rawRounds = (data.rounds||[]).map(r=>({
       ...r,
       holes_played: r.holes_played ?? (r.holes?.length || null),
@@ -2023,9 +2558,6 @@ async function handleFiles(files){
   const csvFiles=[...files].filter(f=>f.name.toLowerCase().endsWith('.csv'));
   if(csvFiles.length){ await handleCSVFiles(csvFiles); return; }
 
-  const apiKey=getApiKey();
-  if(!apiKey) return showToast("Set your Anthropic API key in ⚙️ Settings first","error");
-
   const modeMap = {simulator:"round",real:"real_round",practice:"range"};
   const mode    = modeMap[activeTab] || "round";
 
@@ -2035,17 +2567,21 @@ async function handleFiles(files){
 
   const titles = {round:"Analysing Round Screenshots",real_round:"Analysing Scorecard / Round Summary",range:"Analysing Range Practice Screenshots"};
   document.getElementById("loadingTitle").textContent = titles[mode]||"Analysing…";
-  document.getElementById("loadingMsg").textContent = `Compressing & sending ${images.length} image${images.length>1?"s":""} to Claude…`;
   document.getElementById("loadingOverlay").classList.add("active");
+  startAnalysisProgress(images.length);
 
   try{
     const resp=await fetch("/api/analyse",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({api_key:apiKey,images,mode})});
+      body:JSON.stringify({images,mode})});
     const result=await resp.json();
+    finishAnalysisProgress();
     document.getElementById("loadingOverlay").classList.remove("active");
     document.getElementById("fileInput").value="";
 
-    if(!resp.ok||result.error) return showToast("Analysis failed: "+(result.error||"unknown"),"error");
+    if(!resp.ok||result.error){
+      if(result.upgrade_required) return showUpgradeModal(result.error);
+      return showToast("Analysis failed: "+(result.error||"unknown"),"error");
+    }
 
     if(mode==="range"){
       const sessions=(result.data?.range_sessions||[]).filter(s=>s?.club);
@@ -2117,7 +2653,64 @@ function showRoundResults(rds){
         <div class="preview-row"><span>Hole data</span><span>${(r.holes||[]).length>0?r.holes.length+" holes":"summary only"}</span></div>
       </div>
     </div>`).join("");
+
+  // Pro users: fetch a quick coach commentary on this round
+  if (currentUser && currentUser.plan === "pro") {
+    const coachDiv = document.createElement("div");
+    coachDiv.id = "roundCoachComment";
+    coachDiv.style.cssText = "margin-top:12px;padding:14px;background:rgba(251,191,36,.04);border:1px solid rgba(251,191,36,.18);border-radius:10px;font-size:.82rem;line-height:1.6;color:var(--text);display:flex;gap:12px;align-items:flex-start";
+    coachDiv.innerHTML = `
+      <img src="/static/golf-god.png" alt="Golf God"
+           style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(251,191,36,.5)"
+           onerror="this.style.display='none'">
+      <div>
+        <div style="font-weight:700;font-size:.78rem;color:#f59e0b;margin-bottom:4px;letter-spacing:.02em">GOLF GOD</div>
+        <span style="color:var(--muted)">Analysing your round…</span>
+      </div>`;
+    document.getElementById("resultsContent").appendChild(coachDiv);
+    fetchRoundCoachComment(rds, coachDiv);
+  }
+
   document.getElementById("resultsOverlay").classList.add("active");
+}
+
+async function fetchRoundCoachComment(rds, targetEl) {
+  try {
+    const r = rds[0];
+    const summary = `New round — ${r.course||"unknown"}, ${r.date||"today"}: `+
+      `score ${r.score_vs_par!=null?(r.score_vs_par>0?"+":"")+r.score_vs_par+" vs par":"?"}, `+
+      `${r.total_strokes||"?"}/${r.holes_played||18} holes, `+
+      `GIR ${r.gir_pct!=null?r.gir_pct+"%":"N/A"}, FW ${r.fairways_hit_pct!=null?r.fairways_hit_pct+"%":"N/A"}, `+
+      `scrambling ${r.scrambling_pct!=null?r.scrambling_pct+"%":"N/A"}, `+
+      `putts/hole ${r.putts_per_hole!=null?r.putts_per_hole.toFixed(2):"N/A"}, `+
+      `avg drive ${r.avg_drive_m?fmtDist(r.avg_drive_m):"N/A"}`;
+    const recentRounds = rounds.slice(0,5);
+    const histCtx = recentRounds.length
+      ? "Recent rounds: "+recentRounds.map(x=>`${x.date||"?"} ${x.course||""} ${x.score_vs_par!=null?(x.score_vs_par>0?"+":"")+x.score_vs_par:"?"}`).join("; ")
+      : "No prior rounds.";
+    const resp = await fetch("/api/coach", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        mode: "round_comment",
+        messages: [{role:"user",
+          content:`${summary}\n\n${histCtx}\n\nIn 2-3 punchy sentences, give your most important observation about this round vs my recent form. Be direct and specific — no filler.`
+        }],
+        context: {type:"round_comment"}
+      })
+    });
+    const d = await resp.json();
+    if (d.reply) {
+      targetEl.innerHTML = `
+        <img src="/static/golf-god.png" alt="Golf God"
+             style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(251,191,36,.5)"
+             onerror="this.style.display='none'">
+        <div>
+          <div style="font-weight:700;font-size:.78rem;color:#f59e0b;margin-bottom:4px;letter-spacing:.02em">GOLF GOD</div>
+          ${esc(d.reply)}
+        </div>`;
+    } else { targetEl.style.display = "none"; }
+  } catch(e) { targetEl.style.display = "none"; }
 }
 
 function showRangeResults(sessions){
@@ -2197,6 +2790,7 @@ async function confirmSave(){
       if(skipped>0) msg+=` · ${skipped} duplicate${skipped>1?"s":""} skipped`;
       showToast(msg,"success");
       await fetchRounds();
+    }else if(res.upgrade_required){ showUpgradeModal(res.error);
     }else showToast("Save failed: "+res.error,"error");
   }catch(e){ showToast("Error: "+e.message,"error"); }
   pendingData=null;
@@ -2459,8 +3053,8 @@ function renderKPIs(full){
 }
 
 /* ── Charts ─────────────────────────────────────────────────────────────── */
-function renderCharts(full, allRounds){
-  const all = allRounds || full;  // allRounds includes 9-hole; full is 18H only
+function renderCharts(full, rounds){
+  const all = rounds || full;  // rounds includes 9-hole; full is 18H only
   if(!full.length && !all.length){
     ["chartScoring","chartGir","chartFw","chartScrambling","chartRadar"].forEach(id=>{
       destroyChart(id);
@@ -2516,11 +3110,11 @@ function renderCharts(full, allRounds){
   };
   const tgir=BENCH.gir, tfw=BENCH.fw, tscr=BENCH.scr;
   barChart("chartGir",full.map(r=>r.gir_pct),
-    full.map(r=>r.gir_pct>=tgir?"rgba(34,197,94,.65)":r.gir_pct>=(tgir-14)?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),tgir,"GIR %");
+    full.map(r=>r.gir_pct>=tgir?"rgba(58,138,92,.65)":r.gir_pct>=(tgir-14)?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),tgir,"GIR %");
   barChart("chartFw",full.map(r=>r.fairways_hit_pct),
-    full.map(r=>r.fairways_hit_pct==null?"rgba(100,116,139,.3)":r.fairways_hit_pct>=tfw?"rgba(34,197,94,.65)":r.fairways_hit_pct>=(tfw-15)?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),tfw,"FW %");
+    full.map(r=>r.fairways_hit_pct==null?"rgba(100,116,139,.3)":r.fairways_hit_pct>=tfw?"rgba(58,138,92,.65)":r.fairways_hit_pct>=(tfw-15)?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),tfw,"FW %");
   barChart("chartScrambling",full.map(r=>r.scrambling_pct),
-    full.map(r=>r.scrambling_pct==null?"rgba(100,116,139,.3)":r.scrambling_pct>=tscr?"rgba(34,197,94,.65)":r.scrambling_pct>=(tscr-15)?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),tscr,"Scrambling %");
+    full.map(r=>r.scrambling_pct==null?"rgba(100,116,139,.3)":r.scrambling_pct>=tscr?"rgba(58,138,92,.65)":r.scrambling_pct>=(tscr-15)?"rgba(245,158,11,.65)":"rgba(239,68,68,.65)"),tscr,"Scrambling %");
   updateBadgeLabels();
 
   destroyChart("chartRadar");
@@ -2535,7 +3129,7 @@ function renderCharts(full, allRounds){
         nm(BENCH.putts,ap),nm(ad,BENCH.drive),nm(BENCH.score+1,asc+1)],
         borderColor:"#3b82f6",backgroundColor:"rgba(59,130,246,.18)",pointBackgroundColor:"#3b82f6",pointRadius:4},
       {label:BENCH.label,data:[100,100,100,100,100,100],borderColor:"#22c55e",
-        borderDash:[5,4],backgroundColor:"rgba(34,197,94,.04)",pointRadius:0},
+        borderDash:[5,4],backgroundColor:"rgba(74,128,176,.04)",pointRadius:0},
     ]},options:{...CHART_OPTS,scales:{r:{min:0,max:100,
       ticks:{color:TICK_COLOR,backdropColor:"transparent",stepSize:25},
       grid:{color:"rgba(255,255,255,.08)"},
@@ -2591,7 +3185,7 @@ function renderApproach(all){
       </div>`;
     const pct=Math.round((b.hits/b.total)*100);
     const col=pct>=58?"var(--accent)":pct>=44?"var(--warn)":"var(--danger)";
-    const bg=pct>=58?"rgba(34,197,94,.22)":pct>=44?"rgba(245,158,11,.22)":"rgba(239,68,68,.22)";
+    const bg=pct>=58?"rgba(58,138,92,.22)":pct>=44?"rgba(245,158,11,.22)":"rgba(239,68,68,.22)";
     return`
       <div class="apb-row">
         <div class="apb-label">${b.label}</div>
@@ -2638,7 +3232,7 @@ function renderDriveDistribution(all){
   new Chart("chartDrive",{type:"doughnut",data:{
     labels:["Fairway","Rough","Deep Rough","Sand","OB/Penalty"],
     datasets:[{data:[d.fairway,d.rough,d.deepRough,d.sand,d.ob],
-      backgroundColor:["rgba(34,197,94,.75)","rgba(245,158,11,.75)","rgba(239,68,68,.65)","rgba(100,116,139,.65)","rgba(239,68,68,.9)"],
+      backgroundColor:["rgba(58,138,92,.75)","rgba(245,158,11,.75)","rgba(239,68,68,.65)","rgba(100,116,139,.65)","rgba(239,68,68,.9)"],
       borderColor:"#162030",borderWidth:2}]},
     options:{responsive:true,maintainAspectRatio:true,
       plugins:{legend:{position:"bottom",labels:{color:"#94a3b8",font:{size:11},padding:10}},
@@ -2700,7 +3294,7 @@ function saveEval(){
     mental:parseInt(document.getElementById("sMental").value),
     notes:document.getElementById("evalNotes").value.trim(),
   };
-  localStorage.setItem("golf_evals",JSON.stringify(evaluations));
+  localStorage.setItem("golf_evals_" + (currentUser?.id||"0"), JSON.stringify(evaluations));
   document.getElementById("rateOverlay").classList.remove("active");
   showToast("Evaluation saved ✓","success");renderAll();
 }
@@ -2742,6 +3336,20 @@ function renderEvals(){
 /* ── Coaching Insights ──────────────────────────────────────────────────── */
 function renderCoaching(full){
   if(!full.length)return;
+  // Insights are a Pro / trial-active feature
+  const isPro = currentUser && (currentUser.plan === "pro" || currentUser.is_admin);
+  const trialActive = currentUser && currentUser.coach_trial_active;
+  if (!isPro && !trialActive) {
+    const grid = document.getElementById("feedbackGrid");
+    if (grid) grid.innerHTML = `<div class="fb-item secondary" style="grid-column:1/-1;text-align:center;padding:20px">
+      <div style="font-size:2rem;margin-bottom:8px">⚡</div>
+      <strong>Golf God Insights — Pro Feature</strong>
+      <p style="margin-top:6px">Upgrade to Pro to unlock personalised coaching insights based on your data.</p>
+      <button onclick="showUpgradeModal('Unlock Golf God Insights')" style="margin-top:12px;background:var(--accent);
+        color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:.82rem;font-weight:700;cursor:pointer">
+        Upgrade to Pro →</button></div>`;
+    return;
+  }
   const ag=mean(full,"gir_pct"),af=mean(full,"fairways_hit_pct"),
         as=mean(full,"scrambling_pct"),ap=mean(full,"putts_per_hole"),asc=mean(full,"score_vs_par");
   const gaps=[];
@@ -2951,6 +3559,18 @@ function renderTable(all){
 function renderCoachingReal(fr){
   const grid=document.getElementById("feedbackGrid");
   if(!fr.length){grid.innerHTML=`<p style="color:var(--muted);font-size:.85rem">No real rounds yet.</p>`;return;}
+  const isPro = currentUser && (currentUser.plan === "pro" || currentUser.is_admin);
+  const trialActive = currentUser && currentUser.coach_trial_active;
+  if (!isPro && !trialActive) {
+    grid.innerHTML = `<div class="fb-item secondary" style="grid-column:1/-1;text-align:center;padding:20px">
+      <div style="font-size:2rem;margin-bottom:8px">⚡</div>
+      <strong>Golf God Insights — Pro Feature</strong>
+      <p style="margin-top:6px">Upgrade to Pro to unlock personalised coaching insights.</p>
+      <button onclick="showUpgradeModal('Unlock Golf God Insights')" style="margin-top:12px;background:var(--accent);
+        color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:.82rem;font-weight:700;cursor:pointer">
+        Upgrade to Pro →</button></div>`;
+    return;
+  }
   const withHoles=fr.filter(r=>(r.holes||[]).length>0);
   const items=[];
 
@@ -3129,7 +3749,7 @@ function renderHoleDifficulty(fr){
   }
   const labels=Object.keys(hd).map(h=>"H"+h);
   const data=Object.values(hd).map(d=>d.n>0?Math.round(((d.total/d.n)-d.par)*10)/10:null);
-  const cols=data.map(v=>v===null?"rgba(100,116,139,.2)":v<=0?"rgba(34,197,94,.7)":v<=1?"rgba(245,158,11,.7)":"rgba(239,68,68,.7)");
+  const cols=data.map(v=>v===null?"rgba(100,116,139,.2)":v<=0?"rgba(58,138,92,.7)":v<=1?"rgba(245,158,11,.7)":"rgba(239,68,68,.7)");
   el.innerHTML=`<canvas id="chartHoleDiff" style="max-height:200px"></canvas>`;
   destroyChart("chartHoleDiff");
   new Chart("chartHoleDiff",{type:"bar",data:{labels,datasets:[
@@ -3318,9 +3938,9 @@ function renderClubCards(){
             border-top:1px solid var(--border);margin-bottom:6px">
           <span style="font-size:.63rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">⛳ Course</span>
           ${courseData.fairwayPct!=null?`<span style="font-size:.72rem"><span style="color:var(--muted)">FW</span>
-            <strong style="color:${courseData.fairwayPct>=60?'#86efac':courseData.fairwayPct>=40?'#fde68a':'#fca5a5'}">${courseData.fairwayPct}%</strong></span>`:""}
+            <strong style="color:${courseData.fairwayPct>=60?'#7ab89a':courseData.fairwayPct>=40?'#fde68a':'#fca5a5'}">${courseData.fairwayPct}%</strong></span>`:""}
           ${courseData.onGreenPct!=null?`<span style="font-size:.72rem"><span style="color:var(--muted)">Grn</span>
-            <strong style="color:${courseData.onGreenPct>=60?'#86efac':courseData.onGreenPct>=40?'#fde68a':'#fca5a5'}">${courseData.onGreenPct}%</strong></span>`:""}
+            <strong style="color:${courseData.onGreenPct>=60?'#7ab89a':courseData.onGreenPct>=40?'#fde68a':'#fca5a5'}">${courseData.onGreenPct}%</strong></span>`:""}
           <span style="font-size:.63rem;color:var(--muted);margin-left:auto">${courseData.total} shots</span>
         </div>`:""}
 
@@ -3450,7 +4070,7 @@ function renderClubAccuracy(){
       labels:withAcc,
       datasets:[
         {label:"Target Hit %",data,
-         backgroundColor:data.map(v=>v>=65?"rgba(34,197,94,.7)":v>=45?"rgba(245,158,11,.7)":"rgba(239,68,68,.7)"),
+         backgroundColor:data.map(v=>v>=65?"rgba(58,138,92,.7)":v>=45?"rgba(245,158,11,.7)":"rgba(239,68,68,.7)"),
          borderRadius:4},
         {label:`Target ${BENCH.gir}%`,data:withAcc.map(()=>65),
          type:"line",borderColor:"#22c55e",borderDash:[6,3],pointRadius:0,borderWidth:2},
@@ -3589,13 +4209,13 @@ function renderStrikeQuality(){
   };
   mkBar("chartSmash",
     clubs.map(c=>byClub[c].at(-1).avg_smash_factor??null),
-    v=>v==null?"transparent":v>=1.45?"rgba(34,197,94,.6)":v>=1.35?"rgba(245,158,11,.6)":"rgba(239,68,68,.55)");
+    v=>v==null?"transparent":v>=1.45?"rgba(58,138,92,.6)":v>=1.35?"rgba(245,158,11,.6)":"rgba(239,68,68,.55)");
   mkBar("chartClubSpeed",
     clubs.map(c=>{ const v=byClub[c].at(-1).avg_club_speed_mph; return v==null?null:appSettings.speedUnit==="kmh"?Math.round(v*1.60934):Math.round(v); }),
     ()=>"rgba(59,130,246,.55)");
   mkBar("chartSpinRate",
     clubs.map(c=>byClub[c].at(-1).avg_spin_rate_rpm??null),
-    v=>v==null?"transparent":v>4000?"rgba(239,68,68,.55)":v>3000?"rgba(245,158,11,.55)":"rgba(34,197,94,.6)");
+    v=>v==null?"transparent":v>4000?"rgba(239,68,68,.55)":v>3000?"rgba(245,158,11,.55)":"rgba(58,138,92,.6)");
 }
 
 /* ── On-Course Club Usage (Simulator) ──────────────────────────────────── */
@@ -3646,7 +4266,7 @@ function renderSimClubUsage(){
         {label:"On-course shots",  data:clubs.map(c=>stats[c].count),
          backgroundColor:"rgba(59,130,246,.55)", borderRadius:3},
         {label:"Practice sessions",data:clubs.map(c=>stats[c].rangeSessions),
-         backgroundColor:"rgba(34,197,94,.45)",  borderRadius:3},
+         backgroundColor:"rgba(58,138,92,.45)",  borderRadius:3},
       ]
     },
     options:{
@@ -3961,7 +4581,7 @@ function openCoach(type, data){
     const isProfileCoach = coachCtx.type==="profile";
     document.getElementById("coachMessages").innerHTML=`
       <div class="coach-welcome">
-        <p>${isProfileCoach?"I'll give you a personalised assessment based on your profile and all tracked data.":"Ask me anything about your golf game."}</p>
+        <p>${isProfileCoach?"The Golf God will give you a full assessment based on your profile and all tracked data.":"Ask the Golf God anything about your game."}</p>
         <p style="margin-top:4px;font-size:.78rem;color:var(--muted)">I have full access to your stats, rounds, and practice data.</p>
       </div>`;
     if(isProfileCoach){
@@ -3992,7 +4612,7 @@ function clearCoachChat(){
   coachHistory=[];
   document.getElementById("coachMessages").innerHTML=`
     <div class="coach-welcome">
-      <p>Ask me anything about your golf game.</p>
+      <p>Ask the Golf God anything about your game.</p>
       <p style="margin-top:4px;font-size:.78rem;color:var(--muted)">I have full access to your stats, rounds, and practice data.</p>
     </div>`;
 }
@@ -4007,9 +4627,6 @@ async function sendCoachMessage(){
   const input=document.getElementById("coachInput");
   const text=input.value.trim();
   if(!text) return;
-
-  const apiKey=getApiKey();
-  if(!apiKey){ showToast("Set your Anthropic API key in ⚙️ Settings first","error"); return; }
 
   input.value="";
   coachHistory.push({role:"user",content:text});
@@ -4030,13 +4647,25 @@ async function sendCoachMessage(){
     const resp=await fetch("/api/coach",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({api_key:apiKey, messages:coachHistory, context:contextToSend}),
+      body:JSON.stringify({messages:coachHistory, context:contextToSend}),
     });
     const result=await resp.json();
     document.getElementById("coachTyping").style.display="none";
 
     if(!resp.ok||result.error){
-      appendCoachMsg("error","Sorry, I couldn't connect: "+(result.error||"unknown error"));
+      if(result.upgrade_required){
+        appendCoachMsg("assistant",
+          "The Golf God speaks only to Pro members.\n\nUpgrade to Pro for unlimited coaching conversations, unlimited rounds, and full access to all features.");
+        // Show upgrade CTA in coach
+        const upgradeDiv=document.createElement("div");
+        upgradeDiv.style.cssText="padding:10px 16px";
+        upgradeDiv.innerHTML=`<button onclick="showUpgradeModal('Upgrade to Pro to consult the Golf God')"
+          style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:9px 18px;
+          font-size:.85rem;font-weight:700;cursor:pointer;width:100%">Upgrade to Pro →</button>`;
+        document.getElementById("coachMessages").appendChild(upgradeDiv);
+      } else {
+        appendCoachMsg("error","Sorry, I couldn't connect: "+(result.error||"unknown error"));
+      }
     } else {
       coachHistory.push({role:"assistant",content:result.reply});
       appendCoachMsg("assistant",result.reply);
@@ -4093,7 +4722,7 @@ function openClubDetail(clubName){
   const degFmt = (v,flip=false) => {
     if(v==null) return`<span style="color:var(--muted)">—</span>`;
     const pos=flip?v<0:v>0;
-    const col=Math.abs(v)<0.5?"var(--text)":pos?"#86efac":"#fca5a5";
+    const col=Math.abs(v)<0.5?"var(--text)":pos?"#7ab89a":"#fca5a5";
     return`<span style="color:${col}">${v>0?"+":""}${v.toFixed(1)}°</span>`;
   };
 
@@ -4131,8 +4760,8 @@ function openClubDetail(clubName){
   const tableRows = [...sessions].reverse().map(s=>{
     const maxC     = s.max_carry_m||s.longest_m;
     const shapeS   = classifyShape(s.avg_spin_axis_deg);
-    const smashCls = s.avg_smash_factor==null?"":s.avg_smash_factor>=1.45?"#86efac":s.avg_smash_factor>=1.35?"#fde68a":"#fca5a5";
-    const accCls   = s.target_hit_pct==null?"var(--muted)":s.target_hit_pct>=65?"#86efac":s.target_hit_pct>=45?"#fde68a":"#fca5a5";
+    const smashCls = s.avg_smash_factor==null?"":s.avg_smash_factor>=1.45?"#7ab89a":s.avg_smash_factor>=1.35?"#fde68a":"#fca5a5";
+    const accCls   = s.target_hit_pct==null?"var(--muted)":s.target_hit_pct>=65?"#7ab89a":s.target_hit_pct>=45?"#fde68a":"#fca5a5";
     return`<tr style="border-bottom:1px solid rgba(255,255,255,.04)">
       <td style="color:var(--muted);padding:6px 8px;white-space:nowrap">${s.date||"—"}</td>
       <td style="padding:6px 8px;font-weight:700">${fmtDist(s.avg_carry_m)}</td>
@@ -4179,7 +4808,7 @@ function openClubDetail(clubName){
             ["Distance",       perf.distanceControl,  "Carry distance vs your benchmark"],
             ["Strike Quality", perf.strikeQuality>0?perf.strikeQuality:null, "Smash factor & ball speed quality"],
           ].filter(([,v])=>v!=null).map(([label,val,desc])=>{
-            const col=val>=70?"#86efac":val>=50?"#fde68a":"#fca5a5";
+            const col=val>=70?"#7ab89a":val>=50?"#fde68a":"#fca5a5";
             return`<div class="perf-bar-row">
               <div class="perf-bar-label" title="${desc}">${label}</div>
               <div class="perf-bar-track"><div class="perf-bar-fill" style="width:${val}%;background:${col}"></div></div>
@@ -4194,8 +4823,8 @@ function openClubDetail(clubName){
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
       ${kpiTile("Avg Carry",avgOverall!=null?fmtDist(avgOverall):"","","var(--text)")}
       ${kpiTile("Spread",avgSpread!=null?fmtDist(avgSpread):"","","var(--muted)")}
-      ${kpiTile("Target Hit",avgAcc!=null?avgAcc+"%":null,"",avgAcc==null?"var(--muted)":avgAcc>=65?"#86efac":avgAcc>=45?"#fde68a":"#fca5a5")}
-      ${avgSmash!=null?kpiTile("Smash",avgSmash.toFixed(2),"",avgSmash>=1.45?"#86efac":avgSmash>=1.35?"#fde68a":"#fca5a5"):""}
+      ${kpiTile("Target Hit",avgAcc!=null?avgAcc+"%":null,"",avgAcc==null?"var(--muted)":avgAcc>=65?"#7ab89a":avgAcc>=45?"#fde68a":"#fca5a5")}
+      ${avgSmash!=null?kpiTile("Smash",avgSmash.toFixed(2),"",avgSmash>=1.45?"#7ab89a":avgSmash>=1.35?"#fde68a":"#fca5a5"):""}
       ${chcp!=null?kpiTile("HCP Equiv",chcp.hcp.toFixed(1),"","var(--text)"):""}
     </div>
 
@@ -4208,11 +4837,11 @@ function openClubDetail(clubName){
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch">
         ${crs.fairwayPct!=null?`<div style="background:var(--surface);border-radius:8px;padding:10px 14px;flex:1;min-width:90px;text-align:center">
           <div style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Fairway Hit</div>
-          <div style="font-size:1.5rem;font-weight:800;color:${crs.fairwayPct>=60?"#86efac":crs.fairwayPct>=40?"#fde68a":"#fca5a5"}">${crs.fairwayPct}%</div>
+          <div style="font-size:1.5rem;font-weight:800;color:${crs.fairwayPct>=60?"#7ab89a":crs.fairwayPct>=40?"#fde68a":"#fca5a5"}">${crs.fairwayPct}%</div>
         </div>`:""}
         ${crs.onGreenPct!=null?`<div style="background:var(--surface);border-radius:8px;padding:10px 14px;flex:1;min-width:90px;text-align:center">
           <div style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Green / Fringe</div>
-          <div style="font-size:1.5rem;font-weight:800;color:${crs.onGreenPct>=60?"#86efac":crs.onGreenPct>=40?"#fde68a":"#fca5a5"}">${crs.onGreenPct}%</div>
+          <div style="font-size:1.5rem;font-weight:800;color:${crs.onGreenPct>=60?"#7ab89a":crs.onGreenPct>=40?"#fde68a":"#fca5a5"}">${crs.onGreenPct}%</div>
         </div>`:""}
         ${Object.keys(crsResultCounts).filter(k=>crsResultCounts[k]>0).sort((a,b)=>crsResultCounts[b]-crsResultCounts[a]).map(k=>`
           <div style="background:var(--surface);border-radius:8px;padding:10px 14px;flex:1;min-width:70px;text-align:center">
@@ -4290,7 +4919,7 @@ function openClubDetail(clubName){
   if(shapeDist){
     destroyChart("chartDetailShape");
     const SHAPE_ORDER=["hook","draw","straight","fade","slice"];
-    const SHAPE_COL={"hook":"rgba(249,115,22,.8)","draw":"rgba(34,197,94,.8)",
+    const SHAPE_COL={"hook":"rgba(249,115,22,.8)","draw":"rgba(58,138,92,.8)",
       "straight":"rgba(100,116,139,.8)","fade":"rgba(59,130,246,.8)","slice":"rgba(239,68,68,.8)"};
     const labels=SHAPE_ORDER.filter(sh=>shapeDist.counts[sh]>0);
     const data=labels.map(sh=>Math.round(shapeDist.counts[sh]/shapeDist.total*100));
@@ -4409,7 +5038,7 @@ function openRoundDetail(index){
 
   // ── Header ──────────────────────────────────────────────────────────────
   const srcTag  = r.source_type==="real"
-    ? `<span style="background:rgba(34,197,94,.15);color:#86efac;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:700">⛳ Real Course</span>`
+    ? `<span style="background:rgba(58,138,92,.2);color:#7ab89a;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:700">⛳ Real Course</span>`
     : `<span style="background:rgba(59,130,246,.15);color:#93c5fd;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:700">🖥 Simulator</span>`;
 
   const scoreStyle = r.score_vs_par!=null
@@ -4666,5 +5295,656 @@ function closeRoundDetail(){
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════
+     UPGRADE MODAL
+════════════════════════════════════════════════════════════════════════ -->
+<div id="upgradeModal" onclick="if(event.target===this)closeUpgradeModal()"
+  style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.75);
+  display:none;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:36px 32px;max-width:420px;width:90%;text-align:center;
+    box-shadow:0 24px 80px rgba(0,0,0,.6)">
+    <div style="font-size:2.2rem;margin-bottom:16px">⭐</div>
+    <div style="font-size:1.2rem;font-weight:800;margin-bottom:10px">Upgrade to Pro</div>
+    <div id="upgradeModalMsg" style="font-size:.875rem;color:var(--muted);margin-bottom:24px;line-height:1.6"></div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+      padding:20px;margin-bottom:22px;text-align:left">
+      <div style="font-size:.8rem;font-weight:700;margin-bottom:12px;color:var(--muted);
+        text-transform:uppercase;letter-spacing:.06em">Pro includes</div>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:.85rem">
+        <div>✓ Unlimited rounds &amp; range sessions</div>
+        <div>✓ Golf God — unlimited coaching conversations</div>
+        <div>✓ Full charts &amp; performance analysis</div>
+        <div>✓ AI screenshot analysis (unlimited)</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <button onclick="startCheckout('month')"
+        style="flex:1;padding:12px;border-radius:9px;background:var(--green);color:#fff;
+        border:none;font-size:.9rem;font-weight:700;cursor:pointer">
+        €10 / month
+      </button>
+      <button onclick="startCheckout('year')"
+        style="flex:1;padding:12px;border-radius:9px;background:var(--accent);color:#fff;
+        border:none;font-size:.9rem;font-weight:700;cursor:pointer;position:relative">
+        €108 / year
+        <span style="position:absolute;top:-8px;right:-6px;background:var(--gold);color:#000;
+          border-radius:8px;padding:1px 7px;font-size:.65rem;font-weight:800">-10%</span>
+      </button>
+    </div>
+    <button onclick="closeUpgradeModal()"
+      style="background:none;border:none;color:var(--muted);font-size:.82rem;cursor:pointer">
+      Maybe later
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     TUTORIAL OVERLAY SYSTEM
+     Shows when currentUser.tutorial_step < 5.
+     Pre-scripted tour of the dashboard with spotlight + coach bubble.
+════════════════════════════════════════════════════════════════════════ -->
+<style>
+  /* Dark curtain behind spotlight */
+  #tutOverlay {
+    position: fixed; inset: 0; z-index: 8000;
+    pointer-events: none;
+    display: none;
+  }
+  #tutOverlay.active { display: block; pointer-events: auto; }
+
+  /* SVG curtain with clip hole */
+  #tutCurtain {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    fill: rgba(0,0,0,0.72);
+    pointer-events: none;
+    transition: d .45s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* Coach bubble */
+  #tutBubble {
+    position: absolute;
+    background: var(--surface, #161b22);
+    border: 1px solid var(--border, #30363d);
+    border-radius: 14px;
+    padding: 20px 20px 16px;
+    width: 320px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.7);
+    z-index: 8010;
+    transition: top .35s cubic-bezier(.4,0,.2,1), left .35s cubic-bezier(.4,0,.2,1),
+                opacity .25s ease;
+  }
+  #tutBubble::before {
+    content: "";
+    position: absolute;
+    width: 14px; height: 14px;
+    background: var(--surface, #161b22);
+    border: 1px solid var(--border, #30363d);
+    border-right: none; border-bottom: none;
+    transform: rotate(45deg);
+  }
+  #tutBubble.arrow-left::before { left: -8px; top: 28px; border-right: none; border-bottom: none; }
+  #tutBubble.arrow-top::before  { top: -8px; left: 28px; border-right: none; border-bottom: none; transform: rotate(45deg); }
+  #tutBubble.arrow-bottom::before { bottom: -8px; left: 28px; border-top: none; border-left: none; transform: rotate(45deg); }
+  #tutBubble.arrow-right::before { right: -8px; top: 28px; border-left: none; border-top: none; transform: rotate(45deg); }
+
+  .tut-coach-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .tut-coach-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #1f6feb, #2ea043);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+  }
+  .tut-coach-name { font-size: .78rem; font-weight: 700; }
+  .tut-coach-role { font-size: .68rem; color: var(--muted, #8b949e); }
+  .tut-coach-msg  { font-size: .84rem; line-height: 1.6; color: var(--text, #e6edf3); margin-bottom: 16px; }
+
+  .tut-progress { display: flex; gap: 5px; margin-bottom: 14px; }
+  .tut-dot { flex: 1; height: 3px; border-radius: 2px; background: var(--border, #30363d); transition: background .3s; }
+  .tut-dot.done { background: var(--accent, #1f6feb); }
+  .tut-dot.active { background: var(--green, #2ea043); }
+
+  .tut-btn-row { display: flex; gap: 8px; align-items: center; }
+  .tut-btn-next {
+    flex: 1; padding: 9px; border-radius: 8px;
+    background: var(--green, #2ea043); color: #fff;
+    border: none; font-size: .84rem; font-weight: 700;
+    cursor: pointer; transition: background .15s;
+  }
+  .tut-btn-next:hover { background: var(--green-h, #3fb950); }
+  .tut-btn-skip {
+    background: none; border: none; color: var(--muted, #8b949e);
+    font-size: .75rem; cursor: pointer; padding: 6px 8px;
+    border-radius: 6px; transition: color .15s;
+  }
+  .tut-btn-skip:hover { color: var(--text, #e6edf3); }
+
+  /* Step counter */
+  .tut-step-counter { font-size: .7rem; color: var(--muted, #8b949e); text-align: right; margin-bottom: 8px; }
+</style>
+
+<!-- Tutorial overlay DOM -->
+<div id="tutOverlay">
+  <svg id="tutCurtainSvg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
+    <defs>
+      <mask id="tutMask">
+        <rect width="100%" height="100%" fill="white"/>
+        <rect id="tutHole" x="0" y="0" width="0" height="0" rx="10" fill="black"/>
+      </mask>
+    </defs>
+    <rect width="100%" height="100%" fill="rgba(0,0,0,0.72)" mask="url(#tutMask)"/>
+  </svg>
+  <div id="tutBubble" class="arrow-left">
+    <div class="tut-step-counter" id="tutCounter">Step 1 of 4</div>
+    <div class="tut-progress" id="tutProgress"></div>
+    <div class="tut-coach-header">
+      <div class="tut-coach-avatar" id="tutAvatar" style="overflow:hidden;border-radius:50%;background:#0d1821;padding:0">
+        <img src="/static/golf-god.png" alt="Golf God" style="width:100%;height:100%;object-fit:cover"
+             onerror="this.parentNode.innerHTML='⚡'">
+      </div>
+      <div>
+        <div class="tut-coach-name">Golf God</div>
+        <div class="tut-coach-role">All-knowing oracle</div>
+      </div>
+    </div>
+    <div class="tut-coach-msg" id="tutMsg"></div>
+    <div class="tut-btn-row">
+      <button class="tut-btn-next" id="tutNextBtn" onclick="tutAdvance()">Next →</button>
+      <button class="tut-btn-skip" onclick="tutSkip()">Skip tour</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   PROFILE PHOTO
+════════════════════════════════════════════════════════════════ */
+function updateProfileAvatar(base64, initial) {
+  // Header avatar
+  const img  = document.getElementById("profileAvatarImg");
+  const init = document.getElementById("profileAvatarInitial");
+  if (base64) {
+    img.src = base64; img.style.display = "block";
+    if(init) init.style.display = "none";
+  } else {
+    if(img)  img.style.display = "none";
+    if(init) { init.style.display = ""; init.textContent = initial || "?"; }
+  }
+  // Dropdown large avatar (sync with header)
+  const dropImg  = document.getElementById("acctDropAvatarImg");
+  const dropInit = document.getElementById("acctDropAvatarInitial");
+  if (base64) {
+    if(dropImg)  { dropImg.src = base64; dropImg.style.display = "block"; }
+    if(dropInit) dropInit.style.display = "none";
+  } else {
+    if(dropImg)  dropImg.style.display = "none";
+    if(dropInit) { dropInit.style.display = ""; dropInit.textContent = initial || "?"; }
+  }
+  // Big profile section avatar
+  const bigImg  = document.getElementById("profilePhotoBigImg");
+  const bigInit = document.getElementById("profilePhotoBigInitial");
+  const removeBtn = document.getElementById("removePhotoBtn");
+  if (base64) {
+    if(bigImg)  { bigImg.src = base64; bigImg.style.display = "block"; }
+    if(bigInit) bigInit.style.display = "none";
+    if(removeBtn) removeBtn.style.display = "";
+  } else {
+    if(bigImg)  bigImg.style.display = "none";
+    if(bigInit) { bigInit.style.display = ""; bigInit.textContent = initial || "?"; }
+    if(removeBtn) removeBtn.style.display = "none";
+  }
+}
+
+async function handleProfilePhoto(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64 = e.target.result;  // data:image/...;base64,...
+    try {
+      const r = await fetch("/auth/profile_image", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({image: base64})
+      });
+      const d = await r.json();
+      if (d.success) {
+        currentUser.profile_image = base64;
+        updateProfileAvatar(base64, (currentUser.display_name||"?")[0].toUpperCase());
+        showToast("Profile photo saved", "success");
+      } else {
+        showToast("Failed to save photo: " + (d.error||"unknown"), "error");
+      }
+    } catch(err) { showToast("Error uploading photo", "error"); }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function removeProfilePhoto() {
+  try {
+    const r = await fetch("/auth/profile_image", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({image: null})
+    });
+    const d = await r.json();
+    if (d.success) {
+      currentUser.profile_image = null;
+      const initial = (currentUser.display_name||"?")[0].toUpperCase();
+      updateProfileAvatar(null, initial);
+      showToast("Photo removed", "success");
+    }
+  } catch(err) { showToast("Error removing photo", "error"); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOURNAMENTS
+════════════════════════════════════════════════════════════════ */
+let tournChart = null;
+
+function tournFormatChange() {
+  const fmt = document.getElementById("tn-format").value;
+  document.getElementById("tn-stbl-wrap").style.display  = fmt==="stableford" ? "" : "none";
+  document.getElementById("tn-gross-wrap").style.display = fmt==="stableford" ? "none" : "";
+  document.getElementById("tn-net-wrap").style.display   = fmt==="stableford" ? "none" : "";
+}
+
+async function fetchTournaments() {
+  try {
+    const r = await fetch("/api/tournaments");
+    if (r.status === 403) { showUpgradeModal("Upgrade to Pro to log tournament results"); return; }
+    const d = await r.json();
+    tournaments = d.tournaments || [];
+    renderTournaments();
+    updateTabCounts();
+  } catch(e) { console.error("fetchTournaments:", e); }
+}
+
+async function saveTournament() {
+  const fmt = document.getElementById("tn-format").value;
+  const payload = {
+    name:          document.getElementById("tn-name").value.trim(),
+    date:          document.getElementById("tn-date").value,
+    course:        document.getElementById("tn-course").value.trim(),
+    format:        fmt,
+    holes_played:  parseInt(document.getElementById("tn-holes").value)||18,
+    gross_score:   fmt!=="stableford" ? (parseInt(document.getElementById("tn-gross").value)||null) : null,
+    net_score:     fmt!=="stableford" ? (parseInt(document.getElementById("tn-net").value)||null) : null,
+    stableford_pts:fmt==="stableford" ? (parseInt(document.getElementById("tn-stbl").value)||null) : null,
+    position:      parseInt(document.getElementById("tn-pos").value)||null,
+    field_size:    parseInt(document.getElementById("tn-field").value)||null,
+    handicap_used: parseFloat(document.getElementById("tn-hcp").value)||null,
+    notes:         document.getElementById("tn-notes").value.trim(),
+  };
+  if (!payload.name || !payload.date) { showToast("Name and date required", "error"); return; }
+  try {
+    const r = await fetch("/api/tournaments", {
+      method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if(d.success) {
+      document.getElementById("tournSavedMsg").style.display = "";
+      setTimeout(()=>document.getElementById("tournSavedMsg").style.display="none",2500);
+      await fetchTournaments();
+    } else { showToast("Save failed: "+(d.error||"unknown"), "error"); }
+  } catch(e) { showToast("Error: "+e.message, "error"); }
+}
+
+async function deleteTournament(id) {
+  if (!confirm("Delete this tournament result?")) return;
+  await fetch("/api/tournaments/"+id, {method:"DELETE"});
+  await fetchTournaments();
+}
+
+function renderTournaments() {
+  // KPIs
+  const t = tournaments;
+  const events = t.length;
+  document.getElementById("t-events").textContent = events || "—";
+
+  const positions = t.filter(x=>x.position).map(x=>x.position);
+  document.getElementById("t-best").textContent = positions.length ? Math.min(...positions)+"th" : "—";
+  document.getElementById("t-avg-pos").textContent = positions.length ? (positions.reduce((a,b)=>a+b,0)/positions.length).toFixed(1) : "—";
+
+  const nets = t.filter(x=>x.net_score!=null).map(x=>x.net_score);
+  const par  = t.filter(x=>x.score_vs_par!=null).map(x=>x.score_vs_par);
+  document.getElementById("t-avg-score").textContent = par.length ? (par.reduce((a,b)=>a+b,0)/par.length>0?"+":"")+((par.reduce((a,b)=>a+b,0)/par.length).toFixed(1)) : (nets.length ? (nets.reduce((a,b)=>a+b,0)/nets.length).toFixed(0) : "—");
+
+  const stbls = t.filter(x=>x.stableford_pts!=null).map(x=>x.stableford_pts);
+  document.getElementById("t-best-stbl").textContent = stbls.length ? Math.max(...stbls) : "—";
+
+  // Table
+  const tbody = document.getElementById("tournTableBody");
+  if (!t.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">No tournaments logged yet</td></tr>';
+  } else {
+    tbody.innerHTML = [...t].sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(x=>{
+      const fmtBadge = {stroke:"tourn-format-stroke",stableford:"tourn-format-stableford",match:"tourn-format-match",skins:"tourn-format-skins"};
+      const fmtLabel = {stroke:"Stroke",stableford:"Stableford",match:"Match",skins:"Skins"};
+      const pos = x.position ? x.position+(x.field_size?"/"+x.field_size:"") : "—";
+      const score = x.stableford_pts!=null ? "—" : (x.gross_score||"—");
+      const net   = x.stableford_pts!=null ? "—" : (x.net_score||"—");
+      const pts   = x.stableford_pts!=null ? x.stableford_pts : "—";
+      return `<tr>
+        <td>${x.date||"—"}</td>
+        <td><strong>${escHtml(x.name||"")}</strong>${x.notes?`<br><span style="font-size:.7rem;color:var(--muted)">${escHtml(x.notes.slice(0,60))}</span>`:""}</td>
+        <td>${escHtml(x.course||"")}</td>
+        <td><span class="tourn-format-badge ${fmtBadge[x.format]||""}">${fmtLabel[x.format]||x.format}</span></td>
+        <td>${score}</td><td>${net}</td><td>${pts}</td>
+        <td>${pos}</td>
+        <td>${x.handicap_used!=null?x.handicap_used:"—"}</td>
+        <td><button onclick="deleteTournament(${x.id})"
+          style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:.8rem">✕</button></td>
+      </tr>`;
+    }).join("");
+  }
+
+  // Format breakdown
+  const fmtDiv = document.getElementById("tournFormatBreakdown");
+  if (!t.length) {
+    fmtDiv.innerHTML = '<span style="color:var(--muted);font-size:.8rem">No data yet</span>';
+  } else {
+    const counts = {};
+    t.forEach(x=>{counts[x.format]=(counts[x.format]||0)+1;});
+    const fmtLabel = {stroke:"Stroke Play",stableford:"Stableford",match:"Match Play",skins:"Skins"};
+    const fmtBadge = {stroke:"tourn-format-stroke",stableford:"tourn-format-stableford",match:"tourn-format-match",skins:"tourn-format-skins"};
+    fmtDiv.innerHTML = Object.entries(counts).map(([f,c])=>
+      `<span class="tourn-format-badge ${fmtBadge[f]||""}">${fmtLabel[f]||f}: ${c}</span>`
+    ).join(" ");
+  }
+
+  // Score trend chart
+  const noData = document.getElementById("chartTournNoData");
+  const canvas  = document.getElementById("chartTournScore");
+  const scored = [...t].filter(x=>x.score_vs_par!=null||x.net_score!=null).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  if (!scored.length) {
+    noData.style.display = ""; canvas.style.display = "none";
+  } else {
+    noData.style.display = "none"; canvas.style.display = "";
+    const labels = scored.map(x=>x.date||x.name||"");
+    const data   = scored.map(x=>x.score_vs_par!=null?x.score_vs_par:null);
+    if (tournChart) tournChart.destroy();
+    tournChart = new Chart(canvas.getContext("2d"), {
+      type:"line",
+      data:{
+        labels,
+        datasets:[{
+          label:"Score vs Par",
+          data,
+          borderColor:"#3b82f6",backgroundColor:"rgba(59,130,246,.12)",
+          tension:.35,pointRadius:5,pointBackgroundColor:"#3b82f6",
+          fill:true,spanGaps:true
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{display:false}},
+        scales:{
+          y:{
+            grid:{color:"rgba(255,255,255,.04)"},
+            ticks:{color:"#64748b",callback:v=>(v>0?"+":"")+v}
+          },
+          x:{grid:{display:false},ticks:{color:"#64748b",maxRotation:30,font:{size:10}}}
+        }
+      }
+    });
+  }
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TUTORIAL OVERLAY — pre-scripted dashboard tour
+════════════════════════════════════════════════════════════════ */
+
+/* Example data injected when the user has no real rounds yet */
+const TUTORIAL_EXAMPLE_DATA = {
+  rounds: [
+    { id:"ex1", course:"Example Golf Club", date:"2026-03-01", source_type:"simulator",
+      score_vs_par:5, total_strokes:77, par:72, holes_played:18,
+      fairways_hit_pct:55, avg_drive_m:235, longest_drive_m:271,
+      gir_pct:50, scrambling_pct:44, total_putts:34, putts_per_hole:1.89, holes:[] },
+    { id:"ex2", course:"Example Golf Club", date:"2026-03-08", source_type:"simulator",
+      score_vs_par:4, total_strokes:76, par:72, holes_played:18,
+      fairways_hit_pct:61, avg_drive_m:241, longest_drive_m:278,
+      gir_pct:54, scrambling_pct:50, total_putts:32, putts_per_hole:1.78, holes:[] },
+    { id:"ex3", course:"Pines Course", date:"2026-03-15", source_type:"real",
+      score_vs_par:6, total_strokes:78, par:72, holes_played:18,
+      fairways_hit_pct:50, avg_drive_m:238, longest_drive_m:269,
+      gir_pct:47, scrambling_pct:40, total_putts:35, putts_per_hole:1.94, holes:[] },
+  ],
+  range_sessions: [
+    { id:"ex_r1", date:"2026-03-05", club:"7 Iron", shots:50,
+      avg_carry_m:155, max_carry_m:163, min_carry_m:147,
+      avg_club_speed_mph:82, avg_smash_factor:1.41, avg_launch_angle_deg:16.2,
+      avg_spin_rate_rpm:6800, avg_ball_speed_mph:116, source_images:[] },
+  ]
+};
+
+/* Tour steps: each defines what to spotlight and what to say */
+const TOUR_STEPS = [
+  {
+    label: "Welcome",
+    target: "dropZone",
+    arrow: "arrow-top",
+    bubblePos: "below",
+    onEnter: () => setTab("simulator"),
+    msg: `Welcome to Golf Analytics! 👋\n\nThis drop zone is where the magic starts. Drag screenshots from your golf simulator straight onto it — AI reads every stat automatically.\n\nNo manual entry. Just drop and go.`,
+    btnLabel: "Next →",
+  },
+  {
+    label: "Simulator",
+    target: "tab-simulator",
+    arrow: "arrow-right",
+    bubblePos: "right-of",
+    onEnter: () => setTab("simulator"),
+    msg: `🖥️ Simulator tab\n\nDrop screenshots from your launch monitor or simulator software here. The AI extracts:\n\n• Carry & total distance per club\n• Ball speed, smash factor, spin rate\n• Launch angle, face angle, club path\n\nBuild your full bag profile session by session.`,
+    btnLabel: "Next →",
+  },
+  {
+    label: "Real Course",
+    target: "tab-real",
+    arrow: "arrow-right",
+    bubblePos: "right-of",
+    onEnter: () => setTab("real"),
+    msg: `⛳ Real Course tab\n\nPlayed a real round? Drop a scorecard photo or CSV here. AI reads the hole-by-hole scores and logs the round instantly.\n\nTrack your on-course scores separately from simulator sessions to compare true handicap progress.`,
+    btnLabel: "Next →",
+  },
+  {
+    label: "My Bag",
+    target: "tab-practice",
+    arrow: "arrow-right",
+    bubblePos: "right-of",
+    onEnter: () => setTab("practice"),
+    msg: `🎯 My Bag tab\n\nDrop range session screenshots here to build your club distance profile.\n\nSee your average & max carry per club, dispersion, and smash factor — all in one view. Perfect for knowing which clubs need the most work.`,
+    btnLabel: "Next →",
+  },
+  {
+    label: "KPIs",
+    target: "kpiRow",
+    arrow: "arrow-top",
+    bubblePos: "below",
+    onEnter: () => setTab("all"),
+    msg: `These KPI cards update automatically as you add rounds.\n\nYou'll see average score, driving distance, GIR%, scrambling, and putting — all benchmarked against your target handicap.\n\n🟢 Green = above benchmark. 🔴 Red = area to focus on.\n\nFree plan includes up to 3 rounds and 1 range session. Upgrade to Pro for unlimited tracking.`,
+    btnLabel: "Next →",
+  },
+  {
+    label: "Tournaments",
+    target: "tab-tournament",
+    arrow: "arrow-right",
+    bubblePos: "right-of",
+    onEnter: () => setTab("all"),
+    msg: `🏆 Tournaments tab\n\nLog your competition results — stroke play, stableford, match play, or skins.\n\nTrack your finishing positions, net scores, handicap used, and see a score trend chart over time.`,
+    btnLabel: "Next →",
+  },
+  {
+    label: "Golf God",
+    target: "coachHeaderBtn",
+    arrow: "arrow-bottom",
+    bubblePos: "below",
+    onEnter: () => setTab("all"),
+    msg: `⚡ The Golf God awaits.\n\nClick this button any time to summon the Golf God — an all-knowing oracle that knows your full shot history and gives advice based on your actual numbers.\n\n"Why is my GIR dropping?"\n"Which club should I practise most?"\n"How do I compare to my target HCP?"\n\nFree users get a 24-hour trial. Pro members get unlimited access.`,
+    btnLabel: "Finish tour →",
+  },
+];
+
+let tutCurrentStep = 0;
+let tutIsActive = false;
+
+/* Called from DOMContentLoaded after currentUser is loaded */
+async function maybeStartTutorial() {
+  if (!currentUser) return;
+  if (currentUser.tutorial_step >= 5) return; // already completed
+
+  // If user has no real data, inject example data
+  if (!rounds || rounds.length === 0) {
+    injectExampleData();
+  }
+
+  tutCurrentStep = 0;
+  tutIsActive = true;
+  buildProgressDots();
+  document.getElementById("tutOverlay").classList.add("active");
+  renderTutStep(0);
+}
+
+function injectExampleData() {
+  rounds = TUTORIAL_EXAMPLE_DATA.rounds;
+  rangeSessions = TUTORIAL_EXAMPLE_DATA.range_sessions;
+  renderAll();
+}
+
+function buildProgressDots() {
+  const wrap = document.getElementById("tutProgress");
+  wrap.innerHTML = TOUR_STEPS.map((_, i) =>
+    `<div class="tut-dot" id="tutDot${i}"></div>`
+  ).join("");
+}
+
+function renderTutStep(idx) {
+  const step = TOUR_STEPS[idx];
+  if (!step) return;
+
+  // Call onEnter to navigate the dashboard (if defined)
+  if (typeof step.onEnter === "function") step.onEnter();
+
+  // Update counter + dots
+  document.getElementById("tutCounter").textContent = `Step ${idx+1} of ${TOUR_STEPS.length}`;
+  TOUR_STEPS.forEach((_, i) => {
+    const dot = document.getElementById("tutDot"+i);
+    if (dot) {
+      dot.className = "tut-dot" + (i < idx ? " done" : i === idx ? " active" : "");
+    }
+  });
+
+  // Animate spotlight to target element (small delay for tab switch to render)
+  setTimeout(() => {
+    const el = document.getElementById(step.target) ||
+               document.querySelector("[data-tab]") ||
+               document.querySelector(".kpi-card") ||
+               document.body;
+    spotlightElement(el, step.arrow);
+  }, 80);
+
+  // Set message
+  document.getElementById("tutMsg").textContent = step.msg;
+  document.getElementById("tutNextBtn").textContent = step.btnLabel;
+}
+
+function spotlightElement(el, arrowDir) {
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const pad = 10;
+
+  // Update SVG hole
+  const hole = document.getElementById("tutHole");
+  hole.setAttribute("x", rect.left - pad);
+  hole.setAttribute("y", rect.top - pad);
+  hole.setAttribute("width",  rect.width  + pad * 2);
+  hole.setAttribute("height", rect.height + pad * 2);
+  hole.setAttribute("rx", 10);
+
+  // Position bubble
+  const bubble = document.getElementById("tutBubble");
+  bubble.className = ""; // clear arrow class
+
+  const BUBBLE_W = 328;
+  const BUBBLE_H = 260;
+  const VP_W = window.innerWidth;
+  const VP_H = window.innerHeight;
+  const margin = 18;
+
+  let top, left;
+
+  if (arrowDir === "arrow-right" || rect.left > VP_W * 0.5) {
+    // Bubble to the right of element
+    left = Math.min(rect.right + margin, VP_W - BUBBLE_W - margin);
+    top  = Math.max(margin, Math.min(rect.top, VP_H - BUBBLE_H - margin));
+    bubble.className = "arrow-left";
+  } else if (arrowDir === "arrow-top" || rect.bottom < VP_H * 0.6) {
+    // Bubble below element
+    top  = Math.min(rect.bottom + margin, VP_H - BUBBLE_H - margin);
+    left = Math.max(margin, Math.min(rect.left, VP_W - BUBBLE_W - margin));
+    bubble.className = "arrow-top";
+  } else {
+    // Bubble above element
+    top  = Math.max(margin, rect.top - BUBBLE_H - margin);
+    left = Math.max(margin, Math.min(rect.left, VP_W - BUBBLE_W - margin));
+    bubble.className = "arrow-bottom";
+  }
+
+  bubble.style.top  = top  + "px";
+  bubble.style.left = left + "px";
+}
+
+async function tutAdvance() {
+  if (tutCurrentStep >= TOUR_STEPS.length - 1) {
+    await tutComplete();
+    return;
+  }
+  tutCurrentStep++;
+  renderTutStep(tutCurrentStep);
+}
+
+async function tutSkip() {
+  await tutComplete();
+}
+
+async function tutComplete() {
+  document.getElementById("tutOverlay").classList.remove("active");
+  tutIsActive = false;
+
+  // Clear injected example data if no real rounds were there
+  if (rounds.length > 0 && rounds.every(r => String(r.id).startsWith("ex"))) {
+    rounds = [];
+    rangeSessions = [];
+    renderAll();
+  }
+
+  // Persist completion to server
+  try {
+    await fetch("/auth/tutorial_step", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({step: 5}),
+    });
+  } catch(e) {}
+
+  if (currentUser) currentUser.tutorial_step = 5;
+}
+
+/* Re-spotlight on window resize */
+window.addEventListener("resize", () => {
+  if (!tutIsActive) return;
+  const step = TOUR_STEPS[tutCurrentStep];
+  if (!step) return;
+  const el = document.getElementById(step.target);
+  if (el) spotlightElement(el, step.arrow);
+});
+
+</script>
 </body>
 </html>

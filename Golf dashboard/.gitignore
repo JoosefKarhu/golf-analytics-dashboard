@@ -1,0 +1,26 @@
+# Environment & secrets
+.env
+.env.*
+
+# Database
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Migration backup
+rounds_data.json.bak
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+dist/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
