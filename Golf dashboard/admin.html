@@ -285,6 +285,17 @@
     </div>
   </div>
 
+  <!-- Visitor stats -->
+  <div class="card section" style="margin-bottom:20px">
+    <div class="card-header">
+      <div class="section-title">Visitor Traffic</div>
+      <div class="section-sub">Page views and unique visitors (IP-hashed, privacy-safe)</div>
+    </div>
+    <div class="card-body" id="visitorStatsWrap">
+      <div class="loading-state"><div class="spinner"></div></div>
+    </div>
+  </div>
+
   <!-- User management -->
   <div class="section card">
     <div class="card-header">
@@ -352,7 +363,7 @@ let deleteTargetId = null;
 
 /* ── Boot ── */
 async function loadAll() {
-  await Promise.all([loadStats(), loadUsers()]);
+  await Promise.all([loadStats(), loadUsers(), loadVisitorStats()]);
 }
 
 /* ── Stats ── */
@@ -374,7 +385,7 @@ function renderStats(d) {
     <div class="stat-card highlight">
       <div class="stat-label">Total users</div>
       <div class="stat-val">${u.total}</div>
-      <div class="stat-sub">${u.free} free · ${u.pro} pro</div>
+      <div class="stat-sub">${u.free} free · ${u.standard||0} standard · ${u.pro} pro</div>
       <div class="stat-trend up">+${u.new_this_week} this week</div>
     </div>
     <div class="stat-card">
@@ -414,6 +425,40 @@ function renderStats(d) {
 
   // Model table
   renderModelTable(d.by_model || []);
+}
+
+/* ── Visitor stats ── */
+async function loadVisitorStats() {
+  try {
+    const r = await fetch("/admin/visitor_stats");
+    if (!r.ok) return;
+    const d = await r.json();
+    renderVisitorStats(d);
+  } catch(e) {}
+}
+
+function renderVisitorStats(d) {
+  const el = document.getElementById("visitorStatsWrap");
+  if (!el) return;
+  const today = d.today || {}, week = d.week || {};
+  const byPage = (d.by_page || []).map(p =>
+    `<tr><td style="color:var(--muted);font-size:.8rem">${p.path}</td><td style="text-align:right;font-size:.8rem">${p.hits}</td></tr>`
+  ).join("") || `<tr><td colspan="2" style="color:var(--muted);font-size:.8rem;text-align:center">No visits yet</td></tr>`;
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div class="stat-card"><div class="stat-label">Visits today</div><div class="stat-val">${today.visits||0}</div></div>
+      <div class="stat-card"><div class="stat-label">Unique today</div><div class="stat-val">${today.unique||0}</div></div>
+      <div class="stat-card"><div class="stat-label">Visits (7d)</div><div class="stat-val">${week.visits||0}</div></div>
+      <div class="stat-card"><div class="stat-label">Unique (7d)</div><div class="stat-val">${week.unique||0}</div></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:left;color:var(--muted);font-size:.75rem;font-weight:500;padding:4px 0;border-bottom:1px solid var(--border)">Page (last 7d)</th>
+        <th style="text-align:right;color:var(--muted);font-size:.75rem;font-weight:500;padding:4px 0;border-bottom:1px solid var(--border)">Hits</th>
+      </tr></thead>
+      <tbody>${byPage}</tbody>
+    </table>`;
 }
 
 function renderMonthlyBars(months) {
@@ -502,14 +547,18 @@ function renderUserTable(users) {
       ? `<span class="plan-badge admin">Admin</span>`
       : u.plan === "pro"
         ? `<span class="plan-badge pro">Pro</span>`
-        : `<span class="plan-badge free">Free</span>`;
+        : u.plan === "standard"
+          ? `<span class="plan-badge" style="background:rgba(59,130,246,.15);color:#60a5fa">Standard</span>`
+          : `<span class="plan-badge free">Free</span>`;
     const cost = u.total_cost_usd != null ? `$${Number(u.total_cost_usd).toFixed(4)}` : "$0.0000";
     const joined   = u.created_at ? u.created_at.slice(0, 10) : "—";
     const lastSeen = u.last_login  ? u.last_login.slice(0, 10)  : "never";
     const planToggle = u.is_admin ? "" :
-      u.plan === "pro"
-        ? `<button class="btn-plan" onclick="setPlan(${u.id},'free')">→ Free</button>`
-        : `<button class="btn-plan" onclick="setPlan(${u.id},'pro')" style="border-color:var(--green);color:var(--green)">→ Pro ⭐</button>`;
+      `<select class="btn-plan-select" onchange="setPlan(${u.id},this.value)" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-size:.75rem;cursor:pointer">
+        <option value="free"     ${u.plan==="free"     ?"selected":""}>Free</option>
+        <option value="standard" ${u.plan==="standard" ?"selected":""}>Standard</option>
+        <option value="pro"      ${u.plan==="pro"      ?"selected":""}>Pro ⭐</option>
+      </select>`;
     const delBtn = u.is_admin ? "" :
       `<button class="btn-del" onclick="openDeleteModal(${u.id},'${esc(u.display_name)}','${esc(u.email)}')">Delete</button>`;
 
