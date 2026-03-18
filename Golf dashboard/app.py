@@ -638,7 +638,7 @@ def auth_me():
         trial_end = user["coach_trial_end"]
         pro = is_pro(user)          # True for admins AND plan='pro' users
         trial_active = False
-        if not pro and trial_end:   # trial only relevant for genuine free users
+        if not pro and trial_end:   # trial relevant for free and standard users
             try:
                 trial_active = _dt.datetime.utcnow() < _dt.datetime.fromisoformat(trial_end)
             except Exception:
@@ -1088,8 +1088,9 @@ def api_coach():
         user = get_current_user(conn)
         pro  = is_pro(user)
         trial_user_name = user["display_name"] or "Golfer"
+        plan = user["plan"]
         if not pro:
-            # Check trial window
+            # Check trial window — Free = 24h, Standard = 7 days
             trial_end = user["coach_trial_end"]
             trial_active = False
             if trial_end:
@@ -1098,13 +1099,15 @@ def api_coach():
                 except Exception:
                     pass
             if not trial_active:
+                tier_label = "Standard" if plan == "standard" else "Free"
                 return jsonify({
-                    "error": "Your free AI Coach trial has ended. Upgrade to Pro for unlimited coaching.",
+                    "error": f"Your {tier_label} plan Golf God trial has ended. Upgrade to Pro for unlimited access.",
                     "upgrade_required": True,
                 }), 403
-            # Trial: use cheaper model, cap at 20 messages/day
-            if count_today_actions(conn, uid, "coach") >= 20:
-                return jsonify({"error": "Daily trial coach limit reached. Upgrade to Pro for unlimited access.","upgrade_required": True}), 429
+            # Trial: use cheaper model, cap daily messages
+            daily_cap = STANDARD_DAILY_COACH_MSGS if plan == "standard" else 20
+            if count_today_actions(conn, uid, "coach") >= daily_cap:
+                return jsonify({"error": "Daily Golf God message limit reached. Upgrade to Pro for unlimited access.", "upgrade_required": True}), 429
             coach_model = CLAUDE_TRIAL_MODEL
             trial_mode  = True
         else:
@@ -1329,7 +1332,20 @@ def admin_set_plan(user_id):
     conn = get_db()
     try:
         with conn:
-            conn.execute("UPDATE users SET plan=? WHERE id=?", (plan, user_id))
+            if plan == "standard":
+                # Give Standard users a fresh 7-day Golf God trial from now
+                conn.execute(
+                    "UPDATE users SET plan=?, coach_trial_end=datetime('now', '+7 days') WHERE id=?",
+                    (plan, user_id)
+                )
+            elif plan == "free":
+                # Downgrade: give a 1-day window from now (or 0 if already used)
+                conn.execute(
+                    "UPDATE users SET plan=?, coach_trial_end=datetime('now', '+1 day') WHERE id=?",
+                    (plan, user_id)
+                )
+            else:
+                conn.execute("UPDATE users SET plan=? WHERE id=?", (plan, user_id))
         return jsonify({"success": True, "plan": plan})
     finally:
         conn.close()
@@ -1364,6 +1380,17 @@ def admin_delete_user(user_id):
 @login_required
 def subscription_checkout():
     """Create a Stripe Checkout session and return the redirect URL."""
+    # Require email verification before allowing purchase
+    conn = get_db()
+    try:
+        user = get_current_user(conn)
+        if not user["email_verified"]:
+            return jsonify({
+                "error": "Please verify your email address before upgrading. Check your inbox or resend the verification email.",
+                "email_unverified": True,
+            }), 403
+    finally:
+        conn.close()
     # TODO: Replace stub with real Stripe integration
     # import stripe
     # stripe.api_key = os.getenv("STRIPE_SECRET_KEY")

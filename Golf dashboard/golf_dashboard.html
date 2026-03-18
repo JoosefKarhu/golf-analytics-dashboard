@@ -794,6 +794,13 @@
               <span class="acct-item-label">Appearance</span>
             </button>
           </div>
+          <!-- Email verification notice -->
+          <div class="acct-section" id="acctDropVerifySection" style="display:none">
+            <div style="padding:8px 12px;background:rgba(245,158,11,.12);border-radius:8px;font-size:.75rem;color:#f59e0b;line-height:1.4">
+              ✉️ Verify your email to enable upgrades.
+              <button onclick="resendVerificationEmail()" style="background:none;border:none;color:#f59e0b;text-decoration:underline;cursor:pointer;font-size:.75rem;padding:0;margin-left:4px">Resend</button>
+            </div>
+          </div>
           <!-- Upgrade (free users only) -->
           <div class="acct-section" id="acctDropUpgradeSection" style="display:none">
             <button class="acct-item" style="color:var(--accent)" onclick="acctDropUpgrade()">
@@ -1947,10 +1954,16 @@ function initAcctDropdown() {
   // Plan badge
   const planEl = document.getElementById("acctDropPlan");
   if (planEl) {
-    const isPro = currentUser.plan === "pro" || currentUser.is_admin;
+    const isPro      = currentUser.plan === "pro" || currentUser.is_admin;
+    const isStandard = currentUser.plan === "standard";
     if (isPro) {
-      planEl.textContent = "Pro";
+      planEl.textContent = currentUser.is_admin ? "Admin" : "Pro";
       planEl.className = "acct-plan pro";
+    } else if (isStandard) {
+      planEl.textContent = currentUser.coach_trial_active ? "Standard · Golf God active" : "Standard";
+      planEl.className = "acct-plan";
+      planEl.style.background = "rgba(59,130,246,.18)";
+      planEl.style.color = "#60a5fa";
     } else if (currentUser.coach_trial_active) {
       planEl.textContent = "Free · Trial Active";
       planEl.className = "acct-plan free";
@@ -1960,7 +1973,13 @@ function initAcctDropdown() {
     }
   }
 
-  // Upgrade section — free non-trial users (or trial users wanting to upgrade)
+  // Email verification notice (non-admin, unverified)
+  const verifySection = document.getElementById("acctDropVerifySection");
+  if (verifySection && !currentUser.is_admin && !currentUser.email_verified) {
+    verifySection.style.display = "";
+  }
+
+  // Upgrade section — non-pro, non-admin users
   const upgradeSection = document.getElementById("acctDropUpgradeSection");
   if (upgradeSection && currentUser.plan !== "pro" && !currentUser.is_admin) {
     upgradeSection.style.display = "";
@@ -1997,7 +2016,27 @@ function acctDropGo(tab) {
 
 function acctDropUpgrade() {
   closeAcctDropdown();
+  if (currentUser && !currentUser.email_verified) {
+    showToast("Please verify your email before upgrading — check your inbox.", "warn");
+    return;
+  }
   showUpgradeModal();
+}
+
+async function resendVerificationEmail() {
+  try {
+    const r = await fetch("/auth/resend_verification", {method:"POST"});
+    const d = await r.json();
+    if (d.already_verified) {
+      showToast("Your email is already verified.", "success");
+    } else if (d.sent) {
+      showToast("Verification email sent — check your inbox.", "success");
+    } else {
+      showToast("Email sending not configured on this server.", "warn");
+    }
+  } catch(e) {
+    showToast("Failed to resend — try again.", "error");
+  }
 }
 
 function acctDropAdmin() {
@@ -2039,7 +2078,10 @@ async function startCheckout(interval) {
     });
     const d = await r.json();
     if (d.url) window.location.href = d.url;
-    else showToast(d.error || "Payment not available yet — contact support", "error");
+    else if (d.email_unverified) {
+      closeUpgradeModal();
+      showToast("Please verify your email address before upgrading — check your inbox.", "warn");
+    } else showToast(d.error || "Payment not available yet — contact support", "error");
   } catch(e) {
     showToast("Network error — please try again", "error");
   }
@@ -2183,12 +2225,13 @@ function setTab(tab) {
   document.getElementById("tournamentSection").style.display    = isTournament   ? "" : "none";
   document.getElementById("integrationsSection").style.display  = isIntegrations ? "" : "none";
   document.getElementById("releaseNotesSection").style.display  = isReleaseNotes ? "" : "none";
+  // Hide upload zone on all non-data tabs before early returns
+  document.getElementById("dropWrap").style.display  = (isAll||isProfile||isSettings||isExtra) ? "none" : "";
+  document.getElementById("allHint").style.display   = isAll ? "" : "none";
   if (isTournament) { fetchTournaments(); return; }
   if (isReleaseNotes) { fetchReleaseNotes(); return; }
-  if (isIntegrations || isExtra) return;
+  if (isExtra) return;
   if (isProfile && currentUser && currentUser.is_admin) { fetchDataScore(); }
-  document.getElementById("dropWrap").style.display  = (isAll||isProfile||isSettings) ? "none" : "";
-  document.getElementById("allHint").style.display   = isAll ? "" : "none";
   // Real-only section
   document.getElementById("realSection").style.display       = isReal ? "" : "none";
   // Sections hidden on Real tab (shot stats not available from scorecard)
