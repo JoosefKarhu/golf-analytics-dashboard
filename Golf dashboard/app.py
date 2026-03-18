@@ -15,7 +15,9 @@ Environment (.env or export):
     FLASK_ENV          — production | development
 """
 
-import json, os, urllib.request, urllib.error
+import json, os, urllib.request, urllib.error, hashlib, smtplib, secrets
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 from functools import wraps
 
@@ -42,11 +44,23 @@ API_URL       = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # ── Plan limits ───────────────────────────────────────────────────────────────
-FREE_ROUNDS_LIMIT       = 3
-FREE_RANGE_LIMIT        = 1
-FREE_DAILY_AI_ANALYSES  = 5   # image analyses per day (free)
-PRO_DAILY_AI_ANALYSES   = 30  # image analyses per day (pro)
-PRO_DAILY_COACH_MSGS    = 100 # coach messages per day (pro)
+FREE_ROUNDS_LIMIT           = 3
+FREE_RANGE_LIMIT            = 1
+FREE_DAILY_AI_ANALYSES      = 5    # image analyses per day (free)
+STANDARD_ROUNDS_LIMIT       = 20
+STANDARD_RANGE_LIMIT        = 10
+STANDARD_DAILY_AI_ANALYSES  = 15
+STANDARD_DAILY_COACH_MSGS   = 20   # Golf God chats (standard: 1 week only)
+PRO_DAILY_AI_ANALYSES       = 30   # image analyses per day (pro)
+PRO_DAILY_COACH_MSGS        = 100  # coach messages per day (pro)
+
+# ── Email config (SMTP) ────────────────────────────────────────────────────────
+SMTP_HOST     = os.getenv("SMTP_HOST", "")
+SMTP_PORT     = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER     = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+EMAIL_FROM    = os.getenv("EMAIL_FROM", SMTP_USER)
+APP_BASE_URL  = os.getenv("APP_BASE_URL", "http://localhost:5000")
 
 # ── Model cost table (USD per million tokens) ─────────────────────────────────
 MODEL_COSTS = {
@@ -349,7 +363,51 @@ def is_pro(user_row) -> bool:
     """True if user has an active paid plan (or is admin)."""
     if user_row["is_admin"]:
         return True
-    return user_row["plan"] == "pro"
+    return user_row["plan"] in ("pro", "standard")
+
+
+def is_standard_or_above(user_row) -> bool:
+    return user_row["is_admin"] or user_row["plan"] in ("standard", "pro")
+
+
+def send_email(to_addr: str, subject: str, html_body: str) -> bool:
+    """Send an email via SMTP. Returns True on success, False if not configured."""
+    if not SMTP_HOST or not SMTP_USER:
+        return False
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = EMAIL_FROM
+        msg["To"] = to_addr
+        msg.attach(MIMEText(html_body, "html"))
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(EMAIL_FROM, [to_addr], msg.as_string())
+        return True
+    except Exception as e:
+        print(f"  ✗ Email send failed: {e}")
+        return False
+
+
+def track_visit(path: str):
+    """Record a page visit. Non-blocking — errors are silently ignored."""
+    try:
+        uid = session.get("user_id")
+        raw_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "")
+        ip_hash = hashlib.sha256(raw_ip.encode()).hexdigest()[:16] if raw_ip else None
+        ua = (request.headers.get("User-Agent") or "")[:200]
+        conn = get_db()
+        try:
+            with conn:
+                conn.execute(
+                    "INSERT INTO page_visits (path, user_id, ip_hash, user_agent) VALUES (?,?,?,?)",
+                    (path, uid, ip_hash, ua)
+                )
+        finally:
+            conn.close()
+    except Exception:
+        pass
 
 
 def count_today_actions(conn, user_id: int, action_prefix: str) -> int:
@@ -371,6 +429,7 @@ def static_files(filename):
 # ── Page routes ───────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
+    track_visit("/")
     if "user_id" not in session:
         return send_file(BASE_DIR / "landing.html")
     return send_file(BASE_DIR / "golf_dashboard.html")
@@ -380,6 +439,7 @@ def index():
 @app.route("/register")
 @app.route("/onboarding")
 def onboarding_page():
+    track_visit(request.path)
     return send_file(BASE_DIR / "onboarding.html")
 
 
@@ -413,19 +473,33 @@ def auth_register():
         return jsonify({"error": "Display name is required"}), 400
 
     pw_hash = generate_password_hash(password, method="pbkdf2:sha256")
+    verify_token = secrets.token_urlsafe(32)
     conn = get_db()
     try:
         with conn:
             conn.execute(
-                """INSERT INTO users (email, password_hash, display_name, coach_trial_end)
-                   VALUES (?, ?, ?, datetime('now', '+1 day'))""",
-                (email, pw_hash, display_name)
+                """INSERT INTO users (email, password_hash, display_name, coach_trial_end,
+                                     email_verify_token, email_verified)
+                   VALUES (?, ?, ?, datetime('now', '+1 day'), ?, 0)""",
+                (email, pw_hash, display_name, verify_token)
             )
         user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+        # Send verification email (non-blocking — account works even if email fails)
+        verify_url = f"{APP_BASE_URL}/auth/verify_email?token={verify_token}"
+        send_email(
+            email,
+            "Verify your CadenceOS email",
+            f"""<p>Hi {display_name},</p>
+            <p>Please verify your email address by clicking the link below:</p>
+            <p><a href="{verify_url}">{verify_url}</a></p>
+            <p>This link does not expire — you can verify at any time.</p>
+            <p>— The CadenceOS team</p>"""
+        )
         session.permanent = True
         session["user_id"] = user["id"]
         return jsonify({
             "success": True,
+            "email_verification_sent": bool(SMTP_HOST),
             "user": {
                 "id": user["id"],
                 "email": user["email"],
@@ -433,6 +507,7 @@ def auth_register():
                 "onboarding_complete": user["onboarding_complete"],
                 "tutorial_step": user["tutorial_step"],
                 "plan": user["plan"],
+                "email_verified": False,
             }
         })
     except Exception as e:
@@ -480,10 +555,72 @@ def auth_logout():
     return jsonify({"success": True})
 
 
+@app.route("/auth/verify_email")
+def auth_verify_email():
+    token = request.args.get("token", "")
+    if not token:
+        return "Invalid verification link.", 400
+    conn = get_db()
+    try:
+        user = conn.execute("SELECT id FROM users WHERE email_verify_token=?", (token,)).fetchone()
+        if not user:
+            return "Verification link is invalid or already used.", 400
+        with conn:
+            conn.execute("UPDATE users SET email_verified=1, email_verify_token=NULL WHERE id=?", (user["id"],))
+        return redirect("/?verified=1")
+    finally:
+        conn.close()
+
+
+@app.route("/auth/resend_verification", methods=["POST"])
+@login_required
+def auth_resend_verification():
+    conn = get_db()
+    try:
+        user = get_current_user(conn)
+        if user["email_verified"]:
+            return jsonify({"success": True, "already_verified": True})
+        token = secrets.token_urlsafe(32)
+        with conn:
+            conn.execute("UPDATE users SET email_verify_token=? WHERE id=?", (token, user["id"]))
+        verify_url = f"{APP_BASE_URL}/auth/verify_email?token={token}"
+        sent = send_email(
+            user["email"],
+            "Verify your CadenceOS email",
+            f"""<p>Hi {user['display_name']},</p>
+            <p>Click the link below to verify your email address:</p>
+            <p><a href="{verify_url}">{verify_url}</a></p>
+            <p>— The CadenceOS team</p>"""
+        )
+        return jsonify({"success": True, "sent": sent})
+    finally:
+        conn.close()
+
+
 @app.route("/auth/forgot_password", methods=["POST"])
 def auth_forgot_password():
-    # Stub — always returns success (no email server yet).
-    # In production: generate a token, store it, email the user a reset link.
+    data  = request.get_json(force=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    conn  = get_db()
+    try:
+        user = conn.execute("SELECT id, display_name FROM users WHERE email=?", (email,)).fetchone()
+        if user:
+            token = secrets.token_urlsafe(32)
+            reset_url = f"{APP_BASE_URL}/reset_password?token={token}"
+            with conn:
+                conn.execute("UPDATE users SET email_verify_token=? WHERE id=?", (token, user["id"]))
+            send_email(
+                email,
+                "Reset your CadenceOS password",
+                f"""<p>Hi {user['display_name']},</p>
+                <p>Click the link below to reset your password:</p>
+                <p><a href="{reset_url}">{reset_url}</a></p>
+                <p>If you did not request this, ignore this email.</p>
+                <p>— The CadenceOS team</p>"""
+            )
+    finally:
+        conn.close()
+    # Always return success to avoid email enumeration
     return jsonify({"success": True})
 
 
@@ -522,6 +659,7 @@ def auth_me():
             "profile_image": user["profile_image"],
             "coach_trial_active": trial_active,
             "coach_trial_end": trial_end,
+            "email_verified": bool(user["email_verified"]),
         })
     finally:
         conn.close()
@@ -622,19 +760,20 @@ def api_usage():
         range_count   = conn.execute("SELECT COUNT(*) as n FROM range_sessions WHERE user_id=?", (uid,)).fetchone()["n"]
         today_analyse = count_today_actions(conn, uid, "analyse")
         plan          = user["plan"]
-        pro           = is_pro(user)
+        pro           = user["is_admin"] or plan == "pro"
+        standard      = plan == "standard"
         return jsonify({
             "plan": plan,
-            "is_pro": pro,
+            "is_pro": is_pro(user),
             "is_admin": bool(user["is_admin"]),
             "rounds_count":  rounds_count,
             "range_count":   range_count,
             "today_analyses": today_analyse,
             "limits": {
-                "rounds":         None if pro else FREE_ROUNDS_LIMIT,
-                "range_sessions": None if pro else FREE_RANGE_LIMIT,
-                "daily_analyses": PRO_DAILY_AI_ANALYSES if pro else FREE_DAILY_AI_ANALYSES,
-                "coach":          pro,
+                "rounds":         None if pro else (STANDARD_ROUNDS_LIMIT if standard else FREE_ROUNDS_LIMIT),
+                "range_sessions": None if pro else (STANDARD_RANGE_LIMIT if standard else FREE_RANGE_LIMIT),
+                "daily_analyses": PRO_DAILY_AI_ANALYSES if pro else (STANDARD_DAILY_AI_ANALYSES if standard else FREE_DAILY_AI_ANALYSES),
+                "coach":          is_pro(user),
             }
         })
     finally:
@@ -777,26 +916,32 @@ def api_save():
     uid  = current_user_id()
     conn = get_db()
 
-    # ── Free tier hard limits ────────────────────────────────────────────────
+    # ── Plan-based upload limits ─────────────────────────────────────────────
     user = get_current_user(conn)
-    if not is_pro(user):
+    full_pro = user["is_admin"] or user["plan"] == "pro"
+    standard = user["plan"] == "standard"
+    if not full_pro:
+        r_limit  = STANDARD_ROUNDS_LIMIT if standard else FREE_ROUNDS_LIMIT
+        rs_limit = STANDARD_RANGE_LIMIT  if standard else FREE_RANGE_LIMIT
         if target == "range_sessions":
             existing = conn.execute("SELECT COUNT(*) as n FROM range_sessions WHERE user_id=?", (uid,)).fetchone()["n"]
-            if existing >= FREE_RANGE_LIMIT:
+            if existing >= rs_limit:
                 conn.close()
+                tier = "Standard" if standard else "Free"
                 return jsonify({
-                    "error": f"Free plan allows {FREE_RANGE_LIMIT} range session. Upgrade to Pro for unlimited.",
+                    "error": f"{tier} plan allows {rs_limit} range session(s). Upgrade for more.",
                     "upgrade_required": True,
-                    "limit": FREE_RANGE_LIMIT,
+                    "limit": rs_limit,
                 }), 403
         else:
             existing = conn.execute("SELECT COUNT(*) as n FROM rounds WHERE user_id=?", (uid,)).fetchone()["n"]
-            if existing >= FREE_ROUNDS_LIMIT:
+            if existing >= r_limit:
                 conn.close()
+                tier = "Standard" if standard else "Free"
                 return jsonify({
-                    "error": f"Free plan allows {FREE_ROUNDS_LIMIT} rounds. Upgrade to Pro for unlimited.",
+                    "error": f"{tier} plan allows {r_limit} rounds. Upgrade for more.",
                     "upgrade_required": True,
-                    "limit": FREE_ROUNDS_LIMIT,
+                    "limit": r_limit,
                 }), 403
     try:
         saved, skipped = 0, 0
@@ -1086,14 +1231,15 @@ def admin_stats():
     try:
         # User counts
         total_users = conn.execute("SELECT COUNT(*) as n FROM users").fetchone()["n"]
-        free_users  = conn.execute("SELECT COUNT(*) as n FROM users WHERE plan='free' AND is_admin=0").fetchone()["n"]
-        pro_users   = conn.execute("SELECT COUNT(*) as n FROM users WHERE plan='pro'").fetchone()["n"]
-        new_this_week = conn.execute(
+        free_users     = conn.execute("SELECT COUNT(*) as n FROM users WHERE plan='free' AND is_admin=0").fetchone()["n"]
+        standard_users = conn.execute("SELECT COUNT(*) as n FROM users WHERE plan='standard'").fetchone()["n"]
+        pro_users      = conn.execute("SELECT COUNT(*) as n FROM users WHERE plan='pro'").fetchone()["n"]
+        new_this_week  = conn.execute(
             "SELECT COUNT(*) as n FROM users WHERE created_at >= datetime('now', '-7 days')"
         ).fetchone()["n"]
 
-        # Revenue
-        mrr_eur = pro_users * 10.0
+        # Revenue (standard = €5/mo, pro = €10/mo — adjust as needed)
+        mrr_eur = standard_users * 5.0 + pro_users * 10.0
 
         # API costs — this month
         this_month = __import__("datetime").date.today().strftime("%Y-%m")
@@ -1137,7 +1283,7 @@ def admin_stats():
         return jsonify({
             "users": {
                 "total": total_users, "free": free_users,
-                "pro": pro_users, "new_this_week": new_this_week,
+                "standard": standard_users, "pro": pro_users, "new_this_week": new_this_week,
             },
             "revenue": {"mrr_eur": mrr_eur, "arr_eur": round(mrr_eur * 12 * 0.9, 2)},
             "costs": {
@@ -1178,8 +1324,8 @@ def admin_users():
 def admin_set_plan(user_id):
     data = request.get_json(force=True) or {}
     plan = data.get("plan")
-    if plan not in ("free", "pro"):
-        return jsonify({"error": "plan must be 'free' or 'pro'"}), 400
+    if plan not in ("free", "standard", "pro"):
+        return jsonify({"error": "plan must be 'free', 'standard', or 'pro'"}), 400
     conn = get_db()
     try:
         with conn:
@@ -1357,6 +1503,147 @@ def api_tournaments_delete(tourn_id):
         with conn:
             conn.execute("DELETE FROM tournaments WHERE id=? AND user_id=?", (tourn_id, uid))
         return jsonify({"success": True})
+    finally:
+        conn.close()
+
+
+# ── User data score (admin-only, shows data readiness progress) ───────────────
+@app.route("/api/user_score")
+@login_required
+def api_user_score():
+    """
+    Returns a data-readiness score for the current user broken down by category.
+    Only exposed in the UI for admins until the feature is validated.
+    """
+    uid  = current_user_id()
+    conn = get_db()
+    try:
+        # Simulator rounds
+        sim_rounds = conn.execute(
+            "SELECT COUNT(*) as n FROM rounds WHERE user_id=? AND source_type='simulator'", (uid,)
+        ).fetchone()["n"]
+        # Real course rounds
+        real_rounds = conn.execute(
+            "SELECT COUNT(*) as n FROM rounds WHERE user_id=? AND source_type='real'", (uid,)
+        ).fetchone()["n"]
+        # Practice sessions
+        practice = conn.execute(
+            "SELECT COUNT(*) as n FROM range_sessions WHERE user_id=?", (uid,)
+        ).fetchone()["n"]
+        # Tournaments
+        tournaments = conn.execute(
+            "SELECT COUNT(*) as n FROM tournaments WHERE user_id=?", (uid,)
+        ).fetchone()["n"]
+
+        def score(count, thresholds):
+            """Map count → 0-100 score using milestone thresholds."""
+            milestones = thresholds  # e.g. [5, 15, 30, 60]
+            for i, m in enumerate(milestones):
+                if count < m:
+                    prev = milestones[i - 1] if i > 0 else 0
+                    frac = (count - prev) / (m - prev)
+                    return int(((i + frac) / len(milestones)) * 100)
+            return 100
+
+        sim_score   = score(sim_rounds,  [3, 10, 25, 50])
+        real_score  = score(real_rounds, [2,  8, 20, 40])
+        prac_score  = score(practice,    [2,  8, 20, 40])
+        tourn_score = score(tournaments, [1,  4, 10, 20])
+
+        overall = int((sim_score * 0.35 + real_score * 0.25 + prac_score * 0.25 + tourn_score * 0.15))
+
+        return jsonify({
+            "overall": overall,
+            "categories": {
+                "simulator":  {"score": sim_score,   "count": sim_rounds,  "label": "Simulator"},
+                "real_course":{"score": real_score,  "count": real_rounds, "label": "Real Course"},
+                "practice":   {"score": prac_score,  "count": practice,    "label": "Practice"},
+                "tournaments":{"score": tourn_score, "count": tournaments,  "label": "Tournaments"},
+            }
+        })
+    finally:
+        conn.close()
+
+
+# ── Release notes ─────────────────────────────────────────────────────────────
+@app.route("/api/release_notes")
+def api_release_notes():
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM release_notes ORDER BY created_at DESC LIMIT 20"
+        ).fetchall()
+        return jsonify({"notes": [dict(r) for r in rows]})
+    finally:
+        conn.close()
+
+
+@app.route("/api/release_notes", methods=["POST"])
+@admin_required
+def api_release_notes_post():
+    data = request.get_json(force=True) or {}
+    version = (data.get("version") or "").strip()
+    title   = (data.get("title") or "").strip()
+    body    = (data.get("body") or "").strip()
+    if not version or not title:
+        return jsonify({"error": "version and title are required"}), 400
+    conn = get_db()
+    try:
+        with conn:
+            cur = conn.execute(
+                "INSERT INTO release_notes (version, title, body) VALUES (?,?,?)",
+                (version, title, body)
+            )
+        return jsonify({"success": True, "id": cur.lastrowid})
+    finally:
+        conn.close()
+
+
+# ── Admin visitor stats ────────────────────────────────────────────────────────
+@app.route("/admin/visitor_stats")
+@admin_required
+def admin_visitor_stats():
+    conn = get_db()
+    try:
+        import datetime as _dt
+        today = _dt.date.today().isoformat()
+        week_ago = (_dt.date.today() - _dt.timedelta(days=7)).isoformat()
+
+        visits_today = conn.execute(
+            "SELECT COUNT(*) as n FROM page_visits WHERE date(created_at)=?", (today,)
+        ).fetchone()["n"]
+
+        unique_today = conn.execute(
+            "SELECT COUNT(DISTINCT ip_hash) as n FROM page_visits WHERE date(created_at)=?", (today,)
+        ).fetchone()["n"]
+
+        visits_week = conn.execute(
+            "SELECT COUNT(*) as n FROM page_visits WHERE date(created_at)>=?", (week_ago,)
+        ).fetchone()["n"]
+
+        unique_week = conn.execute(
+            "SELECT COUNT(DISTINCT ip_hash) as n FROM page_visits WHERE date(created_at)>=?", (week_ago,)
+        ).fetchone()["n"]
+
+        by_page = conn.execute("""
+            SELECT path, COUNT(*) as hits
+            FROM page_visits WHERE date(created_at)>=?
+            GROUP BY path ORDER BY hits DESC LIMIT 10
+        """, (week_ago,)).fetchall()
+
+        daily = conn.execute("""
+            SELECT date(created_at) as day, COUNT(*) as visits,
+                   COUNT(DISTINCT ip_hash) as uniques
+            FROM page_visits WHERE date(created_at)>=?
+            GROUP BY day ORDER BY day DESC
+        """, (week_ago,)).fetchall()
+
+        return jsonify({
+            "today":    {"visits": visits_today, "unique": unique_today},
+            "week":     {"visits": visits_week,  "unique": unique_week},
+            "by_page":  [dict(r) for r in by_page],
+            "daily":    [dict(r) for r in daily],
+        })
     finally:
         conn.close()
 

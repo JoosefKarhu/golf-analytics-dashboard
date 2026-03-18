@@ -707,6 +707,14 @@
       <span class="sb-label">Tournaments</span>
       <span class="sb-badge" id="tc-tourn">0</span>
     </button>
+    <button class="sb-tab" id="tab-integrations" data-tab="integrations" onclick="setTab('integrations')">
+      <span class="sb-icon">🔗</span>
+      <span class="sb-label">Integrations</span>
+    </button>
+    <button class="sb-tab" id="tab-release-notes" data-tab="release-notes" onclick="setTab('release-notes')">
+      <span class="sb-icon">📋</span>
+      <span class="sb-label">What's New</span>
+    </button>
   </div>
 
   <!-- Spacer -->
@@ -970,14 +978,6 @@
         </div>
       </div>
 
-      <!-- Hole Difficulty Map -->
-      <div class="section-wrap">
-        <div class="section-head">🗺️ Hole-by-Hole Difficulty Map <span class="badge-pill" style="margin-left:8px;font-size:.62rem">avg strokes over par · green=par, amber=bogey, red=double+</span></div>
-        <div class="chart-card">
-          <div id="holeDiffContent"><div class="no-data"><div class="nd-icon">🗺️</div><p>No hole data yet</p><p class="nd-sub">Upload a scorecard to see per-hole difficulty</p></div></div>
-        </div>
-      </div>
-
     </div><!-- /realSection -->
 
     <!-- Evaluations -->
@@ -1202,6 +1202,16 @@
       </div>
 
     </div>
+
+    <!-- Admin-only: Data Readiness Score -->
+    <div id="dataScoreWrap" style="display:none;max-width:900px;margin:20px auto 0">
+      <div class="chart-card">
+        <div class="chart-title">📊 Golf God Data Readiness <span class="badge-pill" style="margin-left:8px;font-size:.6rem;background:rgba(239,68,68,.15);color:#f87171">Admin only</span></div>
+        <p style="font-size:.78rem;color:var(--muted);margin:0 0 16px">The more data uploaded across all areas, the stronger Golf God's analysis becomes. Use this to drive users toward uploading more data and upgrading their plan.</p>
+        <div id="dataScoreContent"><div class="no-data"><div class="nd-icon">📊</div><p>Loading...</p></div></div>
+      </div>
+    </div>
+
   </div><!-- /profileSection -->
 
   <!-- ── SETTINGS TAB ──────────────────────────────────────────────────────── -->
@@ -1256,6 +1266,87 @@
 
     </div>
   </div><!-- /settingsSection -->
+
+  <!-- ── RELEASE NOTES TAB ────────────────────────────────────────────────── -->
+  <div id="releaseNotesSection" style="display:none;padding:20px 24px 40px">
+    <div style="max-width:720px;margin:0 auto">
+      <div class="section-head" style="margin-bottom:20px">📋 Release Notes</div>
+      <div id="releaseNotesList">
+        <div class="no-data"><div class="nd-icon">📋</div><p>Loading...</p></div>
+      </div>
+    </div>
+  </div><!-- /releaseNotesSection -->
+
+  <!-- ── INTEGRATIONS TAB ─────────────────────────────────────────────────── -->
+  <div id="integrationsSection" style="display:none;padding:20px 24px 40px">
+    <div style="max-width:820px;margin:0 auto">
+      <div class="section-head" style="margin-bottom:8px">🔗 Integrations</div>
+      <p style="color:var(--muted);font-size:.85rem;margin:0 0 24px">Connect CadenceOS with apps you already use.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+
+        <!-- Garmin Connect -->
+        <div class="chart-card" style="padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+            <span style="font-size:2rem">⌚</span>
+            <div><strong>Garmin Connect</strong><div style="font-size:.75rem;color:var(--muted)">Wearables &amp; activity sync</div></div>
+          </div>
+          <p style="font-size:.8rem;color:var(--muted);margin:0 0 12px">Auto-import round distances, heart rate, and step data from your Garmin device.</p>
+          <span class="badge-pill" style="background:rgba(245,158,11,.15);color:#f59e0b">Coming soon</span>
+        </div>
+
+        <!-- Arccos -->
+        <div class="chart-card" style="padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+            <span style="font-size:2rem">🎯</span>
+            <div><strong>Arccos Caddie</strong><div style="font-size:.75rem;color:var(--muted)">Shot-level GPS tracking</div></div>
+          </div>
+          <p style="font-size:.8rem;color:var(--muted);margin:0 0 12px">Import shot-by-shot GPS data to enrich your real course stats with dispersion maps.</p>
+          <span class="badge-pill" style="background:rgba(245,158,11,.15);color:#f59e0b">Coming soon</span>
+        </div>
+
+        <!-- Trackman -->
+        <div class="chart-card" style="padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+            <span style="font-size:2rem">📡</span>
+            <div><strong>TrackMan</strong><div style="font-size:.75rem;color:var(--muted)">Launch monitor data</div></div>
+          </div>
+          <p style="font-size:.8rem;color:var(--muted);margin:0 0 12px">Pull session data directly from TrackMan to populate your practice stats without screenshots.</p>
+          <span class="badge-pill" style="background:rgba(245,158,11,.15);color:#f59e0b">Coming soon</span>
+        </div>
+
+        <!-- Hole19 -->
+        <div class="chart-card" style="padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+            <span style="font-size:2rem">📱</span>
+            <div><strong>Hole19</strong><div style="font-size:.75rem;color:var(--muted)">GPS scoring app</div></div>
+          </div>
+          <p style="font-size:.8rem;color:var(--muted);margin:0 0 12px">Import scorecards and stats from Hole19 rounds directly into your CadenceOS history.</p>
+          <span class="badge-pill" style="background:rgba(245,158,11,.15);color:#f59e0b">Coming soon</span>
+        </div>
+
+        <!-- Golf Genius -->
+        <div class="chart-card" style="padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+            <span style="font-size:2rem">🏆</span>
+            <div><strong>Golf Genius</strong><div style="font-size:.75rem;color:var(--muted)">Tournament software</div></div>
+          </div>
+          <p style="font-size:.8rem;color:var(--muted);margin:0 0 12px">Sync competition results from Golf Genius events directly into your Tournament tab.</p>
+          <span class="badge-pill" style="background:rgba(245,158,11,.15);color:#f59e0b">Coming soon</span>
+        </div>
+
+        <!-- CSV Export/Import -->
+        <div class="chart-card" style="padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+            <span style="font-size:2rem">📄</span>
+            <div><strong>CSV Export</strong><div style="font-size:.75rem;color:var(--muted)">Take your data anywhere</div></div>
+          </div>
+          <p style="font-size:.8rem;color:var(--muted);margin:0 0 12px">Export all your rounds, practice sessions, and tournament data as CSV for use in Excel or other tools.</p>
+          <span class="badge-pill" style="background:rgba(58,138,92,.15);color:#3a8a5c">Available</span>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /integrationsSection -->
 
   <!-- ── TOURNAMENT TAB ───────────────────────────────────────────────────── -->
   <div id="tournamentSection" style="display:none;padding:20px 24px 40px">
@@ -2075,19 +2166,27 @@ function setTab(tab) {
   activeTab = tab;
   document.querySelectorAll(".sb-tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
 
-  const isPractice   = tab === "practice";
-  const isProfile    = tab === "profile";
-  const isSettings   = tab === "settings";
-  const isAll        = tab === "all";
-  const isReal       = tab === "real";
-  const isTournament = tab === "tournament";
+  const isPractice     = tab === "practice";
+  const isProfile      = tab === "profile";
+  const isSettings     = tab === "settings";
+  const isAll          = tab === "all";
+  const isReal         = tab === "real";
+  const isTournament   = tab === "tournament";
+  const isIntegrations = tab === "integrations";
+  const isReleaseNotes = tab === "release-notes";
+  const isExtra        = isIntegrations || isReleaseNotes;
 
-  document.getElementById("roundsContent").style.display    = (isPractice||isProfile||isSettings||isTournament) ? "none" : "";
-  document.getElementById("practiceSection").style.display  = isPractice   ? "" : "none";
-  document.getElementById("profileSection").style.display   = isProfile    ? "" : "none";
-  document.getElementById("settingsSection").style.display  = isSettings   ? "" : "none";
-  document.getElementById("tournamentSection").style.display= isTournament ? "" : "none";
+  document.getElementById("roundsContent").style.display        = (isPractice||isProfile||isSettings||isTournament||isExtra) ? "none" : "";
+  document.getElementById("practiceSection").style.display      = isPractice     ? "" : "none";
+  document.getElementById("profileSection").style.display       = isProfile      ? "" : "none";
+  document.getElementById("settingsSection").style.display      = isSettings     ? "" : "none";
+  document.getElementById("tournamentSection").style.display    = isTournament   ? "" : "none";
+  document.getElementById("integrationsSection").style.display  = isIntegrations ? "" : "none";
+  document.getElementById("releaseNotesSection").style.display  = isReleaseNotes ? "" : "none";
   if (isTournament) { fetchTournaments(); return; }
+  if (isReleaseNotes) { fetchReleaseNotes(); return; }
+  if (isIntegrations || isExtra) return;
+  if (isProfile && currentUser && currentUser.is_admin) { fetchDataScore(); }
   document.getElementById("dropWrap").style.display  = (isAll||isProfile||isSettings) ? "none" : "";
   document.getElementById("allHint").style.display   = isAll ? "" : "none";
   // Real-only section
@@ -3644,7 +3743,6 @@ function renderRealSection(fr){
   renderParTypePerf(fr);
   renderScoreDistribution(fr);
   renderFrontBack(fr);
-  renderHoleDifficulty(fr);
 }
 
 function renderParTypePerf(fr){
@@ -3735,30 +3833,6 @@ function renderFrontBack(fr){
   }}});
 }
 
-function renderHoleDifficulty(fr){
-  const hd={};
-  for(let i=1;i<=18;i++)hd[i]={n:0,total:0,par:4};
-  for(const r of fr) for(const h of r.holes||[]){
-    if(!h.number||!h.strokes||!h.par)continue;
-    const n=h.number;if(n<1||n>18)continue;
-    hd[n].n++;hd[n].total+=h.strokes;hd[n].par=h.par;
-  }
-  const el=document.getElementById("holeDiffContent");
-  if(!Object.values(hd).some(d=>d.n>0)){
-    el.innerHTML=`<div class="no-data"><div class="nd-icon">🗺️</div><p>No hole data yet</p><p class="nd-sub">Upload a scorecard to see hole difficulty</p></div>`;return;
-  }
-  const labels=Object.keys(hd).map(h=>"H"+h);
-  const data=Object.values(hd).map(d=>d.n>0?Math.round(((d.total/d.n)-d.par)*10)/10:null);
-  const cols=data.map(v=>v===null?"rgba(100,116,139,.2)":v<=0?"rgba(58,138,92,.7)":v<=1?"rgba(245,158,11,.7)":"rgba(239,68,68,.7)");
-  el.innerHTML=`<canvas id="chartHoleDiff" style="max-height:200px"></canvas>`;
-  destroyChart("chartHoleDiff");
-  new Chart("chartHoleDiff",{type:"bar",data:{labels,datasets:[
-    {label:"Avg vs Par",data,backgroundColor:cols,borderRadius:3}
-  ]},options:{...CHART_OPTS,scales:{
-    x:{...AXIS_OPTS,ticks:{color:TICK_COLOR,font:{size:10}}},
-    y:{...AXIS_OPTS,title:{display:true,text:"Avg strokes over par",color:TICK_COLOR}},
-  }}});
-}
 
 /* ════════════════════════════════════════════════════════════════════════════
    PRACTICE TAB
@@ -3829,10 +3903,31 @@ function detectLongTermTrend(clubName){
   return { direction: diff>0?'gaining':'losing', metres: Math.abs(Math.round(diff)), n: s.length };
 }
 
+const ALL_BAG_CLUBS=["Dr","3W","5W","7W","2I","3I","4I","5I","6I","7I","8I","9I","PW","GW","AW","48°","50°","52°","54°","56°","58°","60°"];
+
 function renderClubCards(){
   const byClub=latestByClub();
-  const clubs=Object.keys(byClub);
+  // Show all standard clubs — ones with data first, then placeholders
+  const withData=Object.keys(byClub);
+  const allClubs=[...new Set([...withData,...ALL_BAG_CLUBS])];
+  allClubs.sort((a,b)=>{
+    const ia=ALL_BAG_CLUBS.findIndex(x=>x.toLowerCase()===a.toLowerCase());
+    const ib=ALL_BAG_CLUBS.findIndex(x=>x.toLowerCase()===b.toLowerCase());
+    if(ia>=0&&ib>=0)return ia-ib;if(ia>=0)return-1;if(ib>=0)return 1;return a.localeCompare(b);
+  });
+  const clubs=allClubs;
   document.getElementById("clubGrid").innerHTML=clubs.map((club,ci)=>{
+    if(!byClub[club]){
+      // Placeholder card — no data for this club yet
+      return `<div class="club-card" style="opacity:.45;border-style:dashed">
+        <div class="club-header"><span class="club-name">${club}</span></div>
+        <div class="no-data" style="padding:12px 0 8px;font-size:.75rem;text-align:center;color:var(--muted)">
+          <div style="font-size:1.3rem;margin-bottom:4px">📂</div>
+          <p style="margin:0">No data yet</p>
+          <p style="margin:2px 0 0;font-size:.67rem;opacity:.7">Upload range sessions to fill</p>
+        </div>
+      </div>`;
+    }
     const sessions=byClub[club];
     const latest=sessions[sessions.length-1];
     const prev=sessions.length>1?sessions[sessions.length-2]:null;
@@ -5548,6 +5643,69 @@ function tournFormatChange() {
   document.getElementById("tn-stbl-wrap").style.display  = fmt==="stableford" ? "" : "none";
   document.getElementById("tn-gross-wrap").style.display = fmt==="stableford" ? "none" : "";
   document.getElementById("tn-net-wrap").style.display   = fmt==="stableford" ? "none" : "";
+}
+
+async function fetchDataScore() {
+  const wrap = document.getElementById("dataScoreWrap");
+  const el   = document.getElementById("dataScoreContent");
+  if (!wrap || !el) return;
+  wrap.style.display = "";
+  try {
+    const r = await fetch("/api/user_score");
+    const d = await r.json();
+    const cats = d.categories || {};
+    const bar = (score) => {
+      const pct = Math.min(100, Math.max(0, score));
+      const col = pct >= 70 ? "#3a8a5c" : pct >= 40 ? "#f59e0b" : "#ef4444";
+      return `<div style="height:8px;border-radius:4px;background:var(--surface3);overflow:hidden;flex:1">
+        <div style="height:100%;width:${pct}%;background:${col};border-radius:4px;transition:width .4s"></div>
+      </div>`;
+    };
+    const rows = Object.values(cats).map(c =>
+      `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="width:90px;font-size:.78rem;color:var(--muted)">${c.label}</span>
+        ${bar(c.score)}
+        <span style="width:36px;text-align:right;font-size:.78rem;font-weight:600">${c.score}%</span>
+        <span style="width:60px;font-size:.72rem;color:var(--muted)">${c.count} record${c.count!==1?"s":""}</span>
+      </div>`
+    ).join("");
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="font-size:.85rem;color:var(--muted)">Overall strength</div>
+        ${bar(d.overall)}
+        <span style="font-size:1.1rem;font-weight:700;width:40px;text-align:right">${d.overall}%</span>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:12px">${rows}</div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="no-data"><div class="nd-icon">⚠️</div><p>Failed to load score</p></div>`;
+  }
+}
+
+async function fetchReleaseNotes() {
+  const el = document.getElementById("releaseNotesList");
+  try {
+    const r = await fetch("/api/release_notes");
+    const d = await r.json();
+    const notes = d.notes || [];
+    if (!notes.length) {
+      el.innerHTML = `<div class="chart-card" style="padding:24px;text-align:center;color:var(--muted)">
+        <div style="font-size:2rem;margin-bottom:8px">📋</div>
+        <p>No release notes yet. Check back soon!</p>
+      </div>`;
+      return;
+    }
+    el.innerHTML = notes.map(n => `
+      <div class="chart-card" style="padding:20px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span class="badge-pill" style="background:rgba(59,130,246,.15);color:var(--blue);font-size:.75rem">${n.version}</span>
+          <strong style="font-size:.95rem">${n.title}</strong>
+          <span style="margin-left:auto;font-size:.72rem;color:var(--muted)">${(n.created_at||"").slice(0,10)}</span>
+        </div>
+        ${n.body ? `<p style="font-size:.83rem;color:var(--muted);margin:0;white-space:pre-line">${n.body}</p>` : ""}
+      </div>`).join("");
+  } catch(e) {
+    el.innerHTML = `<div class="no-data"><div class="nd-icon">⚠️</div><p>Failed to load release notes</p></div>`;
+  }
 }
 
 async function fetchTournaments() {
