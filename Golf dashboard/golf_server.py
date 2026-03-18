@@ -23,7 +23,7 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # ── Config ─────────────────────────────────────────────────────────────────
-PORT         = 8080
+PORT         = int(os.environ.get("PORT", 8080))
 BASE_DIR     = Path(__file__).parent
 DATA_FILE    = BASE_DIR / "rounds_data.json"
 HTML_FILE    = BASE_DIR / "golf_dashboard.html"
@@ -310,6 +310,35 @@ class GolfHandler(BaseHTTPRequestHandler):
             else:
                 data = {"rounds": [], "range_sessions": [], "processed_images": []}
             self._send(data)
+
+        elif self.path == "/auth/me":
+            # Dev mode: return mock admin user so the tier selector is visible
+            self._send({
+                "id": 1,
+                "display_name": "Dev User",
+                "email": "dev@local",
+                "plan": "pro",
+                "is_admin": True,
+                "coach_trial_active": False,
+                "profile_image": None,
+            })
+
+        elif self.path in ("/login", "/register"):
+            # Simple server has no auth — redirect back to root
+            self.send_response(302)
+            self.send_header("Location", "/")
+            self.end_headers()
+
+        elif self.path.startswith("/static/"):
+            static_path = BASE_DIR / self.path.lstrip("/")
+            if static_path.exists():
+                ext = static_path.suffix.lower()
+                mime = {"png":"image/png","jpg":"image/jpeg","jpeg":"image/jpeg",
+                        "svg":"image/svg+xml","ico":"image/x-icon","gif":"image/gif",
+                        "woff2":"font/woff2","woff":"font/woff"}.get(ext, "application/octet-stream")
+                self._send(static_path.read_bytes(), content_type=mime)
+            else:
+                self._send({"error": "Not found"}, 404)
 
         else:
             self._send({"error": "Not found"}, 404)

@@ -501,6 +501,36 @@
     }
     @media(max-width:600px){main{padding:12px}.kpi-grid{grid-template-columns:repeat(3,1fr)}}
 
+    /* ── Tier selector ───────────────────────────────────────────────────── */
+    .tier-selector{display:flex;gap:2px;background:var(--surface2);border-radius:7px;padding:2px;border:1px solid var(--border);flex-shrink:0}
+    .tier-btn{padding:5px 13px;border:none;background:none;cursor:pointer;font-size:.75rem;font-weight:700;color:var(--muted);border-radius:5px;transition:all .2s;white-space:nowrap;letter-spacing:.01em}
+    .tier-btn:hover:not(.active){color:var(--text)}
+    .tier-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+    .tier-btn.active[data-tier="pro"]{color:var(--accent)}
+    .tier-btn.active[data-tier="standard"]{color:#60a5fa}
+
+    /* ── Lock overlay system ─────────────────────────────────────────────── */
+    .lock-wrap{position:relative!important;overflow:hidden!important}
+    .lock-overlay{position:absolute;inset:0;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+      background:rgba(13,24,33,.74);display:flex;flex-direction:column;align-items:center;
+      justify-content:center;z-index:20;border-radius:inherit;gap:5px;padding:20px;text-align:center}
+    .lock-icon{font-size:1rem;opacity:.45;line-height:1}
+    .lock-tier{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+    .lock-title{font-size:.84rem;font-weight:700;color:var(--text);line-height:1.3;margin-top:2px}
+    .lock-desc{font-size:.74rem;color:var(--muted);max-width:190px;line-height:1.5}
+    .lock-cta{margin-top:8px;padding:5px 15px;background:transparent;border:1px solid rgba(255,255,255,.13);
+      color:var(--muted);border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;
+      transition:all .2s;white-space:nowrap;font-family:inherit}
+    .lock-cta:hover{border-color:rgba(255,255,255,.3);color:var(--text)}
+    .lock-overlay.kpi-lock{gap:4px;padding:12px}
+    .lock-overlay.kpi-lock .lock-title{font-size:.78rem}
+    .lock-overlay.kpi-lock .lock-desc{font-size:.68rem;max-width:130px}
+    .lock-overlay.kpi-lock .lock-cta{padding:4px 12px;font-size:.7rem;margin-top:6px}
+    .tr-lock-cta td{text-align:center;color:var(--muted);font-size:.78rem;padding:10px!important;border-bottom:none!important}
+    .club-card-locked{opacity:.55;cursor:default;pointer-events:none;border-style:dashed!important}
+    .club-lock-btn{margin-top:10px;padding:5px 14px;background:transparent;border:1px solid rgba(255,255,255,.13);
+      color:var(--muted);border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;pointer-events:all}
+
     /* ── Golf God Drawer ──────────────────────────────────────────────────── */
     .coach-drawer{position:fixed;top:0;right:-420px;width:380px;height:100vh;
       background:var(--surface);border-left:1px solid var(--border);z-index:300;
@@ -749,6 +779,12 @@
         </select>
       </label>
       <span style="flex:1"></span>
+      <!-- Tier selector (dev/simple-server mode — hidden when Flask manages plans) -->
+      <div class="tier-selector" id="tierSelector">
+        <button class="tier-btn" data-tier="free"     onclick="setTier('free')">Free</button>
+        <button class="tier-btn" data-tier="standard" onclick="setTier('standard')">Standard</button>
+        <button class="tier-btn" data-tier="pro"      onclick="setTier('pro')">Pro</button>
+      </div>
       <!-- Golf God button — prominent, top-right -->
       <button id="coachHeaderBtn" class="coach-header-btn" onclick="openCoach('dashboard')" title="Consult the Golf God">
         <span class="golf-god-btn-avatar">
@@ -899,7 +935,7 @@
     </div>
 
     <!-- Score Damage -->
-    <div class="section-wrap">
+    <div class="section-wrap" id="damageSection">
       <div class="section-head">💥 Score Damage Tracker</div>
       <div class="damage-grid">
         <div class="damage-card" id="dmg-doubles"><div class="dmg-value" id="dmg-v-doubles">—</div><div class="dmg-label">Doubles / Round</div><div class="dmg-target">HCP5 target ≤ 1.5</div><div class="dmg-status" id="dmg-s-doubles"></div></div>
@@ -1049,15 +1085,15 @@
 
     <!-- Club trend + consistency -->
     <div class="charts-grid">
-      <div class="chart-card full">
+      <div class="chart-card full" id="cc-club-trend">
         <div class="chart-title">📈 Carry Distance Evolution by Club <span class="badge-pill">Avg carry per session</span></div>
         <div id="clubTrendWrap"><div class="no-data"><div class="nd-icon">📈</div><p>Drop range screenshots to see club trends</p></div></div>
       </div>
-      <div class="chart-card">
+      <div class="chart-card" id="cc-club-consist">
         <div class="chart-title">📏 Distance Consistency — Min · Avg · Max carry</div>
         <div id="clubConsistWrap"><div class="no-data"><div class="nd-icon">📏</div><p>Awaiting data</p></div></div>
       </div>
-      <div class="chart-card">
+      <div class="chart-card" id="cc-club-accuracy">
         <div class="chart-title">🎯 Accuracy / Target Hit Rate <span class="badge-pill">Target ≥ 65%</span> <span style="font-size:.7rem;color:var(--muted);font-weight:400">(target-size dependent)</span></div>
         <div id="clubAccuracyWrap"><div class="no-data"><div class="nd-icon">🎯</div><p>Awaiting data</p></div></div>
       </div>
@@ -1080,7 +1116,7 @@
     </div>
 
     <!-- Range session history -->
-    <div class="table-card">
+    <div class="table-card" id="rangeTableCard">
       <div class="section-head" style="margin-bottom:12px">📋 Range Session History</div>
       <div class="range-table-wrap">
         <table>
@@ -1711,6 +1747,68 @@ const CHART_OPTS = {
 const CLUB_COLORS = ["#22c55e","#3b82f6","#f59e0b","#a855f7","#ef4444",
                      "#06b6d4","#f97316","#84cc16","#ec4899","#94a3b8"];
 
+/* ── Tier state ─────────────────────────────────────────────────────────── */
+let currentTier = "free"; // set from currentUser.plan after auth
+
+function setTier(tier){
+  currentTier = tier;
+  document.querySelectorAll(".tier-btn").forEach(b=>b.classList.toggle("active",b.dataset.tier===tier));
+  renderAll();
+}
+
+function applyTierGates(){
+  // Remove all existing overlays first
+  document.querySelectorAll(".lock-overlay").forEach(el=>el.remove());
+  document.querySelectorAll(".lock-wrap").forEach(el=>el.classList.remove("lock-wrap"));
+
+  const isPro = currentTier === "pro";
+  const isStd = currentTier === "standard" || isPro;
+
+  function gate(id, needsPro, title, desc, cta, isKpi){
+    const el = document.getElementById(id);
+    if(!el) return;
+    // Skip if the element is already hidden (e.g. hidden by tab logic)
+    if(el.offsetParent === null && el.style.display === "none") return;
+    const allowed = needsPro ? isPro : isStd;
+    if(allowed) return;
+    el.classList.add("lock-wrap");
+    const tierLabel = needsPro ? "Pro" : "Standard";
+    const tierColor = needsPro ? "var(--accent)" : "#60a5fa";
+    const ov = document.createElement("div");
+    ov.className = "lock-overlay" + (isKpi ? " kpi-lock" : "");
+    ov.innerHTML = `<div class="lock-icon">⚡</div>
+      <div class="lock-tier" style="color:${tierColor}">${tierLabel}</div>
+      <div class="lock-title">${title}</div>
+      ${desc ? `<div class="lock-desc">${desc}</div>` : ""}
+      <button class="lock-cta" onclick="setTier('${needsPro?'pro':'standard'}')">${cta}</button>`;
+    el.appendChild(ov);
+  }
+
+  // Free → Standard gates
+  gate("kpi-gir",    false, "GIR %",         null, "Unlock Standard", true);
+  gate("kpi-fw",     false, "Fairway %",      null, "Unlock Standard", true);
+  gate("kpi-scr",    false, "Scrambling",     null, "Unlock Standard", true);
+  gate("kpi-putts",  false, "Putts / Hole",   null, "Unlock Standard", true);
+  gate("kpi-drive",  false, "Avg Drive",      null, "Unlock Standard", true);
+  gate("kpi-hcp-sim",false, "Est. Handicap",  null, "Unlock Standard", true);
+  gate("kpi-hcp-real",false,"Est. Handicap",  null, "Unlock Standard", true);
+  gate("cc-gir",     false, "GIR Trend",      "Track greens-in-regulation over time", "Unlock with Standard");
+  gate("cc-fw",      false, "Fairway Trend",  "See where your driving accuracy is heading", "Unlock with Standard");
+  gate("cc-radar",   false, "Skills Radar",   "Visualise your full game profile at a glance", "Unlock with Standard");
+  gate("cc-scr",     false, "Scrambling",     "Analyse your up-and-down consistency", "Unlock with Standard");
+  gate("damageSection",   false, "Score Damage Tracker", "Find the shots that are costing you the most strokes", "Unlock with Standard");
+  gate("par3Section",     false, "Par 3 Analysis",       "Detailed par 3 scoring and GIR breakdown", "Unlock with Standard");
+  gate("evalSection",     false, "Evaluations",          "Structure your improvement with guided self-evaluation", "Unlock with Standard");
+  gate("coachingSection", false, "AI Coaching Insights", "Get personalised practice prescriptions from the Golf God", "Unlock with Standard");
+  gate("cc-club-trend",   false, "Club Distance Evolution", "Track how your carry distances change over sessions", "Unlock with Standard");
+  gate("cc-club-consist", false, "Distance Consistency",    "See your min/avg/max carry spread per club", "Unlock with Standard");
+  gate("cc-club-accuracy",false, "Target Hit Rate",         "Measure your accuracy against a target", "Unlock with Standard");
+  gate("rangeTableCard",  false, "Session History",          "Full range session log with stats per club", "Unlock with Standard");
+
+  // Standard → Pro gates
+  gate("cc-approach-drive", true, "Approach & Drive Analysis", "Distance-segmented GIR % and driving heatmaps", "Upgrade to Pro");
+}
+
 /* ── State ──────────────────────────────────────────────────────────────── */
 let rounds        = [];
 let rangeSessions = [];
@@ -1779,6 +1877,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ── Populate account dropdown ─────────────────────────────────────────
   initAcctDropdown();
+
+  // ── Tier from plan ────────────────────────────────────────────────────
+  const planMap = {free:"free", standard:"standard", pro:"pro"};
+  currentTier = planMap[currentUser.plan] || "free";
+  // Tier selector: visible only for admins (for preview/testing), hidden for regular users
+  const tierSel = document.getElementById("tierSelector");
+  if(tierSel) tierSel.style.display = currentUser.is_admin ? "" : "none";
+  document.querySelectorAll(".tier-btn").forEach(b=>b.classList.toggle("active",b.dataset.tier===currentTier));
 
   // ── Trial badge on AI Coach button (free trial only, not Pro/admin) ───
   if (currentUser.plan !== "pro" && !currentUser.is_admin && currentUser.coach_trial_active) {
@@ -2824,6 +2930,8 @@ function renderAll(){
     if(activeTab==="all") renderPracticeTransfer();
     renderTable(fr);
   }
+  // Apply tier gates last, after all sections are rendered/shown
+  setTimeout(applyTierGates, 0);
 }
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
@@ -3490,10 +3598,13 @@ function renderTable(all){
     if(head)head.innerHTML=`<th colspan="${colspan}" style="text-align:center;color:var(--muted)">No rounds in this view</th>`;
     body.innerHTML="";return;
   }
+  // Free tier: show only 3 most recent rows
+  const displayAll = (currentTier !== "free") ? all : all.slice(0, 3);
+  const hiddenCount = all.length - displayAll.length;
   if(isReal){
     // Simplified header for Real tab — score-focused, no shot stats
     if(head)head.innerHTML=`<th>#</th><th>Course</th><th>Date</th><th>Holes</th><th>Score</th><th>Strokes</th><th>Par</th><th>Eval</th>`;
-    body.innerHTML=all.map((r,i)=>{
+    body.innerHTML=displayAll.map((r,i)=>{
       const sc=r.score_vs_par,sp=sc!=null?(sc<=3?"pill-good":sc<=6?"pill-warn":"pill-bad"):"pill-neutral";
       const he=!!evaluations[evalKey(r)],fi=i;
       const par=r.par||(r.total_strokes!=null&&sc!=null?r.total_strokes-sc:null);
@@ -3516,11 +3627,12 @@ function renderTable(all){
           <button class="btn btn-ghost btn-sm" onclick="deleteItem('round',${ai})"
             style="color:var(--danger);border-color:rgba(239,68,68,.3)" title="Delete this round">🗑</button>
         </td>
-      </tr>`;}).join("");
+      </tr>`;}).join("")
+      + (hiddenCount > 0 ? `<tr class="tr-lock-cta"><td colspan="${colspan}">⚡ Standard — ${hiddenCount} more round${hiddenCount>1?"s":""} hidden · <button class="lock-cta" onclick="setTier('standard')">Unlock with Standard</button></td></tr>` : "");
   } else {
     // Full header for All/Simulator tabs
     if(head)head.innerHTML=`<th>#</th><th>Type</th><th>Course</th><th>Date</th><th>Score</th><th>Strokes</th><th>Holes</th><th>FW%</th><th>Drive</th><th>GIR%</th><th>Scrambling</th><th>Putts/H</th><th>Eval</th>`;
-    body.innerHTML=all.map((r,i)=>{
+    body.innerHTML=displayAll.map((r,i)=>{
       const sc=r.score_vs_par,sp=sc<=3?"pill-good":sc<=6?"pill-warn":"pill-bad";
       const tp=r.source_type==="real"?"pill-real":"pill-neutral",tl=r.source_type==="real"?"Real":"Sim";
       const gc=r.gir_pct==null?"":r.gir_pct>=58?"col-good":r.gir_pct>=44?"col-warn":"col-bad";
@@ -3551,7 +3663,8 @@ function renderTable(all){
           <button class="btn btn-ghost btn-sm" onclick="deleteItem('round',${ai})"
             style="color:var(--danger);border-color:rgba(239,68,68,.3)" title="Delete this round">🗑</button>
         </td>
-      </tr>`;}).join("");
+      </tr>`;}).join("")
+      + (hiddenCount > 0 ? `<tr class="tr-lock-cta"><td colspan="${colspan}">⚡ Standard — ${hiddenCount} more round${hiddenCount>1?"s":""} hidden · <button class="lock-cta" onclick="setTier('standard')">Unlock with Standard</button></td></tr>` : "");
   }
 }
 
@@ -3831,7 +3944,11 @@ function detectLongTermTrend(clubName){
 
 function renderClubCards(){
   const byClub=latestByClub();
-  const clubs=Object.keys(byClub);
+  const allClubs=Object.keys(byClub);
+  // Free tier: show only first 3 clubs; rest get a locked placeholder
+  const visibleClubs = currentTier==="free" ? allClubs.slice(0,3) : allClubs;
+  const lockedClubs  = currentTier==="free" ? allClubs.slice(3)   : [];
+  const clubs=visibleClubs; // keep local var name for chart functions below
   document.getElementById("clubGrid").innerHTML=clubs.map((club,ci)=>{
     const sessions=byClub[club];
     const latest=sessions[sessions.length-1];
@@ -3972,7 +4089,13 @@ function renderClubCards(){
         </div>
       </div>
     </div>`;
-  }).join("");
+  }).join("")
+  + (lockedClubs.length > 0 ? `<div class="club-card club-card-locked" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:160px;border-style:dashed">
+      <div style="font-size:1.5rem;opacity:.3">⚡</div>
+      <div style="font-size:.8rem;font-weight:700;color:var(--muted);margin-top:8px">${lockedClubs.length} more club${lockedClubs.length>1?"s":""}</div>
+      <div style="font-size:.72rem;color:var(--muted2,#8aafc8);margin-top:4px">Standard plan</div>
+      <button class="club-lock-btn" onclick="setTier('standard')">Unlock</button>
+    </div>` : "");
 }
 
 function renderClubTrend(){
@@ -4092,12 +4215,15 @@ function renderRangeTable(){
   const frs=filteredRangeSessions();
   if(!frs.length){tbody.innerHTML=`<tr><td colspan="20" style="text-align:center;color:var(--muted);padding:24px">No sessions recorded</td></tr>`;return}
   const sorted=[...frs].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  // Free tier: show only 3 most recent sessions
+  const displaySorted = currentTier==="free" ? sorted.slice(0,3) : sorted;
+  const hiddenRangeCount = sorted.length - displaySorted.length;
   const degFmt=(v,redNeg=false)=>{
     if(v==null) return"—";
     const cls=Math.abs(v)<1?"":v>0?(redNeg?"col-bad":"col-good"):(redNeg?"col-good":"col-bad");
     return`<span class="${cls}">${v>0?"+":""}${v.toFixed(1)}°</span>`;
   };
-  tbody.innerHTML=sorted.map((s,i)=>{
+  tbody.innerHTML=displaySorted.map((s,i)=>{
     const maxC=s.max_carry_m||s.longest_m;
     const accCls=s.target_hit_pct==null?"":s.target_hit_pct>=65?"col-good":s.target_hit_pct>=45?"col-warn":"col-bad";
     const smashCls=s.avg_smash_factor==null?"":s.avg_smash_factor>=1.45?"col-good":s.avg_smash_factor>=1.35?"col-warn":"col-bad";
@@ -4126,7 +4252,8 @@ function renderRangeTable(){
         <button class="btn btn-ghost btn-sm" onclick="deleteItem('range',${ai})"
           style="color:var(--danger);border-color:rgba(239,68,68,.3)" title="Delete session">🗑</button>
       </td>
-    </tr>`;}).join("");
+    </tr>`;}).join("")
+    + (hiddenRangeCount > 0 ? `<tr class="tr-lock-cta"><td colspan="20">⚡ Standard — ${hiddenRangeCount} more session${hiddenRangeCount>1?"s":""} hidden · <button class="lock-cta" onclick="setTier('standard')">Unlock with Standard</button></td></tr>` : "");
 }
 
 /* ── Ball Flight Pattern chart (face/path/F→P per club) ───────────────── */
