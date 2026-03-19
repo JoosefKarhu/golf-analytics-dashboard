@@ -135,6 +135,31 @@ CREATE TABLE IF NOT EXISTS tournaments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tournaments_user ON tournaments(user_id, date DESC);
+
+CREATE TABLE IF NOT EXISTS page_visits (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    path       TEXT    NOT NULL,
+    user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    ip_hash    TEXT    DEFAULT NULL,
+    user_agent TEXT    DEFAULT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_visits_date ON page_visits(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS release_notes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    version    TEXT    NOT NULL,
+    title      TEXT    NOT NULL,
+    body       TEXT    NOT NULL DEFAULT '',
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+    key        TEXT PRIMARY KEY,
+    value      TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """)
         # Add new columns to existing DBs (safe no-ops if already present)
         for sql in [
@@ -152,6 +177,8 @@ CREATE INDEX IF NOT EXISTS idx_tournaments_user ON tournaments(user_id, date DES
             # coach trial: set to 24h after account creation for free users
             "ALTER TABLE users ADD COLUMN coach_trial_end TEXT DEFAULT NULL",
             "ALTER TABLE users ADD COLUMN profile_image TEXT DEFAULT NULL",
+            "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN email_verify_token TEXT DEFAULT NULL",
         ]:
             try:
                 conn.execute(sql)
