@@ -160,6 +160,22 @@ CREATE TABLE IF NOT EXISTS settings (
     value      TEXT NOT NULL,
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS pricing_plans (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    name            TEXT    NOT NULL,
+    plan_key        TEXT    NOT NULL DEFAULT 'pro',
+    interval        TEXT    NOT NULL DEFAULT 'month',
+    display_price   TEXT    NOT NULL,
+    display_suffix  TEXT    NOT NULL DEFAULT '/ month',
+    description     TEXT    NOT NULL DEFAULT '',
+    stripe_price_id TEXT    NOT NULL DEFAULT '',
+    badge_text      TEXT    NOT NULL DEFAULT '',
+    discount_label  TEXT    NOT NULL DEFAULT '',
+    sort_order      INTEGER NOT NULL DEFAULT 0,
+    is_active       INTEGER NOT NULL DEFAULT 1,
+    created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+);
 """)
         # Add new columns to existing DBs (safe no-ops if already present)
         for sql in [
@@ -184,6 +200,21 @@ CREATE TABLE IF NOT EXISTS settings (
                 conn.execute(sql)
             except Exception:
                 pass  # column already exists
+        # Seed default pricing plans if none exist
+        count = conn.execute("SELECT COUNT(*) FROM pricing_plans").fetchone()[0]
+        if count == 0:
+            conn.executemany(
+                """INSERT INTO pricing_plans
+                   (name, plan_key, interval, display_price, display_suffix,
+                    description, stripe_price_id, badge_text, discount_label, sort_order, is_active)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                [
+                    ("Pro Monthly", "pro", "month", "€10", "/ month",
+                     "Everything included. No tiers, no upsells.", "", "🎯 Full access", "", 0, 1),
+                    ("Pro Yearly", "pro", "year", "€108", "/ year",
+                     "Save 10% with annual billing.", "", "⭐ Best value", "-10%", 1, 1),
+                ],
+            )
         # Ensure the first registered user is always admin
         conn.execute("UPDATE users SET is_admin=1 WHERE id=(SELECT MIN(id) FROM users)")
         # Set coach_trial_end for users who don't have it yet (24h from creation)

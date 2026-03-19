@@ -127,9 +127,10 @@
     display: inline-block; border-radius: 5px; padding: 2px 8px;
     font-size: .7rem; font-weight: 700;
   }
-  .plan-badge.pro  { background: rgba(46,160,67,.2);  color: var(--green);    border: 1px solid rgba(46,160,67,.3); }
-  .plan-badge.free { background: rgba(139,148,158,.1); color: var(--muted);   border: 1px solid var(--border); }
-  .plan-badge.admin{ background: rgba(218,54,51,.15);  color: var(--red);     border: 1px solid rgba(218,54,51,.3); }
+  .plan-badge.pro      { background: rgba(46,160,67,.2);   color: var(--green);   border: 1px solid rgba(46,160,67,.3); }
+  .plan-badge.standard { background: rgba(31,111,235,.15); color: var(--accent-h); border: 1px solid rgba(31,111,235,.3); }
+  .plan-badge.free     { background: rgba(139,148,158,.1); color: var(--muted);   border: 1px solid var(--border); }
+  .plan-badge.admin    { background: rgba(218,54,51,.15);  color: var(--red);     border: 1px solid rgba(218,54,51,.3); }
   .user-avatar {
     width: 28px; height: 28px; border-radius: 50%;
     background: linear-gradient(135deg, var(--accent), var(--green));
@@ -246,6 +247,45 @@
   }
   .stripe-notice strong { color: var(--gold); }
 
+  /* Pricing editor */
+  .pricing-grid { display: flex; flex-direction: column; gap: 14px; padding: 20px; }
+  .pricing-plan-row {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end;
+  }
+  .pricing-plan-row.inactive { opacity: .5; }
+  .pp-field label { display: block; font-size: .68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 5px; }
+  .pp-input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; color: var(--text); padding: 7px 10px; font-size: .82rem;
+    outline: none; transition: border-color .15s;
+  }
+  .pp-input:focus { border-color: var(--accent); }
+  .pp-actions { display: flex; gap: 6px; }
+  .btn-pp-save {
+    background: var(--accent); border: none; border-radius: 7px; color: #fff;
+    padding: 7px 14px; font-size: .78rem; font-weight: 600; cursor: pointer;
+    white-space: nowrap; transition: background .15s;
+  }
+  .btn-pp-save:hover { background: var(--accent-h); }
+  .btn-pp-del {
+    background: rgba(248,81,73,.08); border: 1px solid rgba(248,81,73,.2);
+    border-radius: 7px; color: var(--red); padding: 7px 10px;
+    font-size: .78rem; cursor: pointer; transition: all .15s;
+  }
+  .btn-pp-del:hover { background: rgba(248,81,73,.18); }
+  .btn-add-plan {
+    background: var(--surface2); border: 1px dashed var(--border);
+    border-radius: 9px; color: var(--muted); padding: 12px; font-size: .85rem;
+    cursor: pointer; width: 100%; transition: all .15s; margin-top: 4px;
+  }
+  .btn-add-plan:hover { border-color: var(--accent); color: var(--accent-h); }
+  .pp-stripe-hint {
+    font-size: .7rem; color: var(--muted); margin-top: 3px; line-height: 1.4;
+  }
+
   @media (max-width:900px) { .two-col { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -272,10 +312,9 @@
 
   <!-- Stripe notice -->
   <div class="stripe-notice">
-    <strong>💳 Payment integration not yet active.</strong>
-    Stripe Checkout routes are stubbed — ready to wire up once you have a Stripe account.
-    See <code>app.py → /subscription/checkout</code> for setup instructions.
-    For now, use the plan toggle buttons in the user table to manually upgrade users.
+    <strong>💳 Stripe Sandbox active.</strong>
+    Checkout is live in test mode. Set Price IDs in the Pricing Plans section below.
+    To go live: swap <code>STRIPE_SECRET_KEY</code> in <code>.env</code> to your live <code>sk_live_...</code> key and register the webhook URL in Stripe Dashboard → Developers → Webhooks → <code>/subscription/webhook</code>.
   </div>
 
   <!-- Stats cards -->
@@ -361,6 +400,19 @@
     <button class="btn-save-models" id="saveModelsBtn" onclick="saveModelSettings()">Save model settings</button>
   </div>
 
+  <!-- Pricing Plans -->
+  <div class="card section" style="margin-bottom:20px">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div class="section-title">💳 Pricing Plans</div>
+        <div class="section-sub">What users see on the landing page and upgrade modal. Each plan needs a Stripe Price ID to enable checkout.</div>
+      </div>
+    </div>
+    <div id="pricingGrid" class="pricing-grid">
+      <div class="loading-state"><div class="spinner"></div></div>
+    </div>
+  </div>
+
   <!-- User management -->
   <div class="section card">
     <div class="card-header">
@@ -377,6 +429,7 @@
         <select class="filter-select" id="planFilter" onchange="filterUsers()">
           <option value="">All plans</option>
           <option value="free">Free</option>
+          <option value="standard">Standard</option>
           <option value="pro">Pro</option>
         </select>
         <div class="table-count" id="tableCount"></div>
@@ -450,13 +503,18 @@ function renderStats(d) {
     <div class="stat-card highlight">
       <div class="stat-label">Total users</div>
       <div class="stat-val">${u.total}</div>
-      <div class="stat-sub">${u.free} free · ${u.standard||0} standard · ${u.pro} pro</div>
+      <div class="stat-sub">${u.free} free · ${u.standard||0} std · ${u.pro} pro</div>
       <div class="stat-trend up">+${u.new_this_week} this week</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Free users</div>
       <div class="stat-val">${u.free}</div>
       <div class="stat-sub">${u.total > 0 ? Math.round(u.free/u.total*100) : 0}% of total</div>
+    </div>
+    <div class="stat-card highlight">
+      <div class="stat-label">Standard users</div>
+      <div class="stat-val">${u.standard||0}</div>
+      <div class="stat-sub">${u.total > 0 ? Math.round((u.standard||0)/u.total*100) : 0}% of total</div>
     </div>
     <div class="stat-card green">
       <div class="stat-label">Pro users</div>
@@ -613,17 +671,20 @@ function renderUserTable(users) {
       : u.plan === "pro"
         ? `<span class="plan-badge pro">Pro</span>`
         : u.plan === "standard"
-          ? `<span class="plan-badge" style="background:rgba(59,130,246,.15);color:#60a5fa">Standard</span>`
+          ? `<span class="plan-badge standard">Standard</span>`
           : `<span class="plan-badge free">Free</span>`;
     const cost = u.total_cost_usd != null ? `$${Number(u.total_cost_usd).toFixed(4)}` : "$0.0000";
     const joined   = u.created_at ? u.created_at.slice(0, 10) : "—";
     const lastSeen = u.last_login  ? u.last_login.slice(0, 10)  : "never";
     const planToggle = u.is_admin ? "" :
-      `<select class="btn-plan-select" onchange="setPlan(${u.id},this.value)" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-size:.75rem;cursor:pointer">
-        <option value="free"     ${u.plan==="free"     ?"selected":""}>Free</option>
-        <option value="standard" ${u.plan==="standard" ?"selected":""}>Standard</option>
-        <option value="pro"      ${u.plan==="pro"      ?"selected":""}>Pro ⭐</option>
-      </select>`;
+      u.plan === "pro"
+        ? `<button class="btn-plan" onclick="setPlan(${u.id},'standard')">→ Standard</button>
+           <button class="btn-plan" onclick="setPlan(${u.id},'free')" style="margin-left:4px">→ Free</button>`
+        : u.plan === "standard"
+          ? `<button class="btn-plan" onclick="setPlan(${u.id},'pro')" style="border-color:var(--green);color:var(--green)">→ Pro ⭐</button>
+             <button class="btn-plan" onclick="setPlan(${u.id},'free')" style="margin-left:4px">→ Free</button>`
+          : `<button class="btn-plan" onclick="setPlan(${u.id},'standard')" style="border-color:var(--accent);color:var(--accent-h)">→ Standard</button>
+             <button class="btn-plan" onclick="setPlan(${u.id},'pro')" style="border-color:var(--green);color:var(--green);margin-left:4px">→ Pro ⭐</button>`;
     const delBtn = u.is_admin ? "" :
       `<button class="btn-del" onclick="openDeleteModal(${u.id},'${esc(u.display_name)}','${esc(u.email)}')">Delete</button>`;
 
@@ -746,9 +807,116 @@ async function saveModelSettings() {
   finally { btn.disabled = false; btn.textContent = "Save model settings"; }
 }
 
+/* ── Pricing Plans ── */
+let pricingPlans = [];
+
+async function loadPricing() {
+  try {
+    const r = await fetch("/admin/pricing");
+    pricingPlans = await r.json();
+    renderPricing();
+  } catch(e) { showToast("Failed to load pricing plans", "error"); }
+}
+
+function renderPricing() {
+  const grid = document.getElementById("pricingGrid");
+  const rows = pricingPlans.map(p => `
+    <div class="pricing-plan-row${p.is_active ? "" : " inactive"}" id="pp-row-${p.id}">
+      <div class="pp-field">
+        <label>Name</label>
+        <input class="pp-input" id="pp-name-${p.id}" value="${esc(p.name)}" placeholder="Pro Monthly">
+      </div>
+      <div class="pp-field">
+        <label>Price &amp; suffix</label>
+        <div style="display:flex;gap:6px">
+          <input class="pp-input" id="pp-price-${p.id}" value="${esc(p.display_price)}" placeholder="€10" style="width:70px;flex-shrink:0">
+          <input class="pp-input" id="pp-suffix-${p.id}" value="${esc(p.display_suffix)}" placeholder="/ month">
+        </div>
+      </div>
+      <div class="pp-field">
+        <label>Stripe Price ID</label>
+        <input class="pp-input" id="pp-stripe-${p.id}" value="${esc(p.stripe_price_id)}" placeholder="price_1Abc…" style="font-family:monospace;font-size:.75rem">
+        <div class="pp-stripe-hint">Get this from Stripe Dashboard → Products → your plan → Price ID</div>
+      </div>
+      <div class="pp-field">
+        <label>Badge / discount</label>
+        <div style="display:flex;gap:6px">
+          <input class="pp-input" id="pp-badge-${p.id}" value="${esc(p.badge_text)}" placeholder="🎯 Popular">
+          <input class="pp-input" id="pp-disc-${p.id}" value="${esc(p.discount_label)}" placeholder="-10%" style="width:60px;flex-shrink:0">
+        </div>
+      </div>
+      <div class="pp-field">
+        <label>Active</label>
+        <select class="pp-input" id="pp-active-${p.id}">
+          <option value="1"${p.is_active ? " selected" : ""}>Active</option>
+          <option value="0"${!p.is_active ? " selected" : ""}>Hidden</option>
+        </select>
+      </div>
+      <div class="pp-actions">
+        <button class="btn-pp-save" onclick="savePlan(${p.id})">Save</button>
+        <button class="btn-pp-del" onclick="deletePlan(${p.id})" title="Delete plan">✕</button>
+      </div>
+    </div>`).join("");
+  grid.innerHTML = rows + `<button class="btn-add-plan" onclick="addPlan()">+ Add pricing plan</button>`;
+}
+
+async function savePlan(id) {
+  const data = {
+    name:            document.getElementById(`pp-name-${id}`).value.trim(),
+    display_price:   document.getElementById(`pp-price-${id}`).value.trim(),
+    display_suffix:  document.getElementById(`pp-suffix-${id}`).value.trim(),
+    stripe_price_id: document.getElementById(`pp-stripe-${id}`).value.trim(),
+    badge_text:      document.getElementById(`pp-badge-${id}`).value.trim(),
+    discount_label:  document.getElementById(`pp-disc-${id}`).value.trim(),
+    is_active:       document.getElementById(`pp-active-${id}`).value,
+    plan_key: pricingPlans.find(p=>p.id===id)?.plan_key || "pro",
+    interval:  pricingPlans.find(p=>p.id===id)?.interval  || "month",
+    sort_order: pricingPlans.find(p=>p.id===id)?.sort_order || 0,
+  };
+  try {
+    const r = await fetch(`/admin/pricing/${id}`, {
+      method: "PUT",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(data),
+    });
+    if (!r.ok) { showToast("Save failed", "error"); return; }
+    showToast("Plan saved ✓", "success");
+    loadPricing();
+  } catch(e) { showToast("Network error", "error"); }
+}
+
+async function deletePlan(id) {
+  if (!confirm("Delete this pricing plan?")) return;
+  try {
+    const r = await fetch(`/admin/pricing/${id}`, {method:"DELETE"});
+    if (!r.ok) { showToast("Delete failed", "error"); return; }
+    showToast("Plan deleted ✓", "success");
+    loadPricing();
+  } catch(e) { showToast("Network error", "error"); }
+}
+
+async function addPlan() {
+  try {
+    const r = await fetch("/admin/pricing", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        name: "New Plan", plan_key: "pro", interval: "month",
+        display_price: "€", display_suffix: "/ month",
+        description: "", stripe_price_id: "", badge_text: "", discount_label: "",
+        sort_order: pricingPlans.length, is_active: 1,
+      }),
+    });
+    if (!r.ok) { showToast("Create failed", "error"); return; }
+    showToast("Plan created ✓", "success");
+    loadPricing();
+  } catch(e) { showToast("Network error", "error"); }
+}
+
 /* Boot */
 loadAll();
 loadModelSettings();
+loadPricing();
 </script>
 </body>
 </html>

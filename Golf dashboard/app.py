@@ -323,8 +323,8 @@ Your goals during this trial:
 
 Free plan reminders (mention naturally when relevant, not as a sales pitch):
 - They can upload up to 3 rounds and 1 range session on the free plan
-- The full AI Coach requires a Pro subscription after the trial ends today
-- Pro is €10/month or €108/year (10% off)
+- The full AI Coach requires a Standard or Pro subscription after the trial ends today
+- Standard is €5.99/month, Pro is €10/month or €108/year (10% off)
 
 Tone: warm, encouraging, like a knowledgeable friend who plays golf. \
 Not salesy — focus 90% on golf, 10% on the product when it genuinely helps them.
@@ -673,6 +673,7 @@ def auth_me():
             "coach_trial_active": trial_active,
             "coach_trial_end": trial_end,
             "email_verified": bool(user["email_verified"]),
+            "subscription_status": user["subscription_status"],
         })
     finally:
         conn.close()
@@ -1247,7 +1248,7 @@ def admin_stats():
     conn = get_db()
     try:
         # User counts
-        total_users = conn.execute("SELECT COUNT(*) as n FROM users").fetchone()["n"]
+        total_users    = conn.execute("SELECT COUNT(*) as n FROM users").fetchone()["n"]
         free_users     = conn.execute("SELECT COUNT(*) as n FROM users WHERE plan='free' AND is_admin=0").fetchone()["n"]
         standard_users = conn.execute("SELECT COUNT(*) as n FROM users WHERE plan='standard'").fetchone()["n"]
         pro_users      = conn.execute("SELECT COUNT(*) as n FROM users WHERE plan='pro'").fetchone()["n"]
@@ -1255,8 +1256,8 @@ def admin_stats():
             "SELECT COUNT(*) as n FROM users WHERE created_at >= datetime('now', '-7 days')"
         ).fetchone()["n"]
 
-        # Revenue (standard = €5/mo, pro = €10/mo — adjust as needed)
-        mrr_eur = standard_users * 5.0 + pro_users * 10.0
+        # Revenue (Standard €5.99/mo, Pro €10/mo)
+        mrr_eur = pro_users * 10.0 + standard_users * 5.99
 
         # API costs — this month
         this_month = __import__("datetime").date.today().strftime("%Y-%m")
@@ -1300,7 +1301,8 @@ def admin_stats():
         return jsonify({
             "users": {
                 "total": total_users, "free": free_users,
-                "standard": standard_users, "pro": pro_users, "new_this_week": new_this_week,
+                "standard": standard_users, "pro": pro_users,
+                "new_this_week": new_this_week,
             },
             "revenue": {"mrr_eur": mrr_eur, "arr_eur": round(mrr_eur * 12 * 0.9, 2)},
             "costs": {
@@ -1434,61 +1436,272 @@ def admin_save_settings():
 # TODO: Wire up to real Stripe once you have a Stripe account.
 # 1. pip install stripe
 # 2. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in .env
-# 3. Create products in Stripe Dashboard: Monthly €10, Yearly €108
-# 4. Set STRIPE_MONTHLY_PRICE_ID and STRIPE_YEARLY_PRICE_ID in .env
+# 3. Create products in Stripe Dashboard:
+#    - Standard: €5.99/month
+#    - Pro: €10/month or €108/year (10% off)
+# 4. Set STRIPE_STANDARD_PRICE_ID, STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID in .env
 
 @app.route("/subscription/checkout", methods=["POST"])
 @login_required
 def subscription_checkout():
     """Create a Stripe Checkout session and return the redirect URL."""
-    # Require email verification before allowing purchase
+    import stripe as stripe_lib
+    stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
+    if not stripe_lib.api_key:
+        return jsonify({"error": "Payment not configured — contact support"}), 503
+
     conn = get_db()
     try:
         user = get_current_user(conn)
-        if not user["email_verified"]:
-            return jsonify({
-                "error": "Please verify your email address before upgrading. Check your inbox or resend the verification email.",
-                "email_unverified": True,
-            }), 403
+        # TODO: Re-enable email verification gate once email sending is configured
+        # if not user["email_verified"]:
+        #     return jsonify({
+        #         "error": "Please verify your email before upgrading — check your inbox.",
+        #         "email_unverified": True,
+        #     }), 403
+
+        interval = (request.get_json() or {}).get("interval", "month")
+
+        # Look up the price ID from the database (set via admin pricing panel)
+        plan_row = conn.execute(
+            "SELECT stripe_price_id FROM pricing_plans WHERE interval=? AND is_active=1 ORDER BY sort_order LIMIT 1",
+            (interval,)
+        ).fetchone()
+
+        if not plan_row or not plan_row["stripe_price_id"]:
+            return jsonify({"error": "No Stripe Price ID configured for this plan — set it in the Admin panel"}), 503
+
+        price_id = plan_row["stripe_price_id"]
+
+        session_obj = stripe_lib.checkout.Session.create(
+            customer_email=user["email"],
+            line_items=[{"price": price_id, "quantity": 1}],
+            mode="subscription",
+            success_url=request.host_url + "subscription/success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=request.host_url + "subscription/cancel",
+            metadata={"user_id": str(user["id"])},
+        )
+        return jsonify({"url": session_obj.url})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
-    # TODO: Replace stub with real Stripe integration
-    # import stripe
-    # stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-    # interval = request.get_json().get("interval", "month")  # "month" or "year"
-    # price_id = STRIPE_YEARLY_PRICE_ID if interval == "year" else STRIPE_MONTHLY_PRICE_ID
-    # session_obj = stripe.checkout.Session.create(
-    #     customer_email=current_user_email,
-    #     line_items=[{"price": price_id, "quantity": 1}],
-    #     mode="subscription",
-    #     success_url=request.host_url + "subscription/success?session_id={CHECKOUT_SESSION_ID}",
-    #     cancel_url=request.host_url + "subscription/cancel",
-    #     metadata={"user_id": str(current_user_id())},
-    # )
-    # return jsonify({"url": session_obj.url})
-    return jsonify({"error": "Payment not configured yet — contact support"}), 503
 
 
 @app.route("/subscription/webhook", methods=["POST"])
 def subscription_webhook():
-    """Handle Stripe webhook events (payment success, cancellation, etc.)."""
-    # TODO: Verify stripe signature and process events:
-    # - checkout.session.completed → set plan='pro', store stripe IDs
-    # - customer.subscription.deleted → set plan='free'
-    # - invoice.payment_failed → notify user
+    """Handle Stripe webhook events."""
+    import stripe as stripe_lib
+    stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+    payload = request.get_data()
+    sig_header = request.headers.get("Stripe-Signature")
+
+    try:
+        if webhook_secret and sig_header:
+            event = stripe_lib.Webhook.construct_event(payload, sig_header, webhook_secret)
+        else:
+            event = stripe_lib.Event.construct_from(
+                __import__("json").loads(payload), stripe_lib.api_key
+            )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    conn = get_db()
+    try:
+        if event["type"] == "checkout.session.completed":
+            session = event["data"]["object"]
+            user_id = session.get("metadata", {}).get("user_id")
+            customer_id = session.get("customer")
+            subscription_id = session.get("subscription")
+            if user_id:
+                with conn:
+                    conn.execute(
+                        """UPDATE users SET plan='pro',
+                           stripe_customer_id=?, stripe_subscription_id=?,
+                           subscription_status='active'
+                           WHERE id=?""",
+                        (customer_id, subscription_id, int(user_id)),
+                    )
+
+        elif event["type"] == "customer.subscription.deleted":
+            sub = event["data"]["object"]
+            customer_id = sub.get("customer")
+            with conn:
+                conn.execute(
+                    "UPDATE users SET plan='free', subscription_status='cancelled' WHERE stripe_customer_id=?",
+                    (customer_id,),
+                )
+
+        elif event["type"] == "invoice.payment_failed":
+            sub = event["data"]["object"]
+            customer_id = sub.get("customer")
+            with conn:
+                conn.execute(
+                    "UPDATE users SET subscription_status='past_due' WHERE stripe_customer_id=?",
+                    (customer_id,),
+                )
+    finally:
+        conn.close()
+
     return jsonify({"received": True})
 
 
 @app.route("/subscription/success")
 @login_required
 def subscription_success():
+    """Verify the completed Stripe session and immediately upgrade the user's plan."""
+    import stripe as stripe_lib
+    stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
+    session_id = request.args.get("session_id")
+    if session_id and stripe_lib.api_key:
+        try:
+            session_obj = stripe_lib.checkout.Session.retrieve(session_id)
+            if session_obj.payment_status == "paid":
+                conn = get_db()
+                try:
+                    user_id = session_obj.metadata.get("user_id")
+                    if user_id:
+                        with conn:
+                            conn.execute(
+                                """UPDATE users SET plan='pro',
+                                   stripe_customer_id=?, stripe_subscription_id=?,
+                                   subscription_status='active'
+                                   WHERE id=?""",
+                                (session_obj.customer, session_obj.subscription, int(user_id)),
+                            )
+                finally:
+                    conn.close()
+        except Exception:
+            pass
     return redirect("/")
 
 
 @app.route("/subscription/cancel")
 @login_required
-def subscription_cancel():
+def subscription_cancel_redirect():
+    """GET — redirect back to dashboard (Stripe cancel URL)."""
     return redirect("/")
+
+
+@app.route("/subscription/cancel", methods=["POST"])
+@login_required
+def subscription_cancel_post():
+    """POST — cancel the user's active Stripe subscription at period end."""
+    try:
+        import stripe as stripe_lib
+        stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
+        if not stripe_lib.api_key:
+            return jsonify({"error": "Stripe not configured — contact support"}), 503
+        conn = get_db()
+        try:
+            user = get_current_user(conn)
+            sub_id = user["stripe_subscription_id"]
+            if not sub_id:
+                return jsonify({"error": "No active subscription found on this account"}), 400
+            stripe_lib.Subscription.modify(sub_id, cancel_at_period_end=True)
+            with conn:
+                conn.execute(
+                    "UPDATE users SET subscription_status='cancelling' WHERE id=?",
+                    (user["id"],)
+                )
+            return jsonify({"ok": True})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        finally:
+            conn.close()
+    except Exception as e:
+        return jsonify({"error": "Unexpected error: " + str(e)}), 500
+
+
+# ── Pricing plans (public read + admin CRUD) ───────────────────────────────────
+
+@app.route("/api/pricing")
+def public_pricing():
+    """Return active pricing plans for landing page and upgrade modal."""
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM pricing_plans WHERE is_active=1 ORDER BY sort_order, id"
+        ).fetchall()
+        return jsonify([dict(r) for r in rows])
+    finally:
+        conn.close()
+
+
+@app.route("/admin/pricing", methods=["GET"])
+@admin_required
+def admin_get_pricing():
+    conn = get_db()
+    try:
+        rows = conn.execute("SELECT * FROM pricing_plans ORDER BY sort_order, id").fetchall()
+        return jsonify([dict(r) for r in rows])
+    finally:
+        conn.close()
+
+
+@app.route("/admin/pricing", methods=["POST"])
+@admin_required
+def admin_create_pricing():
+    data = request.get_json() or {}
+    conn = get_db()
+    try:
+        conn.execute(
+            """INSERT INTO pricing_plans
+               (name, plan_key, interval, display_price, display_suffix,
+                description, stripe_price_id, badge_text, discount_label, sort_order, is_active)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                data.get("name", ""), data.get("plan_key", "pro"),
+                data.get("interval", "month"), data.get("display_price", ""),
+                data.get("display_suffix", "/ month"), data.get("description", ""),
+                data.get("stripe_price_id", ""), data.get("badge_text", ""),
+                data.get("discount_label", ""), int(data.get("sort_order", 0)),
+                int(data.get("is_active", 1)),
+            ),
+        )
+        conn.commit()
+        return jsonify({"ok": True})
+    finally:
+        conn.close()
+
+
+@app.route("/admin/pricing/<int:plan_id>", methods=["PUT"])
+@admin_required
+def admin_update_pricing(plan_id):
+    data = request.get_json() or {}
+    conn = get_db()
+    try:
+        conn.execute(
+            """UPDATE pricing_plans SET name=?, plan_key=?, interval=?, display_price=?,
+               display_suffix=?, description=?, stripe_price_id=?, badge_text=?,
+               discount_label=?, sort_order=?, is_active=? WHERE id=?""",
+            (
+                data.get("name", ""), data.get("plan_key", "pro"),
+                data.get("interval", "month"), data.get("display_price", ""),
+                data.get("display_suffix", "/ month"), data.get("description", ""),
+                data.get("stripe_price_id", ""), data.get("badge_text", ""),
+                data.get("discount_label", ""), int(data.get("sort_order", 0)),
+                int(data.get("is_active", 1)), plan_id,
+            ),
+        )
+        conn.commit()
+        return jsonify({"ok": True})
+    finally:
+        conn.close()
+
+
+@app.route("/admin/pricing/<int:plan_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_pricing(plan_id):
+    conn = get_db()
+    try:
+        conn.execute("DELETE FROM pricing_plans WHERE id=?", (plan_id,))
+        conn.commit()
+        return jsonify({"ok": True})
+    finally:
+        conn.close()
 
 
 # ── Profile image ──────────────────────────────────────────────────────────────

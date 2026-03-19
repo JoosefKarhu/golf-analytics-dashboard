@@ -642,22 +642,55 @@
 <section class="pricing" id="pricing">
   <p class="section-label">Pricing</p>
   <h2 class="section-title" style="margin-bottom:36px">Simple, honest pricing</h2>
-  <div class="price-card">
-    <div class="price-badge">🎯 Full access</div>
-    <div class="price-amt">€10 <span>/ month</span></div>
-    <div class="price-desc">Everything included. No tiers, no upsells.</div>
-    <div class="price-features">
-      <div class="pf-item"><span class="pf-check">✓</span> Unlimited round logging via AI screenshot analysis</div>
-      <div class="pf-item"><span class="pf-check">✓</span> Full club tracking — every club, every session</div>
-      <div class="pf-item"><span class="pf-check">✓</span> Golf God — unlimited oracle consultations</div>
-      <div class="pf-item"><span class="pf-check">✓</span> Performance charts &amp; handicap benchmarks</div>
-      <div class="pf-item"><span class="pf-check">✓</span> Range session tracking</div>
-      <div class="pf-item"><span class="pf-check">✓</span> Works on any device</div>
+  <div id="pricingCards" style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap">
+    <!-- Populated dynamically -->
+    <div class="price-card">
+      <div class="price-badge">🎯 Full access</div>
+      <div class="price-amt">€10 <span>/ month</span></div>
+      <div class="price-desc">Everything included. No tiers, no upsells.</div>
+      <div class="price-features">
+        <div class="pf-item"><span class="pf-check">✓</span> Unlimited round logging via AI screenshot analysis</div>
+        <div class="pf-item"><span class="pf-check">✓</span> Full club tracking — every club, every session</div>
+        <div class="pf-item"><span class="pf-check">✓</span> Golf God — unlimited oracle consultations</div>
+        <div class="pf-item"><span class="pf-check">✓</span> Performance charts &amp; handicap benchmarks</div>
+        <div class="pf-item"><span class="pf-check">✓</span> Range session tracking</div>
+        <div class="pf-item"><span class="pf-check">✓</span> Works on any device</div>
+      </div>
+      <a class="btn-price" href="/register">Start free trial →</a>
+      <div class="price-note">Free to get started · Cancel anytime</div>
     </div>
-    <a class="btn-price" href="/register">Start free trial →</a>
-    <div class="price-note">Free to get started · Cancel anytime</div>
   </div>
 </section>
+<script>
+(async () => {
+  try {
+    const plans = await fetch("/api/pricing").then(r => r.json());
+    if (!plans.length) return;
+    const features = [
+      "Unlimited round logging via AI screenshot analysis",
+      "Full club tracking — every club, every session",
+      "Golf God — unlimited oracle consultations",
+      "Performance charts &amp; handicap benchmarks",
+      "Range session tracking",
+      "Works on any device",
+    ];
+    const featureHTML = features.map(f =>
+      `<div class="pf-item"><span class="pf-check">✓</span> ${f}</div>`).join("");
+    document.getElementById("pricingCards").innerHTML = plans.map(p => `
+      <div class="price-card" style="flex:1;min-width:240px;max-width:360px;position:relative">
+        ${p.badge_text ? `<div class="price-badge">${p.badge_text}</div>` : ""}
+        <div class="price-amt">${p.display_price} <span>${p.display_suffix}</span>
+          ${p.discount_label ? `<span style="font-size:.75rem;background:var(--gold);color:#fff;
+            border-radius:6px;padding:2px 8px;margin-left:8px;font-weight:700">${p.discount_label}</span>` : ""}
+        </div>
+        <div class="price-desc">${p.description || "Everything included. No tiers, no upsells."}</div>
+        <div class="price-features">${featureHTML}</div>
+        <a class="btn-price" href="/register">Start free trial →</a>
+        <div class="price-note">Free to get started · Cancel anytime</div>
+      </div>`).join("");
+  } catch(e) { /* keep static fallback */ }
+})();
+</script>
 
 <!-- ══════════════════════════════════════════════════════════════
      CTA BANNER

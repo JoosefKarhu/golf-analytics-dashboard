@@ -21,8 +21,8 @@
       --accent:  #4a80b0;    /* muted premium blue */
       --accent2: #386895;    /* deeper blue for hover */
       /* Positive performance — muted grounded green */
-      --green:   #3a8a5c;    /* muted success / positive trend */
-      --green2:  #2d6e49;    /* deeper green */
+      --green:   #22c55e;    /* success / positive trend */
+      --green2:  #16a34a;    /* deeper green */
       /* States */
       --warn:    #c47d0e;    /* muted amber */
       --danger:  #a83232;    /* deep restrained red */
@@ -248,7 +248,7 @@
       border:1px solid var(--border);text-align:center;position:relative;overflow:hidden}
     .kpi-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
       background:var(--border);transition:background .3s}
-    .kpi-card.good::after{background:var(--accent)}
+    .kpi-card.good::after{background:var(--green)}
     .kpi-card.warn::after{background:var(--warn)}
     .kpi-card.bad::after{background:var(--danger)}
     .kpi-hcp::after{background:linear-gradient(90deg,#a855f7,#6366f1)!important}
@@ -256,7 +256,7 @@
     .kpi-value{font-size:1.9rem;font-weight:800;letter-spacing:-.03em;line-height:1;margin-bottom:5px}
     .kpi-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
     .kpi-delta{font-size:.72rem;margin-top:7px;font-weight:600}
-    .kpi-delta.good{color:var(--accent)}.kpi-delta.warn{color:var(--warn)}.kpi-delta.bad{color:var(--danger)}
+    .kpi-delta.good{color:var(--green)}.kpi-delta.warn{color:var(--warn)}.kpi-delta.bad{color:var(--danger)}
 
     /* ── Charts ───────────────────────────────────────────────────────── */
     .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
@@ -311,14 +311,14 @@
       padding:16px;text-align:center;position:relative;overflow:hidden}
     .damage-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
       background:var(--border)}
-    .damage-card.good::after{background:var(--accent)}
+    .damage-card.good::after{background:var(--green)}
     .damage-card.bad::after{background:var(--danger)}
     .damage-card.warn::after{background:var(--warn)}
     .dmg-value{font-size:2rem;font-weight:800;line-height:1;margin-bottom:6px}
     .dmg-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
     .dmg-target{font-size:.72rem;color:var(--muted);margin-top:6px}
     .dmg-status{font-size:.72rem;font-weight:700;margin-top:4px}
-    .dmg-status.good{color:var(--accent)}.dmg-status.bad{color:var(--danger)}.dmg-status.warn{color:var(--warn)}
+    .dmg-status.good{color:var(--green)}.dmg-status.bad{color:var(--danger)}.dmg-status.warn{color:var(--warn)}
 
     /* ── Approach distance bars ───────────────────────────────────────── */
     .apb-header{display:grid;grid-template-columns:72px 1fr 46px 52px;gap:8px;padding:0 2px 6px;border-bottom:1px solid rgba(255,255,255,.06);font-size:.68rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
@@ -405,7 +405,7 @@
     .pill-neutral{background:rgba(100,116,139,.15);color:var(--muted)}
     .pill-real{background:rgba(59,130,246,.15);color:var(--blue)}
     .pill-practice{background:rgba(249,115,22,.15);color:var(--orange)}
-    .col-good{color:var(--accent);font-weight:600}
+    .col-good{color:var(--green);font-weight:600}
     .col-warn{color:var(--warn);font-weight:600}
     .col-bad{color:var(--danger);font-weight:600}
 
@@ -419,7 +419,7 @@
     .club-carry-unit{font-size:.72rem;color:var(--muted);margin-top:1px}
     .club-accuracy{font-size:.78rem;font-weight:600}
     .club-trend{font-size:.8rem;font-weight:700}
-    .trend-up{color:var(--accent)}.trend-down{color:var(--danger)}.trend-flat{color:var(--muted)}
+    .trend-up{color:var(--green)}.trend-down{color:var(--danger)}.trend-flat{color:var(--muted)}
 
     /* Consistency bar (min-avg-max) */
     .consist-list{display:flex;flex-direction:column;gap:10px}
@@ -738,11 +738,15 @@
       <span class="sb-badge" id="tc-tourn">0</span>
     </button>
     <button class="sb-tab" id="tab-integrations" data-tab="integrations" onclick="setTab('integrations')">
-      <span class="sb-icon">🔗</span>
+      <span class="sb-icon">
+        <img src="/static/icon-integrations.png" alt="" onerror="this.outerHTML='🔗'">
+      </span>
       <span class="sb-label">Integrations</span>
     </button>
     <button class="sb-tab" id="tab-release-notes" data-tab="release-notes" onclick="setTab('release-notes')">
-      <span class="sb-icon">📋</span>
+      <span class="sb-icon">
+        <img src="/static/icon-release-notes.png" alt="" onerror="this.outerHTML='📋'">
+      </span>
       <span class="sb-label">What's New</span>
     </button>
   </div>
@@ -789,9 +793,8 @@
       <span style="flex:1"></span>
       <!-- Tier selector (dev/simple-server mode — hidden when Flask manages plans) -->
       <div class="tier-selector" id="tierSelector">
-        <button class="tier-btn" data-tier="free"     onclick="setTier('free')">Free</button>
-        <button class="tier-btn" data-tier="standard" onclick="setTier('standard')">Standard</button>
-        <button class="tier-btn" data-tier="pro"      onclick="setTier('pro')">Pro</button>
+        <button class="tier-btn" data-tier="free" onclick="setTier('free')">Free</button>
+        <button class="tier-btn" data-tier="pro"  onclick="setTier('pro')">Full Access</button>
       </div>
       <!-- Golf God button — prominent, top-right -->
       <button id="coachHeaderBtn" class="coach-header-btn" onclick="openCoach('dashboard')" title="Consult the Golf God">
@@ -1117,7 +1120,7 @@
     </div>
 
     <!-- On-Course Club Usage (simulator) — hidden until shot data present -->
-    <div class="chart-card full" id="cc-simclubs" style="display:none">
+    <div class="chart-card full" id="cc-simclubs" style="display:none;margin-bottom:20px">
       <div class="chart-title">🏌️ On-Course Club Usage <span class="badge-pill">Simulator · Shots · Carry · Accuracy</span></div>
       <div id="simClubsWrap"></div>
     </div>
@@ -1131,8 +1134,8 @@
             <th>#</th><th>Date</th><th>Club</th><th>Shots</th>
             <th>Avg Carry</th><th>Avg Total</th><th>Max Carry</th>
             <th>Min Carry</th><th title="Carry spread (max − min) within the session">Spread</th><th title="Accuracy depends on the target size you set — smaller target = lower %">Target Hit ⓘ</th>
-            <th>Shape</th><th>Smash</th><th>Speed</th><th class="pro-only">Spin rpm</th>
-            <th class="pro-only">Axis°</th><th class="pro-only">Face°</th><th class="pro-only">Path°</th><th class="pro-only">F→P°</th><th class="pro-only">Attack°</th><th></th>
+            <th>Shape</th><th>Swing Path</th><th>Smash</th><th>Speed</th><th class="adv-only">Spin rpm</th>
+            <th class="adv-only">Axis°</th><th class="adv-only">Face°</th><th class="adv-only">Path°</th><th class="adv-only">F→P°</th><th class="adv-only">Attack°</th><th></th>
           </tr></thead>
           <tbody id="rangeBody"></tbody>
         </table>
@@ -1246,6 +1249,39 @@
 
     </div>
 
+    <!-- Subscription management -->
+    <div style="max-width:900px;margin:20px auto 0">
+      <div class="chart-card" id="subscriptionProfileCard">
+        <div class="chart-title">💳 Subscription</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:4px">
+          <div>
+            <div style="font-size:1.1rem;font-weight:700" id="subProfilePlanLabel">Free</div>
+            <div style="font-size:.78rem;color:var(--muted);margin-top:2px" id="subProfileStatusLabel">No active subscription</div>
+          </div>
+          <span id="subProfileBadge" style="font-size:.72rem;font-weight:700;padding:4px 12px;border-radius:20px;background:var(--surface2);color:var(--muted)">FREE</span>
+        </div>
+
+        <!-- Active subscription block -->
+        <div id="subProfileActiveBlock" style="display:none;margin-top:16px;padding:14px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Your subscription renews automatically. Cancelling keeps Full Access until the end of your current billing period.</div>
+          <button onclick="cancelSubscription()" id="cancelSubBtn2"
+            style="background:transparent;border:1px solid rgba(239,68,68,.5);color:#f87171;
+            border-radius:8px;padding:8px 18px;font-size:.8rem;font-weight:600;cursor:pointer">
+            Cancel Subscription
+          </button>
+        </div>
+
+        <!-- Free / upgrade block -->
+        <div id="subProfileFreeBlock" style="margin-top:16px">
+          <button onclick="showUpgradeModal()"
+            style="background:var(--accent);border:none;color:#fff;
+            border-radius:8px;padding:10px 22px;font-size:.9rem;font-weight:700;cursor:pointer">
+            ⚡ Upgrade to Full Access
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Admin-only: Data Readiness Score -->
     <div id="dataScoreWrap" style="display:none;max-width:900px;margin:20px auto 0">
       <div class="chart-card">
@@ -1292,17 +1328,6 @@
           <div class="settings-toggle-group">
             <button class="stg-btn stg-active" data-stg="temp" data-val="c" onclick="applySetting('tempUnit','c')">°C</button>
             <button class="stg-btn"            data-stg="temp" data-val="f" onclick="applySetting('tempUnit','f')">°F</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Coming soon -->
-      <div class="settings-card" style="opacity:.45;pointer-events:none">
-        <div class="settings-group-title">Subscription <span style="font-size:.7rem;color:var(--muted);text-transform:none;letter-spacing:0">(coming soon)</span></div>
-        <div class="settings-row">
-          <div class="settings-label">
-            <strong>Plan</strong>
-            <span class="settings-sub">Free · Pro · Team</span>
           </div>
         </div>
       </div>
@@ -1859,52 +1884,44 @@ function applyTierGates(){
   document.querySelectorAll(".lock-overlay").forEach(el=>el.remove());
   document.querySelectorAll(".lock-wrap").forEach(el=>el.classList.remove("lock-wrap"));
 
-  const isPro = currentTier === "pro";
-  const isStd = currentTier === "standard" || isPro;
+  const isFullAccess = currentTier === "pro" || currentTier === "standard";
 
-  function gate(id, needsPro, title, desc, cta, isKpi){
+  function gate(id, title, desc, isKpi){
     const el = document.getElementById(id);
     if(!el) return;
-    // Skip if the element is already hidden (e.g. hidden by tab logic)
     if(el.offsetParent === null && el.style.display === "none") return;
-    const allowed = needsPro ? isPro : isStd;
-    if(allowed) return;
+    if(isFullAccess) return;
     el.classList.add("lock-wrap");
-    const tierLabel = needsPro ? "Pro" : "Standard";
-    const tierColor = needsPro ? "var(--accent)" : "#60a5fa";
     const ov = document.createElement("div");
     ov.className = "lock-overlay" + (isKpi ? " kpi-lock" : "");
     ov.innerHTML = `<div class="lock-icon">⚡</div>
-      <div class="lock-tier" style="color:${tierColor}">${tierLabel}</div>
+      <div class="lock-tier" style="color:var(--accent)">Full Access</div>
       <div class="lock-title">${title}</div>
       ${desc ? `<div class="lock-desc">${desc}</div>` : ""}
-      <button class="lock-cta" onclick="setTier('${needsPro?'pro':'standard'}')">${cta}</button>`;
+      <button class="lock-cta" onclick="showUpgradeModal()">Unlock Full Access</button>`;
     el.appendChild(ov);
   }
 
-  // Free → Standard gates
-  gate("kpi-gir",    false, "GIR %",         null, "Unlock Standard", true);
-  gate("kpi-fw",     false, "Fairway %",      null, "Unlock Standard", true);
-  gate("kpi-scr",    false, "Scrambling",     null, "Unlock Standard", true);
-  gate("kpi-putts",  false, "Putts / Hole",   null, "Unlock Standard", true);
-  gate("kpi-drive",  false, "Avg Drive",      null, "Unlock Standard", true);
-  gate("kpi-hcp-sim",false, "Est. Handicap",  null, "Unlock Standard", true);
-  gate("kpi-hcp-real",false,"Est. Handicap",  null, "Unlock Standard", true);
-  gate("cc-gir",     false, "GIR Trend",      "Track greens-in-regulation over time", "Unlock with Standard");
-  gate("cc-fw",      false, "Fairway Trend",  "See where your driving accuracy is heading", "Unlock with Standard");
-  gate("cc-radar",   false, "Skills Radar",   "Visualise your full game profile at a glance", "Unlock with Standard");
-  gate("cc-scr",     false, "Scrambling",     "Analyse your up-and-down consistency", "Unlock with Standard");
-  gate("damageSection",   false, "Score Damage Tracker", "Find the shots that are costing you the most strokes", "Unlock with Standard");
-  gate("par3Section",     false, "Par 3 Analysis",       "Detailed par 3 scoring and GIR breakdown", "Unlock with Standard");
-  gate("evalSection",     false, "Evaluations",          "Structure your improvement with guided self-evaluation", "Unlock with Standard");
-  gate("coachingSection", false, "AI Coaching Insights", "Get personalised practice prescriptions from the Golf God", "Unlock with Standard");
-  gate("cc-club-trend",   false, "Club Distance Evolution", "Track how your carry distances change over sessions", "Unlock with Standard");
-  gate("cc-club-consist", false, "Distance Consistency",    "See your min/avg/max carry spread per club", "Unlock with Standard");
-  gate("cc-club-accuracy",false, "Target Hit Rate",         "Measure your accuracy against a target", "Unlock with Standard");
-  gate("rangeTableCard",  false, "Session History",          "Full range session log with stats per club", "Unlock with Standard");
-
-  // Standard → Pro gates
-  gate("cc-approach-drive", true, "Approach & Drive Analysis", "Distance-segmented GIR % and driving heatmaps", "Upgrade to Pro");
+  gate("kpi-gir",           "GIR %",                    null, true);
+  gate("kpi-fw",            "Fairway %",                 null, true);
+  gate("kpi-scr",           "Scrambling",                null, true);
+  gate("kpi-putts",         "Putts / Hole",              null, true);
+  gate("kpi-drive",         "Avg Drive",                 null, true);
+  gate("kpi-hcp-sim",       "Est. Handicap",             null, true);
+  gate("kpi-hcp-real",      "Est. Handicap",             null, true);
+  gate("cc-gir",            "GIR Trend",                 "Track greens-in-regulation over time");
+  gate("cc-fw",             "Fairway Trend",             "See where your driving accuracy is heading");
+  gate("cc-radar",          "Skills Radar",              "Visualise your full game profile at a glance");
+  gate("cc-scr",            "Scrambling",                "Analyse your up-and-down consistency");
+  gate("cc-approach-drive", "Approach & Drive Analysis", "Distance-segmented GIR % and driving heatmaps");
+  gate("damageSection",     "Score Damage Tracker",      "Find the shots that are costing you the most strokes");
+  gate("par3Section",       "Par 3 Analysis",            "Detailed par 3 scoring and GIR breakdown");
+  gate("evalSection",       "Evaluations",               "Structure your improvement with guided self-evaluation");
+  gate("coachingSection",   "AI Coaching Insights",      "Get personalised practice prescriptions from the Golf God");
+  gate("cc-club-trend",     "Club Distance Evolution",   "Track how your carry distances change over sessions");
+  gate("cc-club-consist",   "Distance Consistency",      "See your min/avg/max carry spread per club");
+  gate("cc-club-accuracy",  "Target Hit Rate",           "Measure your accuracy against a target");
+  gate("rangeTableCard",    "Session History",           "Full range session log with stats per club");
 }
 
 /* ── State ──────────────────────────────────────────────────────────────── */
@@ -1979,10 +1996,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ── Tier from plan ────────────────────────────────────────────────────
   const planMap = {free:"free", standard:"standard", pro:"pro"};
   currentTier = planMap[currentUser.plan] || "free";
+  refreshSubscriptionCard();
   // Tier selector: visible only for admins (for preview/testing), hidden for regular users
   const tierSel = document.getElementById("tierSelector");
   if(tierSel) tierSel.style.display = currentUser.is_admin ? "" : "none";
   document.querySelectorAll(".tier-btn").forEach(b=>b.classList.toggle("active",b.dataset.tier===currentTier));
+
+  // Admin-only nav tabs
+  ["tab-integrations","tab-release-notes"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display = currentUser.is_admin ? "" : "none";
+  });
 
   // ── Trial badge on AI Coach button (free trial only, not Pro/admin) ───
   if (currentUser.plan !== "pro" && !currentUser.is_admin && currentUser.coach_trial_active) {
@@ -2122,10 +2146,11 @@ function acctDropGo(tab) {
 
 function acctDropUpgrade() {
   closeAcctDropdown();
-  if (currentUser && !currentUser.email_verified) {
-    showToast("Please verify your email before upgrading — check your inbox.", "warn");
-    return;
-  }
+  // TODO: Re-enable once email sending is configured
+  // if (currentUser && !currentUser.email_verified) {
+  //   showToast("Please verify your email before upgrading — check your inbox.", "warn");
+  //   return;
+  // }
   showUpgradeModal();
 }
 
@@ -2171,10 +2196,42 @@ function showUpgradeModal(msg) {
     msg || "Upgrade to Pro for unlimited access to all features.";
   const el = document.getElementById("upgradeModal");
   el.style.display = "flex";
+  loadUpgradePrices();
 }
 function closeUpgradeModal() {
   document.getElementById("upgradeModal").style.display = "none";
 }
+async function loadUpgradePrices() {
+  try {
+    const plans = await fetch("/api/pricing").then(r => r.json());
+    if (!plans.length) return;
+    // If only one plan exists, show a single prominent CTA
+    if (plans.length === 1) {
+      const p = plans[0];
+      document.getElementById("upgradeModalPrices").innerHTML =
+        `<button onclick="startCheckout('${p.interval}')"
+          style="width:100%;padding:14px;border-radius:9px;background:var(--accent);color:#fff;
+          border:none;font-size:1rem;font-weight:700;cursor:pointer">
+          Upgrade — ${p.display_price} ${p.display_suffix}
+        </button>`;
+      return;
+    }
+    const colors = ["var(--green)", "var(--accent)", "var(--gold)"];
+    document.getElementById("upgradeModalPrices").innerHTML = plans.map((p, i) => {
+      const col = colors[i % colors.length];
+      return `<button onclick="startCheckout('${p.interval}')"
+        style="flex:1;padding:12px;border-radius:9px;background:${col};color:#fff;
+        border:none;font-size:.85rem;font-weight:700;cursor:pointer;position:relative">
+        ${p.display_price} ${p.display_suffix}
+        ${p.discount_label ? `<span style="position:absolute;top:-10px;right:-8px;
+          background:#ff4444;color:#fff;border-radius:10px;padding:2px 8px;
+          font-size:.7rem;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,.4);
+          white-space:nowrap">${p.discount_label}</span>` : ""}
+      </button>`;
+    }).join("");
+  } catch(e) { /* keep static fallback */ }
+}
+
 async function startCheckout(interval) {
   try {
     const r = await fetch("/subscription/checkout", {
@@ -2210,6 +2267,95 @@ function initSettingsUI(){
   for(const [k,grp] of Object.entries(m)){
     document.querySelectorAll(`[data-stg="${grp}"]`).forEach(b=>
       b.classList.toggle("stg-active", b.dataset.val === appSettings[k]));
+  }
+}
+
+function refreshSubscriptionCard(){
+  if(!currentUser) return;
+  const isFullAccess  = currentUser.plan === "pro" || currentUser.plan === "standard";
+  const isCancelling  = isFullAccess && currentUser.subscription_status === "cancelling";
+
+  const labelEl   = document.getElementById("subProfilePlanLabel");
+  const statusEl  = document.getElementById("subProfileStatusLabel");
+  const badgeEl   = document.getElementById("subProfileBadge");
+  const activeEl  = document.getElementById("subProfileActiveBlock");
+  const freeEl    = document.getElementById("subProfileFreeBlock");
+  if(!labelEl) return;
+
+  if(isCancelling){
+    // Subscription is active but set to cancel at period end
+    labelEl.textContent          = "Full Access";
+    statusEl.textContent         = "Cancels at end of billing period";
+    badgeEl.textContent          = "CANCELLING";
+    badgeEl.style.background     = "rgba(245,158,11,.15)";
+    badgeEl.style.color          = "#f59e0b";
+    activeEl.style.display       = "";
+    freeEl.style.display         = "none";
+    // Replace cancel button with a note
+    const cancelBtn = document.getElementById("cancelSubBtn2");
+    if(cancelBtn){
+      cancelBtn.disabled    = true;
+      cancelBtn.textContent = "✓ Cancellation scheduled";
+      cancelBtn.style.borderColor = "rgba(245,158,11,.4)";
+      cancelBtn.style.color       = "#f59e0b";
+    }
+  } else if(isFullAccess){
+    labelEl.textContent          = "Full Access";
+    statusEl.textContent         = "Active subscription";
+    badgeEl.textContent          = "ACTIVE";
+    badgeEl.style.background     = "rgba(74,222,128,.15)";
+    badgeEl.style.color          = "#4ade80";
+    activeEl.style.display       = "";
+    freeEl.style.display         = "none";
+    // Restore cancel button
+    const cancelBtn = document.getElementById("cancelSubBtn2");
+    if(cancelBtn){
+      cancelBtn.disabled    = false;
+      cancelBtn.textContent = "Cancel Subscription";
+      cancelBtn.style.borderColor = "rgba(239,68,68,.5)";
+      cancelBtn.style.color       = "#f87171";
+    }
+  } else {
+    labelEl.textContent          = "Free";
+    statusEl.textContent         = "No active subscription";
+    badgeEl.textContent          = "FREE";
+    badgeEl.style.background     = "var(--surface2)";
+    badgeEl.style.color          = "var(--muted)";
+    activeEl.style.display       = "none";
+    freeEl.style.display         = "";
+  }
+}
+
+async function cancelSubscription(){
+  if(!confirm("Are you sure you want to cancel? You'll keep Full Access until the end of your billing period.")) return;
+  const resetBtns = () => ["cancelSubBtn","cancelSubBtn2"].forEach(id=>{
+    const b=document.getElementById(id);
+    if(b){b.disabled=false;b.textContent="Cancel Subscription";}
+  });
+  ["cancelSubBtn","cancelSubBtn2"].forEach(id=>{
+    const b=document.getElementById(id);
+    if(b){b.disabled=true;b.textContent="Cancelling…";}
+  });
+  try {
+    const r = await fetch("/subscription/cancel", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:"{}"
+    });
+    let d;
+    try { d = await r.json(); }
+    catch(_){ showToast("Server error ("+r.status+") — please try again.", "error"); resetBtns(); return; }
+    if(d.ok){
+      showToast("Subscription cancelled — you'll keep access until the end of your billing period.", "warn");
+      try { currentUser = await fetch("/auth/me").then(r=>r.json()); } catch(_){}
+      refreshSubscriptionCard();
+    } else {
+      showToast(d.error || "Could not cancel — please try again.", "error");
+      resetBtns();
+    }
+  } catch(e){
+    showToast("Request failed: " + e.message, "error");
+    resetBtns();
   }
 }
 
@@ -2334,6 +2480,7 @@ function setTab(tab) {
   // Hide upload zone on all non-data tabs before early returns
   document.getElementById("dropWrap").style.display  = (isAll||isProfile||isSettings||isExtra) ? "none" : "";
   document.getElementById("allHint").style.display   = isAll ? "" : "none";
+  if (isSettings || isProfile) { refreshSubscriptionCard(); }
   if (isTournament) { fetchTournaments(); return; }
   if (isReleaseNotes) { fetchReleaseNotes(); return; }
   if (isExtra) return;
@@ -3434,8 +3581,8 @@ function renderApproach(all){
         <div class="apb-n" style="color:var(--muted)">0 holes</div>
       </div>`;
     const pct=Math.round((b.hits/b.total)*100);
-    const col=pct>=58?"var(--accent)":pct>=44?"var(--warn)":"var(--danger)";
-    const bg=pct>=58?"rgba(58,138,92,.22)":pct>=44?"rgba(245,158,11,.22)":"rgba(239,68,68,.22)";
+    const col=pct>=58?"var(--green)":pct>=44?"var(--warn)":"var(--danger)";
+    const bg=pct>=58?"rgba(34,197,94,.22)":pct>=44?"rgba(245,158,11,.22)":"rgba(239,68,68,.22)";
     return`
       <div class="apb-row">
         <div class="apb-label">${b.label}</div>
@@ -3449,7 +3596,7 @@ function renderApproach(all){
       <span>Distance zone</span><span style="grid-column:2/4;text-align:right;padding-right:4px">GIR %</span><span>Holes</span>
     </div>
     <div class="apb-list">${rows}</div>
-    <div class="apb-legend"><span class="apb-leg-dot" style="background:var(--accent)"></span>≥58% on target&ensp;<span class="apb-leg-dot" style="background:var(--warn)"></span>≥44% close&ensp;<span class="apb-leg-dot" style="background:var(--danger)"></span>&lt;44% gap</div>`;
+    <div class="apb-legend"><span class="apb-leg-dot" style="background:var(--green)"></span>≥58% on target&ensp;<span class="apb-leg-dot" style="background:var(--warn)"></span>≥44% close&ensp;<span class="apb-leg-dot" style="background:var(--danger)"></span>&lt;44% gap</div>`;
 }
 
 /* ── Drive Distribution ─────────────────────────────────────────────────── */
@@ -3719,7 +3866,7 @@ function renderPracticeTransfer(){
   }
 
   el.innerHTML = rows.map(r=>{
-    const colr = r.girPct==null ? "var(--muted)" : r.girPct>=BENCH.gir ? "var(--accent)" : r.girPct>=(BENCH.gir-15) ? "var(--warn)" : "var(--danger)";
+    const colr = r.girPct==null ? "var(--muted)" : r.girPct>=BENCH.gir ? "var(--green)" : r.girPct>=(BENCH.gir-15) ? "var(--warn)" : "var(--danger)";
     const girLabel = r.girPct!=null ? `${r.girPct}% GIR` : `< 3 samples`;
     return `<div class="practice-item">
       <div class="prio-label" style="color:${colr}">${r.club}</div>
@@ -3770,7 +3917,7 @@ function renderTable(all){
             style="color:var(--danger);border-color:rgba(239,68,68,.3)" title="Delete this round">🗑</button>
         </td>
       </tr>`;}).join("")
-      + (hiddenCount > 0 ? `<tr class="tr-lock-cta"><td colspan="${colspan}">⚡ Standard — ${hiddenCount} more round${hiddenCount>1?"s":""} hidden · <button class="lock-cta" onclick="setTier('standard')">Unlock with Standard</button></td></tr>` : "");
+      + (hiddenCount > 0 ? `<tr class="tr-lock-cta"><td colspan="${colspan}">⚡ Full Access — ${hiddenCount} more round${hiddenCount>1?"s":""} hidden · <button class="lock-cta" onclick="showUpgradeModal()">Unlock Full Access</button></td></tr>` : "");
   } else {
     // Full header for All/Simulator tabs
     if(head)head.innerHTML=`<th>#</th><th>Type</th><th>Course</th><th>Date</th><th>Score</th><th>Strokes</th><th>Holes</th><th>FW%</th><th>Drive</th><th>GIR%</th><th>Scrambling</th><th>Putts/H</th><th>Eval</th>`;
@@ -3806,7 +3953,7 @@ function renderTable(all){
             style="color:var(--danger);border-color:rgba(239,68,68,.3)" title="Delete this round">🗑</button>
         </td>
       </tr>`;}).join("")
-      + (hiddenCount > 0 ? `<tr class="tr-lock-cta"><td colspan="${colspan}">⚡ Standard — ${hiddenCount} more round${hiddenCount>1?"s":""} hidden · <button class="lock-cta" onclick="setTier('standard')">Unlock with Standard</button></td></tr>` : "");
+      + (hiddenCount > 0 ? `<tr class="tr-lock-cta"><td colspan="${colspan}">⚡ Full Access — ${hiddenCount} more round${hiddenCount>1?"s":""} hidden · <button class="lock-cta" onclick="showUpgradeModal()">Unlock Full Access</button></td></tr>` : "");
   }
 }
 
@@ -3916,7 +4063,7 @@ function renderParTypePerf(fr){
     const el=document.getElementById(id);
     if(!t.n){el.innerHTML=`<div class="par-type-title" style="color:${color}">${label}</div><div class="no-data" style="padding:14px 0;font-size:.78rem"><p>No data yet</p></div>`;return;}
     const avg=t.s/t.n,avp=avg-par;
-    const ac=avp<=0?"var(--accent)":avp<=1?"var(--warn)":"var(--danger)";
+    const ac=avp<=0?"var(--green)":avp<=1?"var(--warn)":"var(--danger)";
     const pct=v=>Math.round((v/t.n)*100);
     el.innerHTML=`
       <div class="par-type-title" style="color:${color}">${label}</div>
@@ -4038,12 +4185,17 @@ function latestByClub(){
 
 /* Returns shape distribution across sessions that have spin axis data */
 function getShapeDistribution(clubName){
-  const sessions = filteredRangeSessions()
-    .filter(s=>s.club===clubName && s.avg_spin_axis_deg!=null);
-  if(sessions.length < 2) return null;
+  const allSessions = filteredRangeSessions().filter(s=>s.club===clubName);
+  // Prefer spin_axis classification; fall back to dominant_shape field
+  const sessions = allSessions.filter(s=>s.avg_spin_axis_deg!=null||s.dominant_shape!=null);
+  if(sessions.length < 1) return null;
   const counts = {hook:0,draw:0,straight:0,fade:0,slice:0};
-  sessions.forEach(s=>{ const sh=classifyShape(s.avg_spin_axis_deg); if(sh) counts[sh]++; });
-  return { counts, total: sessions.length };
+  sessions.forEach(s=>{
+    const sh = s.avg_spin_axis_deg!=null ? classifyShape(s.avg_spin_axis_deg) : s.dominant_shape;
+    if(sh && counts[sh]!=null) counts[sh]++;
+  });
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  return total>0 ? { counts, total } : null;
 }
 
 /* Detects long-term carry trend: compares first-half avg vs last-half avg across sessions */
@@ -4063,30 +4215,18 @@ const ALL_BAG_CLUBS=["Dr","3W","5W","7W","2I","3I","4I","5I","6I","7I","8I","9I"
 
 function renderClubCards(){
   const byClub=latestByClub();
-  // Show all standard clubs sorted by bag order — ones with data first, then placeholders
+  // Only show clubs that have data, sorted by bag order
   const withData=Object.keys(byClub);
-  const allClubs=[...new Set([...withData,...ALL_BAG_CLUBS])];
-  allClubs.sort((a,b)=>{
+  withData.sort((a,b)=>{
     const ia=ALL_BAG_CLUBS.findIndex(x=>x.toLowerCase()===a.toLowerCase());
     const ib=ALL_BAG_CLUBS.findIndex(x=>x.toLowerCase()===b.toLowerCase());
     if(ia>=0&&ib>=0)return ia-ib;if(ia>=0)return-1;if(ib>=0)return 1;return a.localeCompare(b);
   });
   // Free tier: show only first 3 clubs; rest get a locked placeholder
-  const visibleClubs = currentTier==="free" ? allClubs.slice(0,3) : allClubs;
-  const lockedClubs  = currentTier==="free" ? allClubs.slice(3)   : [];
+  const visibleClubs = currentTier==="free" ? withData.slice(0,3) : withData;
+  const lockedClubs  = currentTier==="free" ? withData.slice(3)   : [];
   const clubs=visibleClubs;
   document.getElementById("clubGrid").innerHTML=clubs.map((club,ci)=>{
-    if(!byClub[club]){
-      // Placeholder card — no data for this club yet
-      return `<div class="club-card" style="opacity:.45;border-style:dashed">
-        <div class="club-header"><span class="club-name">${club}</span></div>
-        <div class="no-data" style="padding:12px 0 8px;font-size:.75rem;text-align:center;color:var(--muted)">
-          <div style="font-size:1.3rem;margin-bottom:4px">📂</div>
-          <p style="margin:0">No data yet</p>
-          <p style="margin:2px 0 0;font-size:.67rem;opacity:.7">Upload range sessions to fill</p>
-        </div>
-      </div>`;
-    }
     const sessions=byClub[club];
     const latest=sessions[sessions.length-1];
     const prev=sessions.length>1?sessions[sessions.length-2]:null;
@@ -4200,7 +4340,7 @@ function renderClubCards(){
 
         <!-- Performance score bar -->
         ${perf!=null?`
-        <div class="adv-only" style="${courseData?"":"padding-top:8px;border-top:1px solid var(--border)"}">
+        <div style="${courseData?"":"padding-top:8px;border-top:1px solid var(--border)"}">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
             <span style="font-size:.7rem;color:var(--muted);font-weight:600;letter-spacing:.03em">PERFORMANCE</span>
             <span style="font-size:.86rem;font-weight:800;color:${perfColor}">${perf.overall}<span style="font-size:.65rem;font-weight:400;color:var(--muted)">/100</span></span>
@@ -4218,11 +4358,11 @@ function renderClubCards(){
         </div>`:""}
 
         <!-- Buttons -->
-        <div style="display:flex;gap:8px;margin-top:10px">
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
           <button class="btn btn-ghost btn-sm" onclick="openClubDetail('${club}')"
-            style="flex:1;color:var(--muted);border-color:rgba(100,116,139,.3);font-size:.72rem">↗ Details</button>
+            style="width:100%;color:var(--muted);border-color:rgba(100,116,139,.3);font-size:.72rem">↗ Details</button>
           <button class="btn btn-ghost btn-sm" onclick="openCoach('club','${club}')"
-            style="flex:1;color:var(--blue);border-color:rgba(59,130,246,.35);font-size:.72rem">💬 Coach</button>
+            style="width:100%;color:var(--blue);border-color:rgba(59,130,246,.35);font-size:.72rem">🔮 Ask the Gods</button>
         </div>
       </div>
     </div>`;
@@ -4230,8 +4370,8 @@ function renderClubCards(){
   + (lockedClubs.length > 0 ? `<div class="club-card club-card-locked" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:160px;border-style:dashed">
       <div style="font-size:1.5rem;opacity:.3">⚡</div>
       <div style="font-size:.8rem;font-weight:700;color:var(--muted);margin-top:8px">${lockedClubs.length} more club${lockedClubs.length>1?"s":""}</div>
-      <div style="font-size:.72rem;color:var(--muted2,#8aafc8);margin-top:4px">Standard plan</div>
-      <button class="club-lock-btn" onclick="setTier('standard')">Unlock</button>
+      <div style="font-size:.72rem;color:var(--muted2,#8aafc8);margin-top:4px">Full Access plan</div>
+      <button class="club-lock-btn" onclick="showUpgradeModal()">Unlock</button>
     </div>` : "");
 }
 
@@ -4360,6 +4500,12 @@ function renderRangeTable(){
     const cls=Math.abs(v)<1?"":v>0?(redNeg?"col-bad":"col-good"):(redNeg?"col-good":"col-bad");
     return`<span class="${cls}">${v>0?"+":""}${v.toFixed(1)}°</span>`;
   };
+  const swingPathLabel=(path)=>{
+    if(path==null) return"—";
+    if(path>2)  return`<span style="color:#7ab89a;font-size:.7rem;font-weight:700;white-space:nowrap">In→Out</span>`;
+    if(path<-2) return`<span style="color:#fca5a5;font-size:.7rem;font-weight:700;white-space:nowrap">Out→In</span>`;
+    return`<span style="color:var(--muted);font-size:.7rem;font-weight:700">Straight</span>`;
+  };
   tbody.innerHTML=displaySorted.map((s,i)=>{
     const maxC=s.max_carry_m||s.longest_m;
     const accCls=s.target_hit_pct==null?"":s.target_hit_pct>=65?"col-good":s.target_hit_pct>=45?"col-warn":"col-bad";
@@ -4377,20 +4523,21 @@ function renderRangeTable(){
       <td>${(maxC!=null&&s.min_carry_m!=null)?fmtDist(Math.round((maxC-s.min_carry_m)*10)/10):"—"}</td>
       <td class="${accCls}">${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</td>
       <td>${s.dominant_shape?`<span class="shape-badge shape-${s.dominant_shape}" style="margin-top:0">${s.dominant_shape.toUpperCase()}</span>`:"—"}</td>
+      <td>${swingPathLabel(s.avg_club_path)}</td>
       <td class="${smashCls}">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
       <td>${fmtSpeed(s.avg_club_speed_mph)}</td>
-      <td class="pro-only">${s.avg_spin_rate_rpm!=null?Math.round(s.avg_spin_rate_rpm):"—"}</td>
-      <td class="pro-only">${degFmt(s.avg_spin_axis_deg)}</td>
-      <td class="pro-only">${degFmt(getFaceAngle(s))}</td>
-      <td class="pro-only">${degFmt(s.avg_club_path)}</td>
-      <td class="pro-only">${degFmt(s.avg_face_to_path)}</td>
-      <td class="pro-only">${degFmt(s.avg_attack_angle_deg)}</td>
+      <td class="adv-only">${s.avg_spin_rate_rpm!=null?Math.round(s.avg_spin_rate_rpm):"—"}</td>
+      <td class="adv-only">${degFmt(s.avg_spin_axis_deg)}</td>
+      <td class="adv-only">${degFmt(getFaceAngle(s))}</td>
+      <td class="adv-only">${degFmt(s.avg_club_path)}</td>
+      <td class="adv-only">${degFmt(s.avg_face_to_path)}</td>
+      <td class="adv-only">${degFmt(s.avg_attack_angle_deg)}</td>
       <td>
         <button class="btn btn-ghost btn-sm" onclick="deleteItem('range',${ai})"
           style="color:var(--danger);border-color:rgba(239,68,68,.3)" title="Delete session">🗑</button>
       </td>
     </tr>`;}).join("")
-    + (hiddenRangeCount > 0 ? `<tr class="tr-lock-cta"><td colspan="20">⚡ Standard — ${hiddenRangeCount} more session${hiddenRangeCount>1?"s":""} hidden · <button class="lock-cta" onclick="setTier('standard')">Unlock with Standard</button></td></tr>` : "");
+    + (hiddenRangeCount > 0 ? `<tr class="tr-lock-cta"><td colspan="20">⚡ Full Access — ${hiddenRangeCount} more session${hiddenRangeCount>1?"s":""} hidden · <button class="lock-cta" onclick="showUpgradeModal()">Unlock Full Access</button></td></tr>` : "");
 }
 
 /* ── Ball Flight Pattern chart (face/path/F→P per club) ───────────────── */
@@ -5034,12 +5181,14 @@ function openClubDetail(clubName){
       <td style="padding:6px 8px;color:var(--muted)">${(maxC!=null&&s.min_carry_m!=null)?fmtDist(maxC-s.min_carry_m):"—"}</td>
       <td style="padding:6px 8px;color:${accCls}">${s.target_hit_pct!=null?s.target_hit_pct+"%":"—"}</td>
       <td style="padding:6px 8px">${shapeS?`<span class="shape-badge shape-${shapeS}" style="margin:0;font-size:.6rem;padding:1px 5px">${shapeS.toUpperCase()}</span>`:"—"}</td>
-      <td class="pro-only" style="padding:6px 8px;color:${smashCls||'var(--muted)'}">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
-      <td class="pro-only" style="padding:6px 8px;color:var(--muted)">${fmtSpeed(s.avg_club_speed_mph)}</td>
-      <td class="pro-only" style="padding:6px 8px">${degFmt(s.avg_face_to_path)}</td>
-      <td class="pro-only" style="padding:6px 8px">${degFmt(s.avg_spin_axis_deg)}</td>
-      <td class="pro-only" style="padding:6px 8px">${degFmt(s.avg_club_path)}</td>
-      <td class="pro-only" style="padding:6px 8px">${degFmt(s.avg_attack_angle_deg)}</td>
+      <td class="adv-only" style="padding:6px 8px;color:${smashCls||'var(--muted)'}">${s.avg_smash_factor!=null?s.avg_smash_factor.toFixed(2):"—"}</td>
+      <td class="adv-only" style="padding:6px 8px;color:var(--muted)">${fmtSpeed(s.avg_club_speed_mph)}</td>
+      <td class="adv-only" style="padding:6px 8px;color:var(--muted)">${s.avg_spin_rate_rpm!=null?Math.round(s.avg_spin_rate_rpm)+"rpm":"—"}</td>
+      <td class="adv-only" style="padding:6px 8px">${degFmt(getFaceAngle(s))}</td>
+      <td class="adv-only" style="padding:6px 8px">${degFmt(s.avg_face_to_path)}</td>
+      <td class="adv-only" style="padding:6px 8px">${degFmt(s.avg_spin_axis_deg)}</td>
+      <td class="adv-only" style="padding:6px 8px">${degFmt(s.avg_club_path)}</td>
+      <td class="adv-only" style="padding:6px 8px">${degFmt(s.avg_attack_angle_deg)}</td>
     </tr>`;
   }).join("");
 
@@ -5056,9 +5205,9 @@ function openClubDetail(clubName){
       </div>
     </div>
 
-    <!-- Performance panel (adv-only) — full-width visual gauge + component bars -->
+    <!-- Performance panel — full-width visual gauge + component bars -->
     ${perf!=null?`
-    <div class="adv-only perf-panel">
+    <div class="perf-panel">
       <div class="perf-panel-label">Performance Score</div>
       <div class="perf-panel-body">
         <div class="perf-score-circle" style="border-color:${perfColor}">
@@ -5122,7 +5271,7 @@ function openClubDetail(clubName){
         <div style="font-size:.74rem;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Carry Distance per Session</div>
         <canvas id="chartDetailTrend" style="width:100%;height:180px"></canvas>
       </div>
-      ${shapeDist?`<div class="adv-only">
+      ${shapeDist?`<div>
         <div style="font-size:.74rem;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Shot Shape Distribution</div>
         <canvas id="chartDetailShape" style="width:100%;height:180px"></canvas>
       </div>`:""}
@@ -5140,12 +5289,14 @@ function openClubDetail(clubName){
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)" title="Carry spread (max − min)">Spread</th>
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)" title="Depends on target size">Hit% ⓘ</th>
         <th style="padding:8px 8px;border-bottom:1px solid var(--border)">Shape</th>
-        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Smash</th>
-        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Speed</th>
-        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">F→P°</th>
-        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Axis°</th>
-        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Path°</th>
-        <th class="pro-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">AoA°</th>
+        <th class="adv-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Smash</th>
+        <th class="adv-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Speed</th>
+        <th class="adv-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Spin</th>
+        <th class="adv-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Face°</th>
+        <th class="adv-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">F→P°</th>
+        <th class="adv-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Axis°</th>
+        <th class="adv-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">Path°</th>
+        <th class="adv-only" style="padding:8px 8px;border-bottom:1px solid var(--border)">AoA°</th>
       </tr></thead>
       <tbody style="color:var(--text)">${tableRows}</tbody>
     </table>
@@ -5272,7 +5423,7 @@ function openRoundDetail(index){
     const d = val - a;
     if(Math.abs(d)<0.01) return "";
     const better = lowerBetter ? d<0 : d>0;
-    const col    = better ? "var(--accent)" : "var(--danger)";
+    const col    = better ? "var(--green)" : "var(--danger)";
     const sign   = d>0?"+":"";
     return `<span style="color:${col};font-size:.7rem;margin-left:4px">${sign}${Math.round(d*10)/10}</span>`;
   };
@@ -5306,7 +5457,7 @@ function openRoundDetail(index){
     : `<span style="background:rgba(59,130,246,.15);color:#93c5fd;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:700">🖥 Simulator</span>`;
 
   const scoreStyle = r.score_vs_par!=null
-    ? `color:${r.score_vs_par<=0?'var(--accent)':r.score_vs_par<=3?'var(--warn)':'var(--danger)'}`
+    ? `color:${r.score_vs_par<=0?'var(--green)':r.score_vs_par<=3?'var(--warn)':'var(--danger)'}`
     : "";
 
   const headerHtml = `
@@ -5408,13 +5559,13 @@ function openRoundDetail(index){
                   background:${scCol}22;color:${scCol}">${svp===0?"E":svp>0?"+"+svp:svp}</span>`:"—"}
               </td>
               <td style="padding:5px 8px;text-align:center">
-                ${h.gir!=null?(h.gir?`<span style="color:var(--accent)">✓</span>`:`<span style="color:var(--danger)">✗</span>`):"—"}
+                ${h.gir!=null?(h.gir?`<span style="color:var(--green)">✓</span>`:`<span style="color:var(--danger)">✗</span>`):"—"}
               </td>
-              <td style="padding:5px 8px;text-align:center;color:${h.putts!=null&&h.putts>=3?"var(--danger)":h.putts===1?"var(--accent)":"var(--text)"}">
+              <td style="padding:5px 8px;text-align:center;color:${h.putts!=null&&h.putts>=3?"var(--danger)":h.putts===1?"var(--green)":"var(--text)"}">
                 ${h.putts!=null?h.putts:"—"}
               </td>
               <td style="padding:5px 8px;text-align:center">
-                ${showFw?(h.fairway_hit?`<span style="color:var(--accent)">✓</span>`:`<span style="color:var(--danger)">✗</span>`):"<span style='color:var(--muted)'>—</span>"}
+                ${showFw?(h.fairway_hit?`<span style="color:var(--green)">✓</span>`:`<span style="color:var(--danger)">✗</span>`):"<span style='color:var(--muted)'>—</span>"}
               </td>
               ${hasDrive?`<td style="padding:5px 8px;text-align:center;color:var(--muted);font-size:.75rem">${h.drive_m!=null?fmtDist(h.drive_m):"—"}</td>`:""}
             </tr>`;
@@ -5472,7 +5623,7 @@ function openRoundDetail(index){
             border-radius:8px;padding:7px 12px;font-size:.78rem">
             <span style="font-weight:700;color:var(--text)">${esc(c)}</span>
             <span style="color:var(--muted);margin-left:5px">${d.count} shots</span>
-            ${d.count>0?`<span style="color:${pct>=60?"var(--accent)":pct>=40?"var(--warn)":"var(--danger)"};
+            ${d.count>0?`<span style="color:${pct>=60?"var(--green)":pct>=40?"var(--warn)":"var(--danger)"};
               margin-left:5px;font-weight:600">${pct}% on target</span>`:""}
           </div>`;
         }).join("")}
@@ -5582,7 +5733,8 @@ function closeRoundDetail(){
         <div>✓ AI screenshot analysis (unlimited)</div>
       </div>
     </div>
-    <div style="display:flex;gap:10px;margin-bottom:12px">
+    <div id="upgradeModalPrices" style="display:flex;gap:10px;margin-bottom:12px">
+      <!-- Populated by loadUpgradePrices() -->
       <button onclick="startCheckout('month')"
         style="flex:1;padding:12px;border-radius:9px;background:var(--green);color:#fff;
         border:none;font-size:.9rem;font-weight:700;cursor:pointer">
