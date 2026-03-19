@@ -70,6 +70,19 @@ MODEL_COSTS = {
     "claude-3-5-sonnet-20241022": {"input": 3.00,  "output": 15.00},
 }
 
+def get_setting(key: str, default: str = "") -> str:
+    """Read a persistent setting from the DB, falling back to default."""
+    try:
+        conn = get_db()
+        try:
+            row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+            return row["value"] if row else default
+        finally:
+            conn.close()
+    except Exception:
+        return default
+
+
 app = Flask(__name__, static_folder=None)
 app.secret_key = os.getenv("SECRET_KEY", "dev-insecure-change-me-in-production")
 app.config["PERMANENT_SESSION_LIFETIME"] = 30 * 24 * 3600  # 30 days
@@ -832,8 +845,9 @@ def api_analyse():
     prompt = PROMPTS.get(mode, ANALYSIS_PROMPT)
     content.append({"type": "text", "text": prompt})
 
+    vision_model = get_setting("claude_vision_model", CLAUDE_VISION_MODEL)
     body = json.dumps({
-        "model":      CLAUDE_VISION_MODEL,
+        "model":      vision_model,
         "max_tokens": max_tokens,
         "messages":   [{"role": "user", "content": content}],
     }).encode()
@@ -887,7 +901,7 @@ def api_analyse():
 
         # Log usage
         _log_usage(current_user_id(), "analyse", tokens_used,
-                   model=CLAUDE_VISION_MODEL, input_tokens=input_tok, output_tokens=output_tok)
+                   model=vision_model, input_tokens=input_tok, output_tokens=output_tok)
 
         print(f"  ✓ Extracted {len(rounds)} round(s), {len(range_s)} range session(s)")
         return jsonify({"success": True, "data": extracted, "mode": mode})
@@ -1081,7 +1095,7 @@ def api_coach():
     import datetime as _dt
     uid  = current_user_id()
     conn = get_db()
-    coach_model   = CLAUDE_MODEL
+    coach_model   = get_setting("claude_model", CLAUDE_MODEL)
     trial_mode    = False
     trial_user_name = "Golfer"
     try:
@@ -1108,7 +1122,7 @@ def api_coach():
             daily_cap = STANDARD_DAILY_COACH_MSGS if plan == "standard" else 20
             if count_today_actions(conn, uid, "coach") >= daily_cap:
                 return jsonify({"error": "Daily Golf God message limit reached. Upgrade to Pro for unlimited access.", "upgrade_required": True}), 429
-            coach_model = CLAUDE_TRIAL_MODEL
+            coach_model = get_setting("claude_trial_model", CLAUDE_TRIAL_MODEL)
             trial_mode  = True
         else:
             # Pro daily cap
@@ -1365,6 +1379,53 @@ def admin_delete_user(user_id):
             conn.execute("DELETE FROM users WHERE id=?", (user_id,))
         print(f"  Admin deleted user: {user['email']}")
         return jsonify({"success": True, "deleted": user["email"]})
+    finally:
+        conn.close()
+
+
+ALLOWED_MODELS = {
+    "claude-haiku-4-5",
+    "claude-3-5-haiku-20241022",
+    "claude-opus-4-5",
+    "claude-3-5-sonnet-20241022",
+}
+
+@app.route("/admin/settings", methods=["GET"])
+@admin_required
+def admin_get_settings():
+    return jsonify({
+        "claude_model":        get_setting("claude_model",        CLAUDE_MODEL),
+        "claude_vision_model": get_setting("claude_vision_model", CLAUDE_VISION_MODEL),
+        "claude_trial_model":  get_setting("claude_trial_model",  CLAUDE_TRIAL_MODEL),
+    })
+
+
+@app.route("/admin/settings", methods=["POST"])
+@admin_required
+def admin_save_settings():
+    data = request.get_json(force=True) or {}
+    allowed_keys = {"claude_model", "claude_vision_model", "claude_trial_model"}
+    errors = []
+    updates = {}
+    for key in allowed_keys:
+        if key in data:
+            val = data[key]
+            if val not in ALLOWED_MODELS:
+                errors.append(f"Invalid model for {key}: {val}")
+            else:
+                updates[key] = val
+    if errors:
+        return jsonify({"error": "; ".join(errors)}), 400
+    conn = get_db()
+    try:
+        with conn:
+            for key, val in updates.items():
+                conn.execute(
+                    "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))"
+                    " ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                    (key, val),
+                )
+        return jsonify({"success": True, "updated": updates})
     finally:
         conn.close()
 

@@ -154,6 +154,12 @@ CREATE TABLE IF NOT EXISTS release_notes (
     body       TEXT    NOT NULL DEFAULT '',
     created_at TEXT    NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS settings (
+    key        TEXT PRIMARY KEY,
+    value      TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """)
         # Add new columns to existing DBs (safe no-ops if already present)
         for sql in [

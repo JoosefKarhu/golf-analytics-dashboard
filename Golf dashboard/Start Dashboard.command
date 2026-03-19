@@ -12,7 +12,7 @@ echo "⛳  Starting Golf Analytics Dashboard…"
 echo ""
 
 # Start the server in the background
-python3 golf_server.py &
+python3 app.py &
 SERVER_PID=$!
 
 # Give it a moment to bind the port
