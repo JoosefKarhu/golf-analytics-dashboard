@@ -162,10 +162,45 @@ CRITICAL SCORING RULES — read carefully:
 - Group hole-map images with their corresponding round summary into ONE round entry.
 - If you see two different courses, create two separate round entries.
 - Extract hole-level data from scorecard and hole map images when visible. Leave holes: [] only if no scorecard or hole maps are provided.
-- GIR = true if the player reached the green in (par - 2) strokes or fewer before putting.
 - fairway_hit and drive_m apply to par 4 and par 5 holes only; use null for par 3s.
-- Shot extraction: numbered orange circles on the map show each shot. Each label reads "<n> <Club> • <distance>m". Use canonical club names (Dr, 7I, PW). Leave shots: [] if no shot labels are visible.
 - SELF-CHECK: Before returning, verify that the sum of all hole strokes equals total_strokes. If it does not, re-read the mismatched holes. A box around a score means bogey (par+1 or worse) — do not read it as the par value.
+
+SHOT EXTRACTION from VG3 hole maps:
+  - Numbered orange circles (1, 2, 3 …) show each non-putt shot. Label format: "<n> <Club> • <distance>m".
+    Use canonical club names (Dr, 3W, 5W, 2i–9i, PW, GW, AW, SW, 56°, 60° etc.).
+  - Extract ALL visible numbered shots — do not stop at 2 if a 3rd or 4th shot circle is visible.
+  - For EVERY shot, attempt to determine the result by reading the AERIAL MAP visually:
+      · The fairway is the lighter-mown strip of grass. If the shot endpoint (white dot) is on it → result="fairway"
+      · The green is the circular mown area near the pin. Endpoint on it → result="green"
+      · The fringe is the ring of slightly longer grass around the green → result="fringe"
+      · Sand bunkers are visible as pale/beige areas → result="bunker"
+      · Everything else (longer rough grass, trees) → result="rough"
+  - Additionally, the bottom panel shows ONE highlighted shot's detail: "<distance>m to <landing zone>
+    / <remaining>m to hole". Read both values — the landing zone as result, the remaining as remaining_m.
+    Match this to the correct shot by its carry distance.
+  - Use fairway_hit on par 4/5: result="fairway" → true; anything else → false.
+  - For ALL shots (not just the drive), if the bottom panel or any visible label shows
+    "<remaining>m to hole", extract that as remaining_m for that shot.
+
+PUTTS PER HOLE:
+  - Near the green, VG3 shows a label: "F 1 Putt (Auto)" or "F 2 Putts (Auto)" or "F 1 Putt".
+    ALWAYS extract the INTEGER before "Putt"/"Putts" as the hole's putts value.
+  - CRITICAL: "F 2 Putts" = putts:2. "F 1 Putt" = putts:1. Read the digit carefully — do not
+    assume 1 putt just because the hole is a par 3. Two-putts are common on par 3s.
+  - Example: Par 3, shot 1 shows "156m to green", F label shows "2 Putts (Auto)" →
+    putts:2, gir:true (reached green in 1 shot = par-2 shots in regulation), strokes:3 ✓
+  - Putts are NOT numbered orange circles — they are the "F" (finish) label only.
+  - Putts are NOT included in the shots[] array. They are a separate putts field.
+  - For holes where no F label is visible, set putts:null.
+
+GIR PER HOLE:
+  - Set gir=true if the player reached the green in par-2 or fewer strokes.
+  - Determine from: (a) result="green" or "fringe" for the (par-2)th shot, OR
+    (b) the bottom panel shows "Xm to green" for that approach shot.
+  - Par 3 example: if shot 1 result="green" (or "to green" visible) → gir:true (1 ≤ par-2=1).
+  - Do NOT infer gir:true from score alone — a player can make par by scrambling.
+  - If you cannot determine from visual data, set gir:null.
+
 - Return ONLY the JSON object — no explanation, no markdown fences.
 - If a field is genuinely not visible, use null.
 """
@@ -273,10 +308,16 @@ Always reference actual numbers when data is available — never give generic ad
 
 Coaching principles:
 - Identify 1–2 highest-leverage improvements, not a laundry list
+- When hole-by-hole data is available, reference specific holes by number (e.g. "H8 was a double")
 - Distinguish simulator vs real-course performance where relevant
 - Connect range carry data to on-course GIR outcomes when both are available
 - Use concrete targets ("aim for 60% GIR") not vague cues ("hit more greens")
 - Acknowledge progress explicitly when metrics are improving
+- Always give specific, actionable advice — NEVER ask the player to "diagnose" something yourself;
+  you are the coach, you do the diagnosing based on the data provided
+- NEVER reference relative time gaps between rounds (e.g. "four days ago", "recently") —
+  always refer to rounds by their date or course name only
+- When a metric is poor, state WHY it matters and give a specific drill or focus area
 
 Formatting rules:
 - **Bold** the single most important takeaway per response

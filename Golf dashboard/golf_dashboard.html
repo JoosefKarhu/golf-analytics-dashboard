@@ -3384,24 +3384,25 @@ function calcHCP(rounds, allowNineHole=false){
 // Returns {overall, accuracy, consistency, distanceControl, strikeQuality}
 // or null if no data. Uses last 3 sessions for recent metrics, all sessions
 // for distance stability.
-// Club-specific smash factor ranges calibrated to PGA Tour benchmarks.
-// max = PGA Tour average (= 100%).  min = max − 0.18 (= 0%, very poor contact).
-// Source: PGA Tour data (Driver 1.49, 3W 1.48 … PW 1.23)
+// Club-specific smash factor ranges calibrated to scratch-level amateur benchmarks.
+// max = excellent amateur / low-single-digit HCP (= 100%).
+// min = 0.16 below max (= very poor contact / mishit, = 0%).
+// A 10-HCP player hitting solidly should score 55–75 on this scale.
 function getSmashRange(clubName){
   const n = (clubName||"").toLowerCase().replace(/\s/g,"");
-  if(n==="dr"||n==="1w")                 return {max:1.50,min:1.32}; // Driver
-  if(/^3w/.test(n))                      return {max:1.48,min:1.30}; // 3 Wood
-  if(/^5w/.test(n))                      return {max:1.47,min:1.29}; // 5 Wood
-  if(/^(hy|h[0-9]|[24]w)/.test(n))      return {max:1.46,min:1.28}; // Hybrid / other woods
-  if(/^3i/.test(n))                      return {max:1.45,min:1.27}; // 3 Iron
-  if(/^4i/.test(n))                      return {max:1.43,min:1.25}; // 4 Iron
-  if(/^5i/.test(n))                      return {max:1.41,min:1.23}; // 5 Iron
-  if(/^6i/.test(n))                      return {max:1.38,min:1.20}; // 6 Iron
-  if(/^7i/.test(n))                      return {max:1.33,min:1.15}; // 7 Iron
-  if(/^8i/.test(n))                      return {max:1.32,min:1.14}; // 8 Iron
-  if(/^9i/.test(n))                      return {max:1.28,min:1.10}; // 9 Iron
-  if(/^pw/.test(n)||/\d+deg/.test(n))    return {max:1.23,min:1.05}; // PW / degree wedges
-  return {max:1.40,min:1.22};                                         // Default
+  if(n==="dr"||n==="1w")                 return {max:1.47,min:1.29}; // Driver
+  if(/^3w/.test(n))                      return {max:1.44,min:1.26}; // 3 Wood
+  if(/^5w/.test(n))                      return {max:1.43,min:1.25}; // 5 Wood
+  if(/^(hy|h[0-9]|[24]w)/.test(n))      return {max:1.42,min:1.24}; // Hybrid / other woods
+  if(/^3i/.test(n))                      return {max:1.41,min:1.23}; // 3 Iron
+  if(/^4i/.test(n))                      return {max:1.39,min:1.21}; // 4 Iron
+  if(/^5i/.test(n))                      return {max:1.37,min:1.19}; // 5 Iron
+  if(/^6i/.test(n))                      return {max:1.35,min:1.17}; // 6 Iron
+  if(/^7i/.test(n))                      return {max:1.32,min:1.14}; // 7 Iron
+  if(/^8i/.test(n))                      return {max:1.30,min:1.12}; // 8 Iron
+  if(/^9i/.test(n))                      return {max:1.27,min:1.09}; // 9 Iron
+  if(/^pw/.test(n)||/\d+deg/.test(n))    return {max:1.22,min:1.04}; // PW / degree wedges
+  return {max:1.38,min:1.20};                                         // Default
 }
 
 function calcClubPerformanceScore(clubName){
@@ -5286,11 +5287,27 @@ function openClubDetail(clubName){
 
   // ── On-course stats ────────────────────────────────────────────────────
   const crs = getCourseClubData(clubName);
+  // Normalize AI result strings — handle typos like "pinestrraw", "pinesstraw", "deep rough" etc.
+  function normalizeResult(r){
+    if(!r) return "other";
+    const s = r.toLowerCase().trim().replace(/\s+/g,"_");
+    if(s==="fairway"||s==="fw") return "fairway";
+    if(s==="green") return "green";
+    if(s==="fringe"||s==="collar") return "fringe";
+    if(/rough/.test(s)&&(s.includes("deep")||s.includes("heavy"))) return "deep_rough";
+    if(/rough/.test(s)&&(s.includes("play")||s.includes("light"))) return "playable_rough";
+    if(/rough/.test(s)) return "rough";
+    if(/scrub|pine|straw|pinest/.test(s)) return "pinestraw";
+    if(/sand|bunker/.test(s)) return "bunker";
+    if(/penal|ob|out_of|water|hazard/.test(s)) return "penalty";
+    if(s==="other") return "other";
+    return s; // keep as-is if no match
+  }
   const crsShots = crs ? rounds
     .filter(r=>periodFilter(r.date))
     .flatMap(r=>(r.holes||[]).flatMap(h=>
       (h.shots||[]).filter(s=>s.club&&normalizeClub(s.club)===clubName)
-        .map(s=>({result:s.result||"other", hole:h.number, par:h.par, date:r.date, course:r.course}))
+        .map(s=>({result:normalizeResult(s.result), remaining_m:s.remaining_m, hole:h.number, par:h.par, date:r.date, course:r.course}))
     )) : [];
   const crsResultCounts = {};
   crsShots.forEach(s=>{ crsResultCounts[s.result]=(crsResultCounts[s.result]||0)+1; });
@@ -5659,7 +5676,7 @@ function openRoundDetail(index){
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;
       padding:14px 16px;margin-bottom:20px;overflow-x:auto">
       <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;
-        letter-spacing:.07em;font-weight:700;margin-bottom:12px">Hole-by-Hole</div>
+        letter-spacing:.07em;font-weight:700">Hole-by-Hole</div>
       <table style="width:100%;border-collapse:collapse;font-size:.8rem;min-width:400px">
         <thead>
           <tr style="color:var(--muted);font-size:.67rem;text-transform:uppercase;letter-spacing:.06em">
@@ -5677,8 +5694,12 @@ function openRoundDetail(index){
           ${holes.map(h=>{
             const svp = (h.strokes!=null&&h.par!=null) ? h.strokes-h.par : null;
             const scCol = holeScoreCol(svp);
-            const showFw = h.par > 3 && h.fairway_hit != null;
             const hasDrive = holes.some(x=>x.drive_m!=null);
+            // GIR: calculate from strokes-putts when putts known; otherwise null (never infer from score alone)
+            const girCalc = (h.putts!=null&&h.strokes!=null&&h.par!=null)
+              ? (h.strokes-h.putts <= h.par-2) : null;
+            // FW: only show if par>3 and AI returned explicit fairway_hit data
+            const showFw = h.par>3 && h.fairway_hit!=null;
             return `<tr style="border-bottom:1px solid rgba(255,255,255,.04)">
               <td style="padding:5px 8px;font-weight:700;color:var(--text)">H${h.number||"?"}</td>
               <td style="padding:5px 8px;text-align:center;color:var(--muted)">${h.par||"—"}</td>
@@ -5688,7 +5709,7 @@ function openRoundDetail(index){
                   background:${scCol}22;color:${scCol}">${svp===0?"E":svp>0?"+"+svp:svp}</span>`:"—"}
               </td>
               <td style="padding:5px 8px;text-align:center">
-                ${h.gir!=null?(h.gir?`<span style="color:var(--green)">✓</span>`:`<span style="color:var(--danger)">✗</span>`):"—"}
+                ${girCalc!=null?(girCalc?`<span style="color:var(--green)">✓</span>`:`<span style="color:var(--danger)">✗</span>`):"<span style='color:var(--muted)'>—</span>"}
               </td>
               <td style="padding:5px 8px;text-align:center;color:${h.putts!=null&&h.putts>=3?"var(--danger)":h.putts===1?"var(--green)":"var(--text)"}">
                 ${h.putts!=null?h.putts:"—"}
@@ -5710,7 +5731,7 @@ function openRoundDetail(index){
             <td style="padding:5px 8px;text-align:center;font-weight:800;
               color:${r.score_vs_par!=null&&r.score_vs_par<=0?"var(--accent)":r.score_vs_par!=null&&r.score_vs_par<=3?"var(--warn)":"var(--danger)"}">${r.score_vs_par!=null?fmtScore(r.score_vs_par):"—"}</td>
             <td style="padding:5px 8px;text-align:center">${r.gir_pct!=null?r.gir_pct+"%":"—"}</td>
-            <td style="padding:5px 8px;text-align:center">${r.putts_per_hole!=null?r.putts_per_hole.toFixed(1)+" /h":"—"}</td>
+            <td style="padding:5px 8px;text-align:center">${(()=>{const kp=holes.filter(h=>h.putts!=null);return kp.length?kp.reduce((s,h)=>s+h.putts,0)+(kp.length<holes.length?" *":""):"—";})()}</td>
             <td style="padding:5px 8px;text-align:center">${r.fairways_hit_pct!=null?r.fairways_hit_pct+"%":"—"}</td>
             ${holes.some(h=>h.drive_m!=null)?`<td style="padding:5px 8px;text-align:center">${r.avg_drive_m!=null?fmtDist(r.avg_drive_m):"—"}</td>`:""}
           </tr>
@@ -5730,29 +5751,37 @@ function openRoundDetail(index){
   roundShots.forEach(s=>{
     if(!s.club) return;
     const c = normalizeClub(s.club);
-    if(!shotsByClub[c]) shotsByClub[c]={count:0,results:{}};
+    if(!shotsByClub[c]) shotsByClub[c]={count:0,results:{},closeShots:0};
     shotsByClub[c].count++;
-    const res = s.result||"other";
+    const res = normalizeResult(s.result);
     shotsByClub[c].results[res]=(shotsByClub[c].results[res]||0)+1;
+    // Count shots that stopped within 6m of hole as "close" (for wedge on-target)
+    if(s.remaining_m!=null && s.remaining_m<=6) shotsByClub[c].closeShots++;
   });
   const clubKeys = Object.keys(shotsByClub).sort((a,b)=>shotsByClub[b].count-shotsByClub[a].count);
   const shotsHtml = clubKeys.length>0 ? `
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;
       padding:14px 16px;margin-bottom:20px">
-      <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;
-        letter-spacing:.07em;font-weight:700;margin-bottom:12px">Club Usage This Round</div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700">Club Usage This Round</div>
+      </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${clubKeys.map(c=>{
           const d = shotsByClub[c];
           const fw = (d.results.fairway||0)+(d.results.playable_rough||0);
           const gn = (d.results.green||0)+(d.results.fringe||0);
-          const onTgt = fw+gn;
-          const pct = Math.round(onTgt/d.count*100);
+          const isWedge = /^(56|58|60|64|sw|gw|aw|pw|lw)/i.test(c);
+          // For wedges: also count shots stopping within 6m of hole as on-target
+          const onTgt = fw + gn + (isWedge ? (d.closeShots||0) : 0);
+          const knownResults = (d.results.fairway||0)+(d.results.rough||0)+(d.results.playable_rough||0)
+            +(d.results.green||0)+(d.results.fringe||0)+(d.results.bunker||0)+(d.results.penalty||0)
+            +(d.closeShots||0);
+          const pct = knownResults>0 ? Math.round(Math.min(100,onTgt/d.count*100)) : null;
           return `<div style="background:var(--surface);border:1px solid var(--border);
             border-radius:8px;padding:7px 12px;font-size:.78rem">
             <span style="font-weight:700;color:var(--text)">${esc(c)}</span>
             <span style="color:var(--muted);margin-left:5px">${d.count} shots</span>
-            ${d.count>0?`<span style="color:${pct>=60?"var(--green)":pct>=40?"var(--warn)":"var(--danger)"};
+            ${pct!=null?`<span style="color:${pct>=60?"var(--green)":pct>=40?"var(--warn)":"var(--danger)"};
               margin-left:5px;font-weight:600">${pct}% on target</span>`:""}
           </div>`;
         }).join("")}
