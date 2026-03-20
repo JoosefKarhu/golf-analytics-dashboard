@@ -501,6 +501,51 @@
     }
     @media(max-width:600px){main{padding:12px}.kpi-grid{grid-template-columns:repeat(3,1fr)}}
 
+    /* ── Mobile bottom navigation ──────────────────────────────────────── */
+    .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;
+      background:var(--surface);border-top:1px solid var(--border);
+      z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+    .mob-nav-items{display:flex;height:62px}
+    .mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:3px;border:none;background:none;
+      color:var(--muted);cursor:pointer;padding:8px 4px;transition:color .15s;
+      -webkit-tap-highlight-color:transparent}
+    .mob-tab.active{color:var(--accent)}
+    .mob-tab-icon{font-size:1.4rem;line-height:1;display:flex;align-items:center;justify-content:center}
+    .mob-tab-label{font-size:.58rem;font-weight:600;white-space:nowrap}
+    .mob-more-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200}
+    .mob-more-overlay.active{display:block}
+    .mob-more-sheet{position:fixed;bottom:62px;left:0;right:0;
+      background:var(--surface);border-top:1px solid var(--border);
+      border-radius:16px 16px 0 0;z-index:201;
+      transform:translateY(100%);transition:transform .25s ease;
+      padding-bottom:env(safe-area-inset-bottom)}
+    .mob-more-sheet.active{transform:translateY(0)}
+    .mob-more-item{display:flex;align-items:center;gap:14px;
+      padding:15px 20px;font-size:.9rem;font-weight:600;color:var(--text);
+      cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s;
+      -webkit-tap-highlight-color:transparent}
+    .mob-more-item:last-child{border-bottom:none}
+    .mob-more-item:active{background:var(--surface2)}
+    .mob-more-icon{font-size:1.3rem;width:28px;text-align:center;flex-shrink:0}
+
+    /* Hide mobile nav elements entirely on desktop */
+    @media(min-width:769px){
+      .mob-more-overlay,.mob-more-sheet{display:none!important}
+    }
+    @media(max-width:768px){
+      .sidebar{display:none}
+      .mob-nav{display:block}
+      main{padding:12px 12px 74px}
+      header{padding:8px 12px;gap:8px}
+      #roundCount{display:none}
+      .tier-selector{display:none!important}
+      .kpi-grid{grid-template-columns:repeat(2,1fr)}
+      .charts-grid,.par3-grid,.feedback-grid,.practice-grid,.par-type-grid{grid-template-columns:1fr}
+      .header-right{gap:8px}
+      #coachHeaderLabel{display:none}
+    }
+
     /* ── Tier selector ───────────────────────────────────────────────────── */
     .tier-selector{display:flex;gap:2px;background:var(--surface2);border-radius:7px;padding:2px;border:1px solid var(--border);flex-shrink:0}
     .tier-btn{padding:5px 13px;border:none;background:none;cursor:pointer;font-size:.75rem;font-weight:700;color:var(--muted);border-radius:5px;transition:all .2s;white-space:nowrap;letter-spacing:.01em}
@@ -768,6 +813,52 @@
   </div>
 
 </nav>
+
+<!-- ── Mobile bottom navigation ──────────────────────────────────────────── -->
+<nav class="mob-nav" id="mobNav">
+  <div class="mob-nav-items">
+    <button class="mob-tab active" data-mob-tab="all" onclick="setTab('all')">
+      <span class="mob-tab-icon"><img src="/static/icon-allrounds.png" style="width:26px;height:26px;object-fit:contain" onerror="this.outerHTML='🏠'"></span>
+      <span class="mob-tab-label">Rounds</span>
+    </button>
+    <button class="mob-tab" data-mob-tab="practice" onclick="setTab('practice')">
+      <span class="mob-tab-icon"><img src="/static/icon-mybag.png" style="width:26px;height:26px;object-fit:contain" onerror="this.outerHTML='🎯'"></span>
+      <span class="mob-tab-label">My Bag</span>
+    </button>
+    <button class="mob-tab" data-mob-tab="real" onclick="setTab('real')">
+      <span class="mob-tab-icon"><img src="/static/icon-realcourse.png" style="width:26px;height:26px;object-fit:contain" onerror="this.outerHTML='⛳'"></span>
+      <span class="mob-tab-label">Course</span>
+    </button>
+    <button class="mob-tab" data-mob-tab="simulator" onclick="setTab('simulator')">
+      <span class="mob-tab-icon"><img src="/static/icon-simulator.png" style="width:26px;height:26px;object-fit:contain" onerror="this.outerHTML='🖥️'"></span>
+      <span class="mob-tab-label">Simulator</span>
+    </button>
+    <button class="mob-tab" data-mob-tab="more" onclick="toggleMobMore()">
+      <span class="mob-tab-icon" style="font-size:1.4rem">☰</span>
+      <span class="mob-tab-label">More</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ── Mobile "More" bottom sheet ────────────────────────────────────────── -->
+<div class="mob-more-overlay" id="mobMoreOverlay" onclick="closeMobMore()"></div>
+<div class="mob-more-sheet" id="mobMoreSheet">
+  <div class="mob-more-item" onclick="setTab('tournament');closeMobMore()">
+    <span class="mob-more-icon"><img src="/static/icon-tournament.png" style="width:24px;height:24px;object-fit:contain" onerror="this.outerHTML='🏆'"></span>Tournaments
+  </div>
+  <div class="mob-more-item" onclick="setTab('profile');closeMobMore()">
+    <span class="mob-more-icon">👤</span>Profile
+  </div>
+  <div class="mob-more-item" onclick="setTab('settings');closeMobMore()">
+    <span class="mob-more-icon">⚙️</span>Settings
+  </div>
+  <div class="mob-more-item" onclick="setTab('release-notes');closeMobMore()">
+    <span class="mob-more-icon">📋</span>What's New
+  </div>
+  <div class="mob-more-item" id="mob-integrations-item" style="display:none" onclick="setTab('integrations');closeMobMore()">
+    <span class="mob-more-icon">🔗</span>Integrations
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════
      APP BODY
@@ -1879,6 +1970,25 @@ function setTier(tier){
   renderAll();
 }
 
+/* ── Mobile nav ──────────────────────────────────────────────────────────── */
+function syncMobNav(tab){
+  document.querySelectorAll(".mob-tab").forEach(b=>b.classList.remove("active"));
+  const found=document.querySelector(`.mob-tab[data-mob-tab="${tab}"]`);
+  if(found) found.classList.add("active");
+  else{
+    const more=document.querySelector('.mob-tab[data-mob-tab="more"]');
+    if(more) more.classList.add("active");
+  }
+}
+function toggleMobMore(){
+  document.getElementById("mobMoreOverlay").classList.toggle("active");
+  document.getElementById("mobMoreSheet").classList.toggle("active");
+}
+function closeMobMore(){
+  document.getElementById("mobMoreOverlay").classList.remove("active");
+  document.getElementById("mobMoreSheet").classList.remove("active");
+}
+
 function applyTierGates(){
   // Remove all existing overlays first
   document.querySelectorAll(".lock-overlay").forEach(el=>el.remove());
@@ -2007,6 +2117,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const el=document.getElementById(id);
     if(el) el.style.display = currentUser.is_admin ? "" : "none";
   });
+  // Mobile More sheet — Integrations item is admin-only
+  const mobIntItem=document.getElementById("mob-integrations-item");
+  if(mobIntItem) mobIntItem.style.display=currentUser.is_admin?"":"none";
 
   // ── Trial badge on AI Coach button (free trial only, not Pro/admin) ───
   if (currentUser.plan !== "pro" && !currentUser.is_admin && currentUser.coach_trial_active) {
@@ -2458,6 +2571,7 @@ const DZ_CONFIG = {
 
 function setTab(tab) {
   activeTab = tab;
+  syncMobNav(tab);
   document.querySelectorAll(".sb-tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
 
   const isPractice     = tab === "practice";

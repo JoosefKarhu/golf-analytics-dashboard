@@ -287,6 +287,18 @@
   }
 
   @media (max-width:900px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── Admin tabs ── */
+  .admin-tabs { display:flex; border-bottom:1px solid var(--border);
+    margin-bottom:28px; overflow-x:auto; gap:0; }
+  .admin-tab  { padding:11px 20px; border:none; background:none; color:var(--muted);
+    cursor:pointer; font-size:.85rem; font-weight:600;
+    border-bottom:2px solid transparent; margin-bottom:-1px;
+    white-space:nowrap; transition:all .15s; font-family:inherit; }
+  .admin-tab:hover  { color:var(--text); }
+  .admin-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .admin-panel      { display:none; }
+  .admin-panel.active { display:block; }
 </style>
 </head>
 <body>
@@ -310,152 +322,176 @@
   <div class="page-title">Admin Panel</div>
   <div class="page-sub">Real-time overview of users, revenue, and API costs</div>
 
-  <!-- Stripe notice -->
-  <div class="stripe-notice">
-    <strong>💳 Stripe Sandbox active.</strong>
-    Checkout is live in test mode. Set Price IDs in the Pricing Plans section below.
-    To go live: swap <code>STRIPE_SECRET_KEY</code> in <code>.env</code> to your live <code>sk_live_...</code> key and register the webhook URL in Stripe Dashboard → Developers → Webhooks → <code>/subscription/webhook</code>.
+  <!-- Tab navigation -->
+  <div class="admin-tabs">
+    <button class="admin-tab active" data-tab="overview" onclick="setAdminTab('overview')">📊 Overview</button>
+    <button class="admin-tab" data-tab="users"    onclick="setAdminTab('users')">👥 Users</button>
+    <button class="admin-tab" data-tab="billing"  onclick="setAdminTab('billing')">💳 Billing</button>
+    <button class="admin-tab" data-tab="settings" onclick="setAdminTab('settings')">⚙️ Settings</button>
   </div>
 
-  <!-- Stats cards -->
-  <div class="stats-grid" id="statsGrid">
-    <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>
-  </div>
+  <!-- ── Overview panel ── -->
+  <div class="admin-panel active" id="admin-panel-overview">
 
-  <!-- Charts row -->
-  <div class="two-col">
-    <div class="card section">
-      <div class="card-header">
-        <div class="section-title">Monthly AI activity</div>
-        <div class="section-sub">API calls & cost over the last 6 months</div>
-      </div>
-      <div class="card-body">
-        <div class="monthly-bars" id="monthlyBars"><div class="loading-state" style="width:100%"><div class="spinner"></div></div></div>
-      </div>
+    <!-- Stats cards -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>
     </div>
 
-    <div class="card section">
-      <div class="card-header">
-        <div class="section-title">Cost by model</div>
-        <div class="section-sub">Breakdown of API spend by Claude model</div>
+    <!-- Charts row -->
+    <div class="two-col">
+      <div class="card section">
+        <div class="card-header">
+          <div class="section-title">Monthly AI activity</div>
+          <div class="section-sub">API calls & cost over the last 6 months</div>
+        </div>
+        <div class="card-body">
+          <div class="monthly-bars" id="monthlyBars"><div class="loading-state" style="width:100%"><div class="spinner"></div></div></div>
+        </div>
       </div>
-      <div class="card-body">
-        <table class="model-table" id="modelTable">
-          <thead><tr><th>Model</th><th>Calls</th><th>Input tokens</th><th>Output tokens</th><th>Cost (USD)</th></tr></thead>
-          <tbody><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px"><div class="spinner"></div></td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Visitor stats -->
-  <div class="card section" style="margin-bottom:20px">
-    <div class="card-header">
-      <div class="section-title">Visitor Traffic</div>
-      <div class="section-sub">Page views and unique visitors (IP-hashed, privacy-safe)</div>
-    </div>
-    <div class="card-body" id="visitorStatsWrap">
-      <div class="loading-state"><div class="spinner"></div></div>
-    </div>
-  </div>
-
-  <!-- AI Model Settings -->
-  <div class="card section" style="margin-bottom:20px" id="modelSettingsCard">
-    <div class="card-header">
-      <div class="section-title">AI Model Settings</div>
-      <div class="section-sub">Configure which Claude models are used for each feature</div>
-    </div>
-    <div class="model-settings-grid">
-      <div class="model-setting-item">
-        <label>Pro AI Coach (Golf God)</label>
-        <select id="settingCoachModel">
-          <option value="claude-opus-4-5">claude-opus-4-5 (Best quality)</option>
-          <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet-20241022 (Balanced)</option>
-          <option value="claude-haiku-4-5">claude-haiku-4-5 (Fast &amp; cheap)</option>
-          <option value="claude-3-5-haiku-20241022">claude-3-5-haiku-20241022 (Fast &amp; cheap)</option>
-        </select>
-        <div class="model-setting-desc">Used for Pro &amp; Standard plan coach conversations</div>
-      </div>
-      <div class="model-setting-item">
-        <label>Image Analysis (Vision)</label>
-        <select id="settingVisionModel">
-          <option value="claude-haiku-4-5">claude-haiku-4-5 (Fast &amp; cheap)</option>
-          <option value="claude-3-5-haiku-20241022">claude-3-5-haiku-20241022 (Fast &amp; cheap)</option>
-          <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet-20241022 (Balanced)</option>
-          <option value="claude-opus-4-5">claude-opus-4-5 (Best quality)</option>
-        </select>
-        <div class="model-setting-desc">Used for scorecard &amp; range session image extraction</div>
-      </div>
-      <div class="model-setting-item">
-        <label>Free Trial Coach</label>
-        <select id="settingTrialModel">
-          <option value="claude-haiku-4-5">claude-haiku-4-5 (Fast &amp; cheap)</option>
-          <option value="claude-3-5-haiku-20241022">claude-3-5-haiku-20241022 (Fast &amp; cheap)</option>
-          <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet-20241022 (Balanced)</option>
-          <option value="claude-opus-4-5">claude-opus-4-5 (Best quality)</option>
-        </select>
-        <div class="model-setting-desc">Used during free &amp; standard trial coach sessions</div>
-      </div>
-    </div>
-    <button class="btn-save-models" id="saveModelsBtn" onclick="saveModelSettings()">Save model settings</button>
-  </div>
-
-  <!-- Pricing Plans -->
-  <div class="card section" style="margin-bottom:20px">
-    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div class="section-title">💳 Pricing Plans</div>
-        <div class="section-sub">What users see on the landing page and upgrade modal. Each plan needs a Stripe Price ID to enable checkout.</div>
-      </div>
-    </div>
-    <div id="pricingGrid" class="pricing-grid">
-      <div class="loading-state"><div class="spinner"></div></div>
-    </div>
-  </div>
-
-  <!-- User management -->
-  <div class="section card">
-    <div class="card-header">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div class="section-title">Users</div>
-          <div class="section-sub">Manage accounts, plans, and access</div>
+      <div class="card section">
+        <div class="card-header">
+          <div class="section-title">Cost by model</div>
+          <div class="section-sub">Breakdown of API spend by Claude model</div>
+        </div>
+        <div class="card-body">
+          <table class="model-table" id="modelTable">
+            <thead><tr><th>Model</th><th>Calls</th><th>Input tokens</th><th>Output tokens</th><th>Cost (USD)</th></tr></thead>
+            <tbody><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px"><div class="spinner"></div></td></tr></tbody>
+          </table>
         </div>
       </div>
     </div>
-    <div class="card-body" style="padding:16px 20px">
-      <div class="filter-bar">
-        <input class="search-input" type="text" id="userSearch" placeholder="Search by name or email…" oninput="filterUsers()">
-        <select class="filter-select" id="planFilter" onchange="filterUsers()">
-          <option value="">All plans</option>
-          <option value="free">Free</option>
-          <option value="standard">Standard</option>
-          <option value="pro">Pro</option>
-        </select>
-        <div class="table-count" id="tableCount"></div>
+
+    <!-- Visitor stats -->
+    <div class="card section" style="margin-bottom:20px">
+      <div class="card-header">
+        <div class="section-title">Visitor Traffic</div>
+        <div class="section-sub">Page views and unique visitors (IP-hashed, privacy-safe)</div>
       </div>
-      <div class="user-table-wrap">
-        <table class="user-table" id="userTable">
-          <thead>
-            <tr>
-              <th onclick="sortUsers('display_name')">User ↕</th>
-              <th onclick="sortUsers('plan')">Plan ↕</th>
-              <th onclick="sortUsers('created_at')">Joined ↕</th>
-              <th onclick="sortUsers('rounds_count')">Rounds ↕</th>
-              <th onclick="sortUsers('range_count')">Range ↕</th>
-              <th onclick="sortUsers('total_cost_usd')">API cost ↕</th>
-              <th onclick="sortUsers('today_calls')">Today ↕</th>
-              <th onclick="sortUsers('last_login')">Last seen ↕</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="userTableBody">
-            <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)"><div class="spinner"></div></td></tr>
-          </tbody>
-        </table>
+      <div class="card-body" id="visitorStatsWrap">
+        <div class="loading-state"><div class="spinner"></div></div>
       </div>
     </div>
-  </div>
+
+  </div><!-- /overview -->
+
+  <!-- ── Users panel ── -->
+  <div class="admin-panel" id="admin-panel-users">
+
+    <div class="section card">
+      <div class="card-header">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div class="section-title">Users</div>
+            <div class="section-sub">Manage accounts, plans, and access</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body" style="padding:16px 20px">
+        <div class="filter-bar">
+          <input class="search-input" type="text" id="userSearch" placeholder="Search by name or email…" oninput="filterUsers()">
+          <select class="filter-select" id="planFilter" onchange="filterUsers()">
+            <option value="">All plans</option>
+            <option value="free">Free</option>
+            <option value="standard">Standard</option>
+            <option value="pro">Pro</option>
+          </select>
+          <div class="table-count" id="tableCount"></div>
+        </div>
+        <div class="user-table-wrap">
+          <table class="user-table" id="userTable">
+            <thead>
+              <tr>
+                <th onclick="sortUsers('display_name')">User ↕</th>
+                <th onclick="sortUsers('plan')">Plan ↕</th>
+                <th onclick="sortUsers('created_at')">Joined ↕</th>
+                <th onclick="sortUsers('rounds_count')">Rounds ↕</th>
+                <th onclick="sortUsers('range_count')">Range ↕</th>
+                <th onclick="sortUsers('total_cost_usd')">API cost ↕</th>
+                <th onclick="sortUsers('today_calls')">Today ↕</th>
+                <th onclick="sortUsers('last_login')">Last seen ↕</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody">
+              <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /users -->
+
+  <!-- ── Billing panel ── -->
+  <div class="admin-panel" id="admin-panel-billing">
+
+    <div class="stripe-notice">
+      <strong>💳 Stripe Sandbox active.</strong>
+      Checkout is live in test mode. Set Price IDs in the Pricing Plans section below.
+      To go live: swap <code>STRIPE_SECRET_KEY</code> in <code>.env</code> to your live <code>sk_live_...</code> key and register the webhook URL in Stripe Dashboard → Developers → Webhooks → <code>/subscription/webhook</code>.
+    </div>
+
+    <div class="card section" style="margin-bottom:20px">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div class="section-title">💳 Pricing Plans</div>
+          <div class="section-sub">What users see on the landing page and upgrade modal. Each plan needs a Stripe Price ID to enable checkout.</div>
+        </div>
+      </div>
+      <div id="pricingGrid" class="pricing-grid">
+        <div class="loading-state"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+  </div><!-- /billing -->
+
+  <!-- ── Settings panel ── -->
+  <div class="admin-panel" id="admin-panel-settings">
+
+    <div class="card section" style="margin-bottom:20px" id="modelSettingsCard">
+      <div class="card-header">
+        <div class="section-title">AI Model Settings</div>
+        <div class="section-sub">Configure which Claude models are used for each feature</div>
+      </div>
+      <div class="model-settings-grid">
+        <div class="model-setting-item">
+          <label>Pro AI Coach (Golf God)</label>
+          <select id="settingCoachModel">
+            <option value="claude-opus-4-5">claude-opus-4-5 (Best quality)</option>
+            <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet-20241022 (Balanced)</option>
+            <option value="claude-haiku-4-5">claude-haiku-4-5 (Fast &amp; cheap)</option>
+            <option value="claude-3-5-haiku-20241022">claude-3-5-haiku-20241022 (Fast &amp; cheap)</option>
+          </select>
+          <div class="model-setting-desc">Used for Pro &amp; Standard plan coach conversations</div>
+        </div>
+        <div class="model-setting-item">
+          <label>Image Analysis (Vision)</label>
+          <select id="settingVisionModel">
+            <option value="claude-haiku-4-5">claude-haiku-4-5 (Fast &amp; cheap)</option>
+            <option value="claude-3-5-haiku-20241022">claude-3-5-haiku-20241022 (Fast &amp; cheap)</option>
+            <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet-20241022 (Balanced)</option>
+            <option value="claude-opus-4-5">claude-opus-4-5 (Best quality)</option>
+          </select>
+          <div class="model-setting-desc">Used for scorecard &amp; range session image extraction</div>
+        </div>
+        <div class="model-setting-item">
+          <label>Free Trial Coach</label>
+          <select id="settingTrialModel">
+            <option value="claude-haiku-4-5">claude-haiku-4-5 (Fast &amp; cheap)</option>
+            <option value="claude-3-5-haiku-20241022">claude-3-5-haiku-20241022 (Fast &amp; cheap)</option>
+            <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet-20241022 (Balanced)</option>
+            <option value="claude-opus-4-5">claude-opus-4-5 (Best quality)</option>
+          </select>
+          <div class="model-setting-desc">Used during free &amp; standard trial coach sessions</div>
+        </div>
+      </div>
+      <button class="btn-save-models" id="saveModelsBtn" onclick="saveModelSettings()">Save model settings</button>
+    </div>
+
+  </div><!-- /settings -->
+
 </div>
 
 <!-- Delete confirm modal -->
@@ -480,6 +516,17 @@ let sortAsc  = false;
 let deleteTargetId = null;
 
 /* ── Boot ── */
+function setAdminTab(tab) {
+  document.querySelectorAll(".admin-tab").forEach(b =>
+    b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll(".admin-panel").forEach(p =>
+    p.classList.toggle("active", p.id === "admin-panel-" + tab));
+  // Lazy-load data for the selected tab
+  if (tab === "users")    loadUsers();
+  if (tab === "billing")  loadPricingPlans();
+  if (tab === "settings") loadModelSettings();
+}
+
 async function loadAll() {
   await Promise.all([loadStats(), loadUsers(), loadVisitorStats()]);
 }
@@ -564,21 +611,33 @@ function renderVisitorStats(d) {
   const el = document.getElementById("visitorStatsWrap");
   if (!el) return;
   const today = d.today || {}, week = d.week || {};
-  const byPage = (d.by_page || []).map(p =>
-    `<tr><td style="color:var(--muted);font-size:.8rem">${p.path}</td><td style="text-align:right;font-size:.8rem">${p.hits}</td></tr>`
-  ).join("") || `<tr><td colspan="2" style="color:var(--muted);font-size:.8rem;text-align:center">No visits yet</td></tr>`;
+  const maxHits = Math.max(...(d.by_page||[]).map(p=>p.hits), 1);
+  const byPage = (d.by_page || []).map(p => {
+    const pct = Math.round((p.hits / maxHits) * 100);
+    return `<tr>
+      <td style="padding:9px 14px;font-size:.82rem;color:var(--text);border-bottom:1px solid var(--border)">${p.path}</td>
+      <td style="padding:9px 14px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="flex:1;background:var(--surface2);border-radius:4px;height:6px">
+            <div style="width:${pct}%;background:var(--accent);border-radius:4px;height:6px"></div>
+          </div>
+          <span style="font-size:.82rem;font-weight:600;min-width:28px;text-align:right">${p.hits}</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="2" style="color:var(--muted);font-size:.82rem;text-align:center;padding:20px">No visits yet</td></tr>`;
 
   el.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:20px 20px 0">
       <div class="stat-card"><div class="stat-label">Visits today</div><div class="stat-val">${today.visits||0}</div></div>
       <div class="stat-card"><div class="stat-label">Unique today</div><div class="stat-val">${today.unique||0}</div></div>
       <div class="stat-card"><div class="stat-label">Visits (7d)</div><div class="stat-val">${week.visits||0}</div></div>
       <div class="stat-card"><div class="stat-label">Unique (7d)</div><div class="stat-val">${week.unique||0}</div></div>
     </div>
-    <table style="width:100%;border-collapse:collapse">
+    <table style="width:100%;border-collapse:collapse;margin-top:16px">
       <thead><tr>
-        <th style="text-align:left;color:var(--muted);font-size:.75rem;font-weight:500;padding:4px 0;border-bottom:1px solid var(--border)">Page (last 7d)</th>
-        <th style="text-align:right;color:var(--muted);font-size:.75rem;font-weight:500;padding:4px 0;border-bottom:1px solid var(--border)">Hits</th>
+        <th style="text-align:left;color:var(--muted);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:8px 14px;border-bottom:2px solid var(--border)">Page (last 7d)</th>
+        <th style="text-align:right;color:var(--muted);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:8px 14px;border-bottom:2px solid var(--border)">Hits</th>
       </tr></thead>
       <tbody>${byPage}</tbody>
     </table>`;
