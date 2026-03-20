@@ -89,8 +89,8 @@ app.config["PERMANENT_SESSION_LIFETIME"] = 30 * 24 * 3600  # 30 days
 
 # ── Prompts (copied verbatim from golf_server.py) ────────────────────────────
 ANALYSIS_PROMPT = """
-You are analysing screenshots from the Virtual Golf 3 golf simulator app.
-The images may contain hole-by-hole shot maps and/or round summary/scorecard screens.
+You are analysing screenshots from the Virtual Golf 3 / Trackman golf simulator app.
+The images may contain a round summary screen, a scorecard screen, and/or hole-by-hole shot maps.
 
 Examine ALL provided images carefully and return a single JSON object with this exact schema:
 
@@ -99,9 +99,9 @@ Examine ALL provided images carefully and return a single JSON object with this 
     {
       "course": "string — course name exactly as shown",
       "date": "YYYY-MM-DD or null if not visible",
-      "score_vs_par": integer (e.g. 7 for +7, -1 for -1, 0 for E),
+      "score_vs_par": integer (e.g. +2 for two over, -3 for three under, 0 for even par),
       "total_strokes": integer,
-      "par": integer (total course par, derive from strokes - score_vs_par),
+      "par": integer (total course par — read from scorecard Par row totals, e.g. 72),
       "holes_played": integer (18 or 9 or partial),
       "fairways_hit_pct": integer or null,
       "avg_drive_m": integer or null,
@@ -138,14 +138,34 @@ Examine ALL provided images carefully and return a single JSON object with this 
   "range_sessions": []
 }
 
-Rules:
+CRITICAL SCORING RULES — read carefully:
+
+1. TOTAL STROKES: Read from the "Strokes" field on the round summary screen (e.g. 74).
+   Do NOT confuse with "Score" which is handicap-adjusted.
+
+2. COURSE PAR: Read the Par row totals from the scorecard (Out par + In par, e.g. 36+36=72).
+   If no scorecard is visible, read from any "Par" label on the summary screen.
+
+3. SCORE VS PAR: ALWAYS calculate as total_strokes - par (e.g. 74 - 72 = +2).
+   NEVER use the "Score" value shown on the Trackman/Virtual Golf round summary screen —
+   that value (e.g. "-1") is the handicap-adjusted net score, NOT the score vs course par.
+   Even if the summary shows "Score: -1", if strokes=74 and par=72, score_vs_par MUST be +2.
+
+4. HOLE SCORES: Read each player score from the scorecard table row by row.
+   The scorecard typically has: Hole row, Par row, Player row.
+   Match each score to its correct hole number. Scorecard may be split into two halves
+   (holes 1-9 / Out, then holes 10-18 / In). Read all visible holes.
+   Boxes around a score = bogey or worse. Filled circles = birdies/eagles.
+
+5. HOLE PAR: Read from the Par row in the scorecard for each corresponding hole column.
+
 - Group hole-map images with their corresponding round summary into ONE round entry.
 - If you see two different courses, create two separate round entries.
-- Infer par = total_strokes - score_vs_par.
-- Extract hole-level data from hole map images when visible. Leave holes: [] if only a summary screen is provided.
+- Extract hole-level data from scorecard and hole map images when visible. Leave holes: [] only if no scorecard or hole maps are provided.
 - GIR = true if the player reached the green in (par - 2) strokes or fewer before putting.
 - fairway_hit and drive_m apply to par 4 and par 5 holes only; use null for par 3s.
 - Shot extraction: numbered orange circles on the map show each shot. Each label reads "<n> <Club> • <distance>m". Use canonical club names (Dr, 7I, PW). Leave shots: [] if no shot labels are visible.
+- SELF-CHECK: Before returning, verify that the sum of all hole strokes equals total_strokes. If it does not, re-read the mismatched holes. A box around a score means bogey (par+1 or worse) — do not read it as the par value.
 - Return ONLY the JSON object — no explanation, no markdown fences.
 - If a field is genuinely not visible, use null.
 """
@@ -890,6 +910,22 @@ def api_analyse():
 
         rounds  = extracted.get("rounds", [])
         range_s = extracted.get("range_sessions", [])
+
+        # ── Post-extraction sanity checks for rounds ─────────────────────
+        for r in rounds:
+            # 1. score_vs_par must always equal total_strokes - par
+            ts  = r.get("total_strokes")
+            par = r.get("par")
+            if ts is not None and par is not None:
+                r["score_vs_par"] = ts - par
+
+            # 2. Warn if hole stroke sums don't match total_strokes
+            holes = r.get("holes") or []
+            if holes and ts is not None:
+                hole_sum = sum(h.get("strokes") or 0 for h in holes)
+                if abs(hole_sum - ts) > 0:
+                    print(f"  ⚠ Hole stroke sum ({hole_sum}) ≠ total_strokes ({ts}) "
+                          f"for '{r.get('course')}' — AI may have misread {abs(hole_sum-ts)} hole(s)")
 
         # Date fallback for range sessions
         if mode == "range" and range_s:

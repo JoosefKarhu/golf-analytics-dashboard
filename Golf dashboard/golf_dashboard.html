@@ -499,7 +499,7 @@
       .charts-grid,.par3-grid,.feedback-grid,.practice-grid,.par-type-grid{grid-template-columns:1fr}
       .charts-grid .full{grid-column:1}.api-input{width:190px}
     }
-    @media(max-width:600px){main{padding:12px}.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:600px){.api-input{width:190px}}
 
     /* ── Mobile bottom navigation ──────────────────────────────────────── */
     .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;
@@ -515,12 +515,12 @@
     .mob-tab-label{font-size:.58rem;font-weight:600;white-space:nowrap}
     .mob-more-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200}
     .mob-more-overlay.active{display:block}
-    .mob-more-sheet{position:fixed;bottom:62px;left:0;right:0;
+    .mob-more-sheet{position:fixed;bottom:calc(62px + env(safe-area-inset-bottom));left:0;right:0;
       background:var(--surface);border-top:1px solid var(--border);
       border-radius:16px 16px 0 0;z-index:201;
-      transform:translateY(100%);transition:transform .25s ease;
-      padding-bottom:env(safe-area-inset-bottom)}
-    .mob-more-sheet.active{transform:translateY(0)}
+      transform:translateY(110%);transition:transform .25s ease,visibility .25s;
+      visibility:hidden}
+    .mob-more-sheet.active{transform:translateY(0);visibility:visible}
     .mob-more-item{display:flex;align-items:center;gap:14px;
       padding:15px 20px;font-size:.9rem;font-weight:600;color:var(--text);
       cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s;
@@ -534,16 +534,31 @@
       .mob-more-overlay,.mob-more-sheet{display:none!important}
     }
     @media(max-width:768px){
+      body{overflow-x:hidden}
       .sidebar{display:none}
       .mob-nav{display:block}
-      main{padding:12px 12px 74px}
+      main{padding:12px 12px 80px;overflow-x:hidden}
       header{padding:8px 12px;gap:8px}
       #roundCount{display:none}
       .tier-selector{display:none!important}
-      .kpi-grid{grid-template-columns:repeat(2,1fr)}
+      /* KPI & stat grids */
+      .kpi-grid{grid-template-columns:repeat(2,1fr)!important}
+      .damage-grid{grid-template-columns:repeat(2,1fr)!important}
       .charts-grid,.par3-grid,.feedback-grid,.practice-grid,.par-type-grid{grid-template-columns:1fr}
+      /* Chart cards must clip overflow from canvas */
+      .chart-card{overflow:hidden;min-width:0}
+      canvas{max-width:100%!important}
+      /* Tables scroll horizontally instead of breaking layout */
+      .range-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+      table{min-width:0}
+      /* Coach/Golf God drawer: full width on mobile */
+      .coach-drawer{width:100vw!important;right:-100vw!important}
+      .coach-drawer.open{right:0!important}
+      /* Header tidy */
       .header-right{gap:8px}
       #coachHeaderLabel{display:none}
+      /* Upgrade modal fits screen */
+      .modal-box{max-width:96vw!important;margin:0 8px}
     }
 
     /* ── Tier selector ───────────────────────────────────────────────────── */
